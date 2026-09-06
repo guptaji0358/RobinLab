@@ -1,0 +1,343 @@
+<meta charset="UTF-8">
+<title>Contact Book</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500;1,6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+<nav class="index-rail" id="rail">
+  <div class="mark">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#081022" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c0-4.5 3.4-7.5 7.5-7.5s7.5 3 7.5 7.5"/></svg>
+  </div>
+  <div class="rail-tabs">
+    <a href="#cover" class="active">Cover</a>
+    <a href="#contents">Contents</a>
+    <a href="#spread">Books</a>
+    <a href="#demo">Demo</a>
+    <a href="#calling">Calling</a>
+    <a href="#privacy">Privacy</a>
+    <a href="#install">Install</a>
+  </div>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light and dark mode" title="Toggle light / dark mode">
+    <svg class="moon-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"/></svg>
+    <svg class="sun-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/></svg>
+  </button>
+  <div class="rail-foot">v1.0.0 · MIT</div>
+</nav>
+
+<main>
+
+  <header class="cover" id="cover">
+    <div class="wrap cover-inner">
+      <div>
+        <p class="imprint"><b>Contact Book</b><span class="dot">·</span>an address book for people who keep their own records<span class="dot">·</span>v1.0.0</p>
+        <h1>Every number you<br>keep, kept on <em>your</em><br>own shelf.</h1>
+        <p class="lede">A desktop address book built with Python and PySide6 — multiple contact books, drag-and-drop VCF import, and calling through Phone Link or a direct LAN line. Nothing you type ever leaves this machine.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/guptaji0358/Contact-Book-/releases/latest">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M6 11l6 6 6-6"/><path d="M5 20h14"/></svg>
+            Download for Windows
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/guptaji0358/Contact-Book-">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.9c-2.8.6-3.4-1.4-3.4-1.4-.4-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1.1 1.5 1.1.9 1.6 2.3 1.1 2.9.9.1-.7.3-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.5-1.4.1-2.9 0 0 .8-.3 2.7 1a9 9 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .6 1.5.2 2.6.1 2.9.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .3.3.6.9.6 1.8v2.7c0 .3.2.6.7.5 4-1.3 6.8-5.1 6.8-9.6C22 6.6 17.5 2 12 2z"/></svg>
+            View source
+          </a>
+        </div>
+        <p class="cover-note">No admin rights needed · Desktop &amp; Start Menu shortcuts · Proper uninstaller included</p>
+      </div>
+
+      <figure style="margin:0;" aria-hidden="true">
+        <div class="app-mock">
+          <div class="app-titlebar">
+            <div class="app-icon"></div>
+            <span class="app-title">Contact Book</span>
+            <div class="win-controls">−&nbsp;&nbsp;▢&nbsp;&nbsp;✕</div>
+          </div>
+          <div class="app-body">
+            <div class="app-toprow">
+              <span class="lbl">Search --&gt;</span>
+              <div class="app-search">Search Contacts</div>
+              <div class="app-combo">Personal <span>▾</span></div>
+              <div class="app-newbook"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4.5h6.5a2 2 0 0 1 2 2V20a1.6 1.6 0 0 0-1.6-1.6H4Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 4.5h-6.5a2 2 0 0 0-2 2V20a1.6 1.6 0 0 1 1.6-1.6H20Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+            </div>
+            <div class="app-table">
+              <div class="thead"><span></span><span>Name</span><span>Phone No.</span><span>Email</span></div>
+              <div class="trow"><span class="chk"></span><span>Naruto Uzumaki</span><span>+81 90-1234-5678</span><span>naruto@leaf.com</span></div>
+              <div class="trow"><span class="chk"></span><span>Gojo Satoru</span><span>+81 90-1234-5679</span><span>gojo@jujutsu.com</span></div>
+              <div class="trow"><span class="chk"></span><span>Itachi Uchiha</span><span>+81 90-5555-1234</span><span>Email Not Added</span></div>
+            </div>
+            <div class="app-buttons">
+              <div class="app-ibtn blue" title="View"><svg viewBox="0 0 24 24" fill="none"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" stroke="#fff" stroke-width="1.8"/></svg></div>
+              <div class="app-ibtn blue" title="Add"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg></div>
+              <div class="app-ibtn blue" title="Edit"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l.9-3.9L16.2 4.8a1.4 1.4 0 0 1 2 0l1 1a1.4 1.4 0 0 1 0 2L7.9 19.1 4 20Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M14.6 6.4l3 3" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div class="app-ibtn red" title="Delete"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="M9 7V4.8c0-.44.36-.8.8-.8h4.4c.44 0 .8.36.8.8V7" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 12.2c.05.98.86 1.8 1.85 1.8h6.3c.99 0 1.8-.82 1.85-1.8L18 7" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div class="app-ibtn grey" title="Import"><svg viewBox="0 0 24 24" fill="none"><path d="M7.5 17.5A4.5 4.5 0 0 1 8 8.6a5.5 5.5 0 0 1 10.6 1.9A3.9 3.9 0 0 1 18 17.5H7.5Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 11v6.5M9.2 15.2 12 18l2.8-2.8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="app-ibtn grey" title="Export"><svg viewBox="0 0 24 24" fill="none"><path d="M7.5 17.5A4.5 4.5 0 0 1 8 8.6a5.5 5.5 0 0 1 10.6 1.9A3.9 3.9 0 0 1 18 17.5H7.5Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 17.5V11M9.2 13.3 12 10.5l2.8 2.8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="app-ibtn green" title="Call"><svg viewBox="0 0 24 24" fill="none"><path d="M5.3 3.5h3.1c.5 0 .95.34 1.08.82l.9 3.3a1.13 1.13 0 0 1-.32 1.14l-1.7 1.55a13.7 13.7 0 0 0 5.83 5.83l1.55-1.7a1.13 1.13 0 0 1 1.14-.32l3.3.9c.48.13.82.58.82 1.08v3.1c0 .63-.53 1.13-1.16 1.09-8.02-.5-14.4-6.88-14.9-14.9-.04-.63.46-1.16 1.09-1.16Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>The actual main window — same layout, same colors, same icon set as the real app.</figcaption>
+      </figure>
+    </div>
+  </header>
+
+  <section id="contents">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Table of contents</span>
+        <h2>Everything a paper Rolodex did — minus the paper cuts.</h2>
+        <p>Seven drawers, each doing one job well.</p>
+      </div>
+      <div class="drawers">
+
+        <div class="drawer">
+          <span class="tag">B</span>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M4 5h7a2 2 0 0 1 2 2v12a3 3 0 0 0-3-2H4z"/><path d="M20 5h-7a2 2 0 0 0-2 2v12a3 3 0 0 1 3-2h6z"/></svg></div>
+          <h3>Multiple books</h3>
+          <p>Keep personal, work, and family separate. Create, rename, and delete a book from the selector — each is its own SQLite file.</p>
+        </div>
+
+        <div class="drawer">
+          <span class="tag">S</span>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div>
+          <h3>Live search</h3>
+          <p>Filter as you type across name, number, and email, with the match highlighted inline. Deletes are undoable.</p>
+        </div>
+
+        <div class="drawer">
+          <span class="tag">V</span>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect x="5" y="3" width="10" height="14" rx="1.5"/><path d="M8 8h4M8 11h4M8 14h2.5"/><path d="M15 13l4 4 4-4"/><path d="M19 8v9"/></svg></div>
+          <h3>VCF in &amp; out</h3>
+          <p>Browse for a .vcf, or just drag one onto the window — a pulsing drop zone shows it's ready to catch the file.</p>
+        </div>
+
+        <div class="drawer">
+          <span class="tag">C</span>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M6 4c1.5 0 3 3 3 5s-2 2-2 4 4 7 6 9 6.5 5 8.5 5 2.5-2 4.5-2 4.5 1.2 4.5 2.5-2.5 4-5 4c-5 0-10.5-4-14-8.5S4 14 4 9c0-2.5 2-5 5-5z" transform="scale(0.9) translate(1,1)"/></svg></div>
+          <h3>Real calls</h3>
+          <p>Hand a number to Phone Link for a genuine cellular call, or ring another Contact Book instance directly over your LAN.</p>
+        </div>
+
+        <div class="drawer">
+          <span class="tag">L</span>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+          <h3>Local only</h3>
+          <p>Every book is a file on your disk. No account, no server, nothing phoned home — a rough book, kept honestly.</p>
+        </div>
+
+        <div class="drawer">
+          <span class="tag">I</span>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect x="4" y="4" width="16" height="12" rx="1.5"/><path d="M4 8h16"/><path d="M9 20h6M12 16v4"/></svg></div>
+          <h3>Real installer</h3>
+          <p>A wizard built in the app's own UI — license &amp; data agreement, progress bar, and a GUI uninstaller that actually cleans up.</p>
+        </div>
+
+        <div class="drawer">
+          <span class="tag">T</span>
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M17.5 12.5A6.5 6.5 0 0 1 8 4a5 5 0 1 0 9.5 8.5z"/></svg></div>
+          <h3>Light &amp; dark mode</h3>
+          <p>A toggle in the toolbar flips the app's own look independent of Windows' theme — every window, dialog, and icon switches together, and your choice is remembered next launch.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section id="spread">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Switch books, view a contact</span>
+        <h2>Pick a book from the dropdown. The View button opens exactly this.</h2>
+        <p>Both mockups below match the real widget styling pixel-for-pixel — same fonts, same hex codes, same layout as <code class="mono">scripts/main_window.py</code> and <code class="mono">scripts/view_dialog.py</code>.</p>
+      </div>
+
+      <div class="spread-mocks">
+        <figure style="margin:0;">
+          <div class="app-mock">
+            <div class="app-titlebar">
+              <div class="app-icon"></div>
+              <span class="app-title">Contact Book</span>
+              <div class="win-controls">−&nbsp;&nbsp;▢&nbsp;&nbsp;✕</div>
+            </div>
+            <div class="app-body">
+              <div class="app-toprow">
+                <span class="lbl">Search --&gt;</span>
+                <div class="app-search">Search Contacts</div>
+                <div class="app-combo">Work <span>▾</span></div>
+                <div class="app-newbook"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4.5h6.5a2 2 0 0 1 2 2V20a1.6 1.6 0 0 0-1.6-1.6H4Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 4.5h-6.5a2 2 0 0 0-2 2V20a1.6 1.6 0 0 1 1.6-1.6H20Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+              </div>
+              <div class="app-table">
+                <div class="thead"><span></span><span>Name</span><span>Phone No.</span><span>Email</span></div>
+                <div class="trow"><span class="chk"></span><span>Sakura Haruno</span><span>+81 90-4444-5678</span><span>sakura@leaf.com</span></div>
+                <div class="trow"><span class="chk"></span><span>Kakashi Hatake</span><span>+81 90-3333-9999</span><span>Email Not Added</span></div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Same window, a different book selected — each book is its own SQLite file.</figcaption>
+        </figure>
+
+        <figure style="margin:0;">
+          <div class="win-dialog">
+            <div class="app-titlebar">
+              <div class="app-icon"></div>
+              <span class="app-title">Contact Details</span>
+              <div class="win-controls">✕</div>
+            </div>
+            <div class="app-body">
+              <h5>Contact Details</h5>
+              <div class="drow"><span class="k">Name -&gt;</span><span>Sakura Haruno</span></div>
+              <div class="drow"><span class="k">Phone No. -&gt;</span><span>+81 90-4444-5678</span></div>
+              <div class="drow"><span class="k">Email -&gt;</span><span>sakura@leaf.com</span></div>
+              <div class="dclose">Close</div>
+            </div>
+          </div>
+          <figcaption>The View dialog you get for that row — same title casing, same bold Segoe UI labels.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="demo">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Kept for you to try</span>
+        <h2>A working page from the book — view, edit, add, and delete a contact.</h2>
+        <p>This runs entirely in your browser with three seeded rows. Nothing here touches a server, and refreshing the page resets it — same rule the app itself follows, just without the disk.</p>
+      </div>
+
+      <div class="demo-book">
+        <div class="demo-toolbar">
+          <span class="demo-count mono" id="demoCount">3 contacts</span>
+          <button class="btn btn-primary btn-sm" id="demoAddBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add contact
+          </button>
+        </div>
+
+        <form class="demo-form" id="demoForm" hidden>
+          <div class="field" id="fName">
+            <label for="dfName">Name</label>
+            <input id="dfName" autocomplete="off" placeholder="Naruto Uzumaki">
+            <div class="errmsg"></div>
+          </div>
+          <div class="field" id="fPhone">
+            <label for="dfPhone">Phone</label>
+            <input id="dfPhone" autocomplete="off" placeholder="+81 90-1234-5678">
+            <div class="errmsg"></div>
+          </div>
+          <div class="field full" id="fEmail">
+            <label for="dfEmail">Email <span style="text-transform:none;">(optional)</span></label>
+            <input id="dfEmail" autocomplete="off" placeholder="naruto@leaf.com">
+            <div class="errmsg"></div>
+          </div>
+          <div class="demo-form-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="demoCancelBtn">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="demoSaveBtn">Save contact</button>
+          </div>
+        </form>
+
+        <ul class="demo-rows" id="demoRows"></ul>
+
+        <div class="demo-note">Try it: open <b class="mono" style="color:var(--text-dim);">view</b> on a row, edit a phone number, delete one, then hit undo before it disappears.</div>
+      </div>
+    </div>
+
+    <div class="demo-overlay" id="demoOverlay">
+      <div class="detail-card" id="demoDetailCard">
+        <button class="close" id="demoCloseBtn" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="demo-toast" id="demoToast">
+      <span id="demoToastMsg">Contact deleted.</span>
+      <button id="demoUndoBtn" type="button">Undo</button>
+    </div>
+  </section>
+
+  <section id="calling">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Two ways to actually dial</span>
+        <h2>The app never claims to be a phone. It just knows two ways to reach one.</h2>
+      </div>
+      <div class="call-modes">
+        <div class="mode">
+          <span class="eyebrow">Mode 01</span>
+          <h3>Hand off to Phone Link</h3>
+          <p>Contact Book sends the number to whatever app Windows has registered for <code class="mono">tel:</code> links — usually Microsoft Phone Link, once it's linked to your Android phone. The call happens on your phone; this window just placed the request, minimized, without stealing focus.</p>
+        </div>
+        <div class="mode">
+          <span class="eyebrow">Mode 02</span>
+          <h3>Direct LAN voice</h3>
+          <p>Give a contact a Device IP and Contact Book will ring that device directly over your local network — no phone, no carrier, no internet required. Useful for two desks running the same app on the same Wi-Fi.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap privacy">
+      <div class="stamp" aria-hidden="true">
+        <div class="stamp-text"><b>Local</b>only<br>no cloud sync</div>
+      </div>
+      <div class="privacy-copy">
+        <span class="eyebrow">From the installer's own agreement page</span>
+        <h2>A rough book, kept honestly.</h2>
+        <p>Every contact you add lives in a SQLite file next to the app. Nothing is uploaded, synced, or shared with a server — the installer says this outright, in a License &amp; Data Agreement page you have to read and accept before setup continues.</p>
+        <p>And because it's a rough book and not a telephone, real calls still need a real line: set up Phone Link, or give a contact a Device IP for LAN calling. Contact Book is honest about which one you're getting before you press call.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Two shelves</span>
+        <h2>Take it installed, or take it as source.</h2>
+      </div>
+      <div class="recipes">
+        <div class="recipe">
+          <div class="recipe-head">
+            <h3>Installer</h3>
+            <span class="badge">Recommended</span>
+          </div>
+          <pre><span class="c"># download &amp; run — no Python needed</span>
+ContactBookSetup.exe</pre>
+          <p class="note">Installs per-user under <code class="mono">%LOCALAPPDATA%</code>, no admin rights required. Creates Desktop &amp; Start Menu shortcuts and a proper uninstaller.</p>
+        </div>
+        <div class="recipe">
+          <div class="recipe-head">
+            <h3>From source</h3>
+            <span class="badge">Python 3.11+</span>
+          </div>
+          <pre>git clone https://github.com/guptaji0358/Contact-Book-.git
+cd Contact-Book-
+pip install PySide6 sounddevice numpy pywin32
+python 42_CONTACT_BOOK.py</pre>
+          <p class="note">Everything is a plain <code class="mono">scripts/</code> package of PySide6 mixins — nothing to compile.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="top-line">
+        <h3>Contact Book</h3>
+        <span>Set in Newsreader &amp; IBM Plex</span>
+      </div>
+      <div class="colophon">
+        <div class="block"><b>Author.</b> Robin Gupta, Python developer, learning desktop GUI development. Built with <a class="icon-link" href="https://claude.com/claude-code"><img class="credit-icon" src="assets/claude-icon.png" alt="" width="14" height="14">Claude Code</a> as an AI pair-programming assistant.</div>
+        <div class="block"><b>Edition.</b> v1.0.0, MIT Licensed. <a href="https://github.com/guptaji0358/Contact-Book-/releases/latest">Releases</a> · <a class="icon-link" href="https://github.com/guptaji0358/Contact-Book-"><svg class="credit-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.9c-2.8.6-3.4-1.4-3.4-1.4-.4-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1.1 1.5 1.1.9 1.6 2.3 1.1 2.9.9.1-.7.3-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.5-1.4.1-2.9 0 0 .8-.3 2.7 1a9 9 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .6 1.5.2 2.6.1 2.9.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .3.3.6.9.6 1.8v2.7c0 .3.2.6.7.5 4-1.3 6.8-5.1 6.8-9.6C22 6.6 17.5 2 12 2z"/></svg>Source</a> · <a href="https://github.com/guptaji0358/Contact-Book-/blob/main/installer/README.md">Build the installer</a></div>
+        <div class="block"><b>Colophon.</b> No trackers, no analytics on this page. It's a static file, same as the app it describes.</div>
+      </div>
+    </div>
+  </footer>
+
+</main>
+
+<script src="script.js"></script>

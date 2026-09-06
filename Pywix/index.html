@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pywix — Turn Python scripts into Windows apps</title>
+<meta name="description" content="Pywix is a PySide6 desktop tool that wraps PyInstaller in a clean, guided UI so you never have to hand-write a build command again.">
+<link rel="icon" href="assets/APP_BUILDER_ICON.ico">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand"><img src="assets/package.svg" alt=""> Pywix</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#theming">Theming</a>
+      <a href="#installer">Installer</a>
+      <a href="#celebrate">Celebrate</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/guptaji0358/Pywix" target="_blank" rel="noopener" class="nav-github">
+        <img src="assets/github.svg" width="16" alt=""> GitHub
+      </a>
+    </div>
+    <a class="btn btn-primary" href="https://github.com/guptaji0358/Pywix/releases/download/v1.0.2/PywixInstaller.exe" target="_blank" rel="noopener">
+      <img src="assets/download.svg" width="16" alt=""> Download
+    </a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-glow"></div>
+  <div class="container">
+    <span class="eyebrow">FREE &amp; OPEN SOURCE · WINDOWS</span>
+    <h1>Turn Python scripts into<br><span>Windows apps</span>, visually.</h1>
+    <p>Pywix wraps PyInstaller in a clean, guided desktop UI — pick a file, set your options, and build a real <code>.exe</code>. No terminal, no memorized flags.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-primary" href="https://github.com/guptaji0358/Pywix/releases/download/v1.0.2/PywixInstaller.exe" target="_blank" rel="noopener">
+        <img src="assets/download.svg" width="16" alt=""> Download for Windows
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/guptaji0358/Pywix" target="_blank" rel="noopener">
+        <img src="assets/github.svg" width="16" alt=""> View source on GitHub
+      </a>
+    </div>
+
+    <div class="mock-window">
+      <div class="mock-titlebar">
+        <span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-bar"></div>
+        <div class="mock-line w1"></div>
+        <div class="mock-line w2"></div>
+        <div class="mock-buttons">
+          <div class="mock-btn primary"></div>
+          <div class="mock-btn secondary"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">FEATURES</span>
+      <h2>Everything PyInstaller can do — with buttons</h2>
+      <p>The full build pipeline, exposed as a friendly interface instead of a wall of CLI flags.</p>
+    </div>
+    <div class="features-grid" id="features-grid"></div>
+  </div>
+</section>
+
+<section id="theming">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">THEMING</span>
+      <h2>Try the theme switcher</h2>
+      <p>Light, Dark, System, or the original Developer look — every switch crossfades instantly in the real app. Click a mode below to preview it.</p>
+    </div>
+    <div class="demo-panel reveal">
+      <div class="theme-switch" id="theme-switch"></div>
+      <div class="theme-preview" id="theme-preview">
+        <div class="mock-bar"></div>
+        <div class="mock-line w1"></div>
+        <div class="mock-line w2"></div>
+        <div class="mock-buttons">
+          <div class="mock-btn primary"></div>
+          <div class="mock-btn secondary"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="installer">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">INSTALLER</span>
+      <h2>A real installer, not a bare .exe</h2>
+      <p>Pywix ships its own step-by-step wizard — this is a live preview of it, auto-advancing so you can see the whole flow.</p>
+    </div>
+    <div class="installer-demo reveal">
+      <div class="installer-sidebar">
+        <div class="brand-mini">Pywix</div>
+        <div id="installer-steps"></div>
+      </div>
+      <div class="installer-content" id="installer-content"></div>
+    </div>
+  </div>
+</section>
+
+<section id="celebrate">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">FIRST LAUNCH</span>
+      <h2>Every install ends with fireworks</h2>
+      <p>A 6-second celebration screen plays the first time you open the app after installing it. Hit play for a taste.</p>
+    </div>
+    <div class="fireworks-demo reveal" id="fireworks-demo">
+      <canvas id="fireworks-canvas"></canvas>
+      <div class="fireworks-caption" id="fireworks-caption">
+        <h3>Thank you for installing Pywix!</h3>
+        <p>Enjoy building your apps.</p>
+        <button class="btn btn-primary" id="fireworks-play">
+          <img src="assets/firework.svg" width="16" alt=""> Play the celebration
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">VERSION HISTORY</span>
+      <h2>Every installer, ever published</h2>
+      <p>Grab the latest, or see exactly what changed in an older one.</p>
+    </div>
+    <div class="reveal" style="overflow-x:auto;">
+      <table class="version-table">
+        <tr><th>Version</th><th>Released</th><th>What it provides</th><th>Installer</th></tr>
+        <tr>
+          <td><span class="tag-pill">v1.0.2</span><br><small style="color:var(--muted)">latest</small></td>
+          <td>2026-08-31</td>
+          <td>Added a License/Agreement step to both installers, disclosing the local .py/.ico file indexing (paths and names only, never uploaded) and a note that PyInstaller conversion can briefly use high CPU/memory and warm up the device.</td>
+          <td>
+            <div class="dl-row">
+              <div>
+                <a class="dl-btn" href="https://github.com/guptaji0358/Pywix/releases/download/v1.0.2/PywixInstaller.exe"><img src="assets/download.svg" alt=""> Download</a>
+                <div class="dl-label">PySide6 wizard · 116&nbsp;MB</div>
+              </div>
+              <div>
+                <a class="dl-btn" href="https://github.com/guptaji0358/Pywix/releases/download/v1.0.2/PywixSetup.exe"><img src="assets/download.svg" alt=""> Download</a>
+                <div class="dl-label">Inno Setup · 36&nbsp;MB</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag-pill">v1.0.1</span></td>
+          <td>2026-08-30</td>
+          <td>Renamed the app to <b>Pywix</b> (formerly Python App Builder) — window title, About screen, and installer wizard all updated to match.</td>
+          <td>
+            <a class="dl-btn" href="https://github.com/guptaji0358/Pywix/releases/download/v1.0.1/PywixInstaller.exe"><img src="assets/download.svg" alt=""> Download</a>
+            <div class="dl-label">116&nbsp;MB</div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag-pill">v1.0.0</span></td>
+          <td>2026-08-30</td>
+          <td>First release — the PySide6 GUI wrapper for PyInstaller, plus a custom installer with a branded wizard and a first-launch thank-you celebration.</td>
+          <td>
+            <a class="dl-btn" href="https://github.com/guptaji0358/Pywix/releases/download/v1.0.0/PythonAppBuilderInstaller.exe"><img src="assets/download.svg" alt=""> Download</a>
+            <div class="dl-label">116&nbsp;MB</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <p class="center mt-40 reveal">
+      <a href="https://github.com/guptaji0358/Pywix/releases">See the full Releases page →</a>
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    Built with PySide6 &amp; PyInstaller ·
+    <a href="https://github.com/guptaji0358/Pywix" target="_blank" rel="noopener">
+      <img src="assets/github.svg" width="14" alt="" style="vertical-align:-2px;"> github.com/guptaji0358/Pywix
+    </a>
+    <br>Created by Robin Gupta + Claude Code
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
