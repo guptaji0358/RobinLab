@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "5500", "--directory", "root"],
       "port": 5500
+    },
+    {
+      "name": "robinlab-collection",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["dev_server.py", "--port", "5501"],
+      "port": 5501
     }
   ]
 }

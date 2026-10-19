@@ -1,0 +1,12 @@
+# Cloudflare Pages configuration for the RobinLab site.
+#
+# Cloudflare only RENDERS here: it serves the static site from `root/` and runs
+# the Function in `functions/` to proxy bucket bytes on demand.
+# Storage stays in the Hugging Face bucket (robinlabdev/robinvault).
+
+name = "robinlab"
+compatibility_date = "2026-10-19"
+
+# Static assets live in root/. The Pages Function in functions/ is picked up
+# automatically from the project root.
+pages_build_output_dir = "root"

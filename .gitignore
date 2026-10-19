@@ -1,0 +1,12 @@
+# Secrets — never commit these.
+.dev.vars
+.env
+.env.*
+
+# Local tooling
+__pycache__/
+*.pyc
+
+# Cloudflare / Node
+.wrangler/
+node_modules/

@@ -1,0 +1,6 @@
+# Copy this file to `.dev.vars` and put your real token in it.
+# `.dev.vars` is git-ignored, so the token is never committed.
+#
+# Create a token at https://huggingface.co/settings/tokens
+# A read-only ("Read") token is enough for viewing the bucket.
+HF_TOKEN=hf_your_token_here
