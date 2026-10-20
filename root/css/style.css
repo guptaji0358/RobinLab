@@ -100,6 +100,30 @@ a { color: inherit; text-decoration: none; }
   gap: 6px;
 }
 
+/* Social links sit in their own tight cluster so the 28px nav gap doesn't
+   stretch them across the header. */
+.nav-social {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.site-nav .nav-social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.site-nav .nav-social a:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
 /* Icons */
 
 .icon {
