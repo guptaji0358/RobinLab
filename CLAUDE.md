@@ -1,8 +1,8 @@
 # RobinLabs
 
 Static site and project portfolio. Each project is a self-contained static site
-with its own `assets/`, `css/` and `js/`. There is no shared build system, no
-package manager, and no framework.
+with its own `assets/`, `css/` and `js/`. There is no framework or bundler and no
+package manager — the only build step is the project mirror described below.
 
 ## Layout
 
