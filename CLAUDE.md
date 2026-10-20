@@ -81,6 +81,9 @@ itself and needs a public URL ending in `.pptx`. That route serves files from
 - Collection shows images only — presentations never appear there.
 - Each bucket folder becomes one pack section, images keep their real aspect
   ratio (nothing is cropped).
+- Collection is full-bleed on purpose: `body.col-page` lifts the 1080px
+  `.container` cap so the media grid uses the whole window (`root/css/style.css`,
+  under `.container`). Text pages keep the reading width.
 - `/presentations` embeds `view.officeapps.live.com`; nothing is rendered by this
   repo, so there is no JS bundle to maintain. Microsoft caches the file briefly.
 - Decks are meant to be shared: the viewer has a **Download .pptx** button and the
