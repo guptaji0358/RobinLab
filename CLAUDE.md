@@ -35,7 +35,7 @@ and before every local preview (`dev_server.py` runs it automatically).
 
 - Edit projects in `projects/<name>/`.
 - Never edit `root/projects/` — it is generated and git-ignored.
-- `root/index.html` links to `projects/<name>/` (relative to the site root).
+- `root/index.html` links to `projects/<name>/index.html` (relative to the site root).
 
 ## Adding a new project
 
@@ -44,7 +44,10 @@ and before every local preview (`dev_server.py` runs it automatically).
    `/projects/<Name>/`.
 2. Add a card to `root/index.html` in the `.project-grid` section:
    - watermark + logo images → `projects/<Name>/…`
-   - link → `projects/<Name>/` (URL-encode spaces, e.g. `Contact%20Book`)
+   - link → `projects/<Name>/index.html` (URL-encode spaces, e.g.
+     `projects/Contact%20Book/index.html`). Always name `index.html` explicitly —
+     a bare `projects/<Name>/` breaks when the page is opened from disk
+     (`file://`), because browsers list the directory instead of loading it.
 3. Optionally drop a hub icon in `root/assets/` (the existing ones are
    `pywix-icon.ico`, `codelens-icon.ico`, `contactbook-icon.png`; Motiva pulls
    its favicon straight from `projects/Motiva/Assets/logo/`).
