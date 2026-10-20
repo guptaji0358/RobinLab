@@ -34,6 +34,7 @@
     name: document.getElementById("deck-name"),
     sub: document.getElementById("deck-sub"),
     open: document.getElementById("deck-open"),
+    download: document.getElementById("deck-download"),
     stage: document.getElementById("deck-stage"),
     loading: document.getElementById("deck-loading"),
     close: document.getElementById("deck-close"),
@@ -189,6 +190,12 @@
     el.sub.textContent = [formatBytes(file.size), uploadedLabel(file)].filter(Boolean).join(" · ");
     el.open.href = officeUrl(OFFICE_VIEW, file);
 
+    // Direct .pptx download from the public deck route. `download` forces a save
+    // (same origin) and names the file after the deck, even though the viewer
+    // gets an inline response.
+    el.download.href = deckPath(file);
+    el.download.setAttribute("download", file.name);
+
     // Drop any previous deck and restore the loading text.
     for (const old of el.stage.querySelectorAll("iframe")) old.remove();
     if (el.loading) {
@@ -251,6 +258,8 @@
     }
 
     el.open.href = "#";
+    el.download.href = "#";
+    el.download.removeAttribute("download");
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus({ preventScroll: true });
   }
 

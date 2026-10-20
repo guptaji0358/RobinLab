@@ -83,6 +83,9 @@ itself and needs a public URL ending in `.pptx`. That route serves files from
   ratio (nothing is cropped).
 - `/presentations` embeds `view.officeapps.live.com`; nothing is rendered by this
   repo, so there is no JS bundle to maintain. Microsoft caches the file briefly.
+- Decks are meant to be shared: the viewer has a **Download .pptx** button and the
+  page invites visitors to email Robin for a new deck. The `/decks/*` route is
+  therefore public by design.
 - Office Web Viewer needs the deck to be publicly reachable — it cannot see
   localhost, so the embed only works on the deployed site (or a public tunnel).
 - Layout is responsive from 320 px up; the nav wraps to a second row below 560 px.

@@ -11,7 +11,9 @@ PowerPoint decks are **not** shown in the Collection. They live on their own pag
 **Microsoft Office Web Viewer** (`view.officeapps.live.com`). Microsoft's servers
 download the file themselves, so decks are also exposed on a clean public route,
 `/decks/<name>.pptx` (`functions/decks/[[path]].js`), which serves only files from
-`presentations/`.
+`presentations/`. That route is intentionally public: the decks are built for
+college students and the page offers a direct `.pptx` download, plus an email link
+for requesting a new deck.
 
 It is **view-only by design**. Every user can browse and enlarge images, but the
 Download button is disabled (tooltip: *"Downloads unlock when payments are added"*)
