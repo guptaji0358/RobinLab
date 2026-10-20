@@ -21,6 +21,15 @@
 const BUCKET_ID = "robinlabdev/robinvault";
 const HF = "https://huggingface.co";
 
+// Types the proxy is willing to stream to the browser. Images power the
+// Collection grid; .pptx decks are fetched by the presentations page and
+// rendered client-side by the vendored `pptx-preview` bundle.
+const PPTX_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+
+function isServable(contentType) {
+  return contentType.startsWith("image/") || contentType === PPTX_TYPE;
+}
+
 // How long a cached bucket listing stays valid (ms). Keeps browsing snappy and
 // avoids hammering the Hub on every image request.
 const LISTING_TTL_MS = 60_000;
@@ -165,8 +174,8 @@ async function handleFile(env, request, url) {
   }
 
   if (!entry) return json({ error: "not_found", message: "No such file in this bucket." }, 404);
-  if (!entry.contentType.startsWith("image/")) {
-    return json({ error: "unsupported_type", message: "Only previewable images can be served." }, 415);
+  if (!isServable(entry.contentType)) {
+    return json({ error: "unsupported_type", message: "Only images and PowerPoint decks can be served." }, 415);
   }
 
   // `encodeURIComponent` encodes "/" as %2F, which the Hub's resolve route accepts.

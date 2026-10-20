@@ -9,8 +9,10 @@ package manager — the only build step is the project mirror described below.
 ```
 root/               main site — the ONLY directory Cloudflare publishes
   index.html        project hub (links into projects/<name>/)
-  collection.html   private Hugging Face bucket viewer
+  collection.html   artwork vault — one section ("pack") per bucket folder
+  presentations.html  .pptx decks rendered in the browser
   css/ js/ assets/  site styles, scripts, and the icons used on the hub
+  vendor/           third-party browser bundles (pptx-preview), self-hosted
   projects/         GENERATED mirror of ../projects — git-ignored, never edit
 projects/           source of truth for every project
   CodeLens/
@@ -56,6 +58,28 @@ and before every local preview (`dev_server.py` runs it automatically).
 
 No other file needs to change: the mirror and deploy pick the folder up
 automatically.
+
+## Pages
+
+Three routes, all served from `root/`:
+
+| Route | File | Content |
+| --- | --- | --- |
+| `/` | `index.html` | Project hub, activity, about, contact |
+| `/collection` | `collection.html` | Images from the bucket, grouped by folder ("packs") |
+| `/presentations` | `presentations.html` | `.pptx` decks, rendered client-side |
+
+Both vault pages read `/api/collection/files` (the Pages Function in
+`functions/`, or `dev_server.py` locally) and load bytes through
+`/api/collection/file?path=…`. The proxy serves **images** and **`.pptx`** only;
+everything else is rejected with `415`.
+
+- Collection shows images only — presentations never appear there.
+- Each bucket folder becomes one pack section, images keep their real aspect
+  ratio (nothing is cropped).
+- `/presentations` lazily loads `vendor/pptx-preview.umd.js` (≈1.3 MB) the first
+  time a deck is opened, so it costs nothing on other pages.
+- Layout is responsive from 320 px up; the nav wraps to a second row below 560 px.
 
 ## Running locally
 

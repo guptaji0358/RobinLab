@@ -3,6 +3,13 @@
 The **Collection** page (`root/collection.html`) lists and previews the artwork in the
 private Hugging Face bucket **`robinlabdev/robinvault`**.
 
+Each bucket folder becomes one **pack**: a titled section with its images shown at their
+real aspect ratio (never cropped to squares). Only images appear here.
+
+PowerPoint decks are **not** shown in the Collection. They live on their own page,
+`/presentations` (`root/presentations.html`), which fetches the same `.pptx` files through
+the same proxy and renders them client-side with the vendored `pptx-preview` bundle.
+
 It is **view-only by design**. Every user can browse and enlarge images, but the
 Download button is disabled (tooltip: *"Downloads unlock when payments are added"*)
 until a payment flow exists.
@@ -45,7 +52,7 @@ Both endpoints are served by `functions/api/collection/[[path]].js` in productio
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/collection/files` | JSON manifest: `bucket`, `count`, `totalSize`, `folders`, `files[]` |
-| `GET` | `/api/collection/file?path=<encoded>` | Streams one file's bytes, always `Content-Disposition: inline` |
+| `GET` | `/api/collection/file?path=<encoded>` | Streams one file's bytes (`image/*` or `.pptx`), always `Content-Disposition: inline` |
 
 Each entry in `files[]` looks like:
 
@@ -198,7 +205,8 @@ you which DNS records to create.
   only — never to the CDN.
 - `path` is validated against the live bucket listing, so the endpoint cannot be used
   as an open proxy or to fetch arbitrary paths. This includes `_thumbs/` paths.
-- Only `image/*` content types are served.
+- Only `image/*` and PowerPoint (`.pptx`) content types are served. Everything else
+  returns `415`.
 - Non-`GET`/`HEAD` methods are rejected with `405`.
 - `.dev.vars` and `.env*` are git-ignored. **Never commit a token.**
 - Consider replacing the broad OAuth token with a **read-only, bucket-scoped** token at
