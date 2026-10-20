@@ -374,6 +374,13 @@ a { color: inherit; text-decoration: none; }
 
 .contact-link .icon { color: var(--accent); }
 
+/* Gmail / Outlook brand marks carry their own fill, so they only need a
+   slightly larger box than the line icons. */
+.contact-link .brand-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .inline-link:hover { border-bottom-color: var(--accent); }
 
 /* Footer */
