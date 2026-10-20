@@ -10,10 +10,14 @@ as the Cloudflare Pages Function in `functions/api/collection/[[path]].js`:
 That means the Collection page behaves identically locally and in production.
 The Hugging Face token stays on the server; it is never sent to the browser.
 
+On startup it mirrors `projects/` into `root/projects/` (the same copy Cloudflare
+Pages gets from `tools/sync_projects.py`), so project links work locally too.
+
 Usage:
     python dev_server.py                # http://localhost:5500
     python dev_server.py --port 8080
     python dev_server.py --dir root
+    python dev_server.py --no-sync      # skip the projects/ mirror step
 
 The token is read from, in order:
     1. the HF_TOKEN environment variable
@@ -330,11 +334,28 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=5500)
     parser.add_argument("--dir", default=os.path.join(project_root, "root"))
+    parser.add_argument(
+        "--no-sync",
+        action="store_true",
+        help="skip mirroring projects/ into root/projects/ before serving",
+    )
     args = parser.parse_args()
 
     if not os.path.isdir(args.dir):
         print(f"error: static directory not found: {args.dir}", file=sys.stderr)
         return 1
+
+    if not args.no_sync:
+        # Same mirror Cloudflare Pages runs as its build command, so local
+        # /projects/... links behave exactly like production.
+        sys.path.insert(0, os.path.join(project_root, "tools"))
+        import sync_projects  # noqa: PLC0415 - local tool, imported lazily
+
+        copied, removed, unchanged = sync_projects.sync()
+        if copied or removed:
+            print(f"projects: synced {copied} copied, {removed} removed, {unchanged} unchanged")
+        else:
+            print(f"projects: up to date ({unchanged} files)")
 
     Handler.directory = os.path.abspath(args.dir)
     Handler.token = load_token(project_root)

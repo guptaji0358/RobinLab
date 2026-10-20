@@ -4,7 +4,7 @@
     {
       "name": "robinlab-root",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5500", "--directory", "root"],
+      "runtimeArgs": ["dev_server.py", "--port", "5500"],
       "port": 5500
     },
     {

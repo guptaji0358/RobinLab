@@ -3,6 +3,13 @@
 # Cloudflare only RENDERS here: it serves the static site from `root/` and runs
 # the Function in `functions/` to proxy bucket bytes on demand.
 # Storage stays in the Hugging Face bucket (robinlabdev/robinvault).
+#
+# Project sources live in `projects/`, outside the published directory. The
+# Pages build command must therefore be:
+#
+#     python3 tools/sync_projects.py
+#
+# which mirrors `projects/` into `root/projects/` before the upload.
 
 name = "robinlab"
 compatibility_date = "2026-10-19"

@@ -108,10 +108,12 @@ Originals are **never** modified or deleted. `--prune` only ever removes paths i
 
 ## Running locally
 
-The stock `python -m http.server` (see the `robinlab-root` launch config) serves static
-files only — it has no API, so the Collection page will show a setup message.
+A plain `python -m http.server 5500 --directory root` serves the static pages but has no
+`/api/collection/*` proxy and does not refresh the project mirror in `root/projects/` —
+run `python tools/sync_projects.py` first if you use it.
 
-Use the bundled dev server instead. It serves `root/` **and** the bucket proxy:
+Use the bundled dev server instead. It serves `root/`, mirrors `projects/` into
+`root/projects/`, **and** runs the bucket proxy:
 
 ```powershell
 # 1. Create a token at https://huggingface.co/settings/tokens (a Read token is enough)
@@ -125,10 +127,11 @@ python dev_server.py
 
 Then open <http://127.0.0.1:5500/collection>.
 
-Options: `python dev_server.py --port 8080 --host 127.0.0.1 --dir root`.
+Options: `python dev_server.py --port 8080 --host 127.0.0.1 --dir root --no-sync`.
 
-There is also a **`robinlab-collection`** launch configuration in `.claude/launch.json`
-that starts this server on port `5501`.
+`.claude/launch.json` has two configurations: **`robinlab-root`** (port `5500`) and
+**`robinlab-collection`** (port `5501`) — both run this server, so the project mirror and
+the API are always available.
 
 > This is a **development convenience only** — production runs on Cloudflare Pages.
 
@@ -143,12 +146,20 @@ that starts this server on port `5501`.
 | Host | Cloudflare Pages |
 | Project | `robinlab` |
 | Production URL | <https://robinlab.pages.dev> |
+| Source | GitHub repo, Cloudflare builds on push |
+| Build command | `python3 tools/sync_projects.py` |
+| Build output directory | `root` |
 | Config | `wrangler.toml` (`pages_build_output_dir = "root"`) |
 | Secret | `HF_TOKEN` (encrypted, Pages → Settings → Environment variables) |
 
-Deploy with:
+The build command is required. Projects live in `projects/`, outside the published
+directory, so `tools/sync_projects.py` copies them into `root/projects/` during the
+build. Without it every `/projects/<name>/` link 404s.
+
+Deploy manually with:
 
 ```powershell
+python tools/sync_projects.py
 npx wrangler pages deploy root --project-name=robinlab --branch=master
 ```
 
