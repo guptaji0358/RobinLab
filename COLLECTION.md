@@ -156,6 +156,12 @@ The build command is required. Projects live in `projects/`, outside the publish
 directory, so `tools/sync_projects.py` copies them into `root/projects/` during the
 build. Without it every `/projects/<name>/` link 404s.
 
+Only a **Git-connected** Pages project exposes a build command (Settings → Builds &
+deployments → Build configurations). A **Direct Upload** project — the kind created by
+`wrangler pages deploy` — has no build step and no build command field, and cannot be
+converted in place; create a new Git-connected project from
+<https://github.com/guptaji0358/RobinLab> instead.
+
 Deploy manually with:
 
 ```powershell

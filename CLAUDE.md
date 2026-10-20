@@ -85,6 +85,16 @@ The build command is mandatory: without it `root/projects/` is empty and every
 project link 404s. `wrangler.toml` pins the output directory, and the Function
 in `functions/` is picked up from the repo root automatically.
 
+Repository: <https://github.com/guptaji0358/RobinLab> (branch `master`).
+
+> **Pages project type matters.** Only a *Git-connected* Pages project has
+> Settings → Builds & deployments → Build configurations. A *Direct Upload*
+> project (created by `wrangler pages deploy`) has no build step at all, so no
+> build command field ever appears. Direct Upload projects **cannot** be
+> converted — create a new Git-connected project (delete the old one first if you
+> want to keep the `robinlab` name and the `robinlab.pages.dev` URL), then re-add
+> the `HF_TOKEN` variable.
+
 Manual deploy instead:
 
 ```powershell
