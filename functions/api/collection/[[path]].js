@@ -161,7 +161,7 @@ async function handleList(env) {
  * `allow` narrows what a given route may expose: the Collection endpoint accepts
  * images and decks, while `/decks/*` serves PowerPoint files only.
  */
-export async function streamBucketFile(env, request, path, { allow = isServable } = {}) {
+export async function streamBucketFile(env, request, path, { allow = (entry) => isServable(entry.contentType) } = {}) {
   const missing = requireToken(env);
   if (missing) return missing;
 
