@@ -1,28 +1,29 @@
 /**
- * Presentations page — .pptx decks from the RobinLab bucket, rendered in the
- * browser by the vendored `pptx-preview` bundle (`vendor/pptx-preview.umd.js`).
+ * Presentations page — .pptx decks from the RobinLab bucket.
  *
- * The bundle is ~1.3 MB, so it is loaded lazily the first time a deck is opened
- * instead of on page load. Decks are fetched through the same server-side proxy
- * as the Collection (`/api/collection/file?path=…`); the Hugging Face token never
- * reaches the browser.
+ * Rendering is delegated to **Microsoft Office Web Viewer**
+ * (`view.officeapps.live.com`), the same hosted viewer Microsoft provides for
+ * PowerPoint files on the web. Microsoft's servers download the deck themselves,
+ * so the file has to be reachable at a public URL — which is why decks are
+ * exposed on the clean `/decks/<name>.pptx` route (see
+ * `functions/decks/[[path]].js`) instead of the token-guarded bucket endpoint.
  *
- * Only files the proxy can serve — images and .pptx — appear here. Everything
- * else in the bucket is ignored.
+ * The Hugging Face token still never reaches the browser: `/decks/*` streams the
+ * bytes server-side, exactly like the Collection proxy.
+ *
+ * Only `.pptx` files listed in the bucket appear here; images stay on
+ * `/collection`.
  */
 (() => {
   "use strict";
 
   const LIST_ENDPOINT = "/api/collection/files";
-  const LIB_URL = "vendor/pptx-preview.umd.js";
   const PPTX_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  const DECK_PREFIX = "presentations/";
 
-  // Logical slide surface. The whole deck is scaled to fit the viewport with a
-  // CSS transform, so slides stay vector-crisp at every screen size. A deck can
-  // be 16:9, 4:3 or anything else — the real slide box is measured after render
-  // (see `measureSlides`) and these are only the fallback/initial values.
-  const SLIDE_W = 1280;
-  const SLIDE_H = 720;
+  // `embed.aspx` renders inside an iframe; `view.aspx` is the full-page viewer.
+  const OFFICE_EMBED = "https://view.officeapps.live.com/op/embed.aspx";
+  const OFFICE_VIEW = "https://view.officeapps.live.com/op/view.aspx";
 
   const el = {
     grid: document.getElementById("pr-grid"),
@@ -32,24 +33,15 @@
     viewer: document.getElementById("deck-viewer"),
     name: document.getElementById("deck-name"),
     sub: document.getElementById("deck-sub"),
-    counter: document.getElementById("deck-counter"),
-    status: document.getElementById("deck-status"),
+    open: document.getElementById("deck-open"),
     stage: document.getElementById("deck-stage"),
+    loading: document.getElementById("deck-loading"),
     close: document.getElementById("deck-close"),
-    prev: document.getElementById("deck-prev"),
-    next: document.getElementById("deck-next"),
   };
 
-  const deckCache = new Map();
   let decks = [];
-  let libPromise = null;
-  let scroller = null;
-  let slides = [];
-  let slideW = SLIDE_W;
-  let slideH = SLIDE_H;
-  let slideIndex = 0;
   let lastFocused = null;
-  let rafPending = false;
+  let slowTimer = null;
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                             */
@@ -77,6 +69,24 @@
 
   function isDeck(file) {
     return (file.contentType || "") === PPTX_TYPE || /\.pptx$/i.test(file.name || "");
+  }
+
+  /** Public path Microsoft can fetch, e.g. /decks/NumberSystem.pptx */
+  function deckPath(file) {
+    const relative = file.path.startsWith(DECK_PREFIX) ? file.path.slice(DECK_PREFIX.length) : file.name;
+    return `/decks/${relative.split("/").map(encodeURIComponent).join("/")}`;
+  }
+
+  function absoluteDeckUrl(file) {
+    return new URL(deckPath(file), window.location.href).href;
+  }
+
+  /**
+   * Office Web Viewer URL. `src` must be fully percent-encoded — otherwise an
+   * `&` inside it would be read as a parameter of embed.aspx itself.
+   */
+  function officeUrl(base, file) {
+    return `${base}?src=${encodeURIComponent(absoluteDeckUrl(file))}&action=embedview&wdAllowInteractivity=False`;
   }
 
   function showState(kind, title, detail) {
@@ -134,8 +144,7 @@
 
     const meta = document.createElement("span");
     meta.className = "pr-card-meta";
-    const parts = [formatBytes(file.size), uploadedLabel(file)].filter(Boolean);
-    meta.textContent = parts.join(" · ");
+    meta.textContent = [formatBytes(file.size), uploadedLabel(file)].filter(Boolean).join(" · ");
 
     body.append(title, meta);
     card.append(art, body);
@@ -147,7 +156,11 @@
     el.grid.textContent = "";
 
     if (!decks.length) {
-      showState("empty", "No presentations yet.", "Add .pptx decks to the presentations/ folder in the bucket.");
+      showState(
+        "empty",
+        "No presentations yet.",
+        "Add .pptx decks to the presentations/ folder in the bucket.",
+      );
       el.stats.textContent = "";
       return;
     }
@@ -162,202 +175,82 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* Renderer loading                                                    */
-  /* ------------------------------------------------------------------ */
-
-  function loadLibrary() {
-    if (window.pptxPreview) return Promise.resolve(window.pptxPreview);
-    if (libPromise) return libPromise;
-
-    libPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = LIB_URL;
-      script.async = true;
-      script.onload = () => {
-        if (window.pptxPreview) resolve(window.pptxPreview);
-        else reject(new Error("Renderer loaded but did not register."));
-      };
-      script.onerror = () => reject(new Error("Could not load the presentation renderer."));
-      document.head.appendChild(script);
-    });
-
-    return libPromise;
-  }
-
-  function getDeckBytes(file) {
-    if (deckCache.has(file.path)) return Promise.resolve(deckCache.get(file.path));
-
-    return fetch(file.url, { headers: { Accept: "*/*" } }).then(async (response) => {
-      if (!response.ok) {
-        if (response.status === 415) {
-          throw new Error("The API refused this file type. Redeploy so the proxy allows .pptx (HTTP 415).");
-        }
-        throw new Error(`Could not fetch the deck (HTTP ${response.status}).`);
-      }
-      const buffer = await response.arrayBuffer();
-      deckCache.set(file.path, buffer);
-      return buffer;
-    });
-  }
-
-  /* ------------------------------------------------------------------ */
   /* Viewer                                                              */
   /* ------------------------------------------------------------------ */
 
-  function showDeckState(title, detail) {
-    const box = document.createElement("div");
-    box.className = "deck-state";
-    const heading = document.createElement("p");
-    heading.className = "deck-state-title";
-    heading.textContent = title;
-    box.appendChild(heading);
-    if (detail) {
-      const text = document.createElement("p");
-      text.className = "deck-state-detail";
-      text.textContent = detail;
-      box.appendChild(text);
-    }
-    el.stage.appendChild(box);
-    return box;
-  }
-
-  function clearDeckState() {
-    for (const box of el.stage.querySelectorAll(".deck-state")) box.remove();
-  }
-
-  function setNavEnabled() {
-    const many = slides.length > 1;
-    el.prev.disabled = !many || slideIndex <= 0;
-    el.next.disabled = !many || slideIndex >= slides.length - 1;
-  }
-
-  function goTo(index) {
-    if (!slides.length) return;
-    slideIndex = Math.max(0, Math.min(slides.length - 1, index));
-    if (scroller) scroller.scrollTop = slides[slideIndex].offsetTop;
-    el.counter.textContent = `${slideIndex + 1} / ${slides.length}`;
-    el.status.textContent = `Slide ${slideIndex + 1} of ${slides.length}`;
-    setNavEnabled();
-  }
-
-  // The renderer sizes each slide from the deck's own aspect ratio, so measure
-  // the first rendered slide rather than trusting the requested 16:9 box. The
-  // scroll viewport is then pinned to exactly one slide, which keeps
-  // "one slide per view" true for 4:3 decks too.
-  function measureSlides() {
-    const first = slides[0];
-    if (!first) return;
-    slideW = first.offsetWidth || SLIDE_W;
-    slideH = first.offsetHeight || SLIDE_H;
-    if (scroller) {
-      scroller.style.height = `${slideH}px`;
-      scroller.style.width = `${slideW}px`;
-    }
-  }
-
-  // Fit the fixed-size deck into the stage with a transform. Scaling (rather than
-  // re-rendering at a new size) keeps text sharp and slide navigation stable.
-  function fit() {
-    if (!scroller) return;
-    const { width, height } = el.stage.getBoundingClientRect();
-    if (!width || !height) return;
-    const scale = Math.min(width / slideW, height / slideH);
-
-    scroller.style.position = "absolute";
-    scroller.style.margin = "0";
-    scroller.style.transformOrigin = "top left";
-    scroller.style.transform = `scale(${scale})`;
-    scroller.style.left = `${Math.max(0, (width - slideW * scale) / 2)}px`;
-    scroller.style.top = `${Math.max(0, (height - slideH * scale) / 2)}px`;
-  }
-
-  function syncIndexFromScroll() {
-    if (rafPending || !scroller || !slides.length) return;
-    rafPending = true;
-    requestAnimationFrame(() => {
-      rafPending = false;
-      const top = scroller.scrollTop;
-      let nearest = 0;
-      let best = Infinity;
-      slides.forEach((slide, index) => {
-        const distance = Math.abs(slide.offsetTop - top);
-        if (distance < best) {
-          best = distance;
-          nearest = index;
-        }
-      });
-      if (nearest !== slideIndex) {
-        slideIndex = nearest;
-        el.counter.textContent = `${slideIndex + 1} / ${slides.length}`;
-        el.status.textContent = `Slide ${slideIndex + 1} of ${slides.length}`;
-        setNavEnabled();
-      }
-    });
-  }
-
-  async function openDeck(file) {
+  function openDeck(file) {
     lastFocused = document.activeElement;
+
     el.viewer.hidden = false;
     document.body.classList.add("deck-open");
+
     el.name.textContent = deckTitle(file);
     el.name.title = file.path;
     el.sub.textContent = [formatBytes(file.size), uploadedLabel(file)].filter(Boolean).join(" · ");
-    el.counter.textContent = "";
-    el.status.textContent = "Rendering…";
-    el.prev.disabled = true;
-    el.next.disabled = true;
+    el.open.href = officeUrl(OFFICE_VIEW, file);
 
-    scroller = null;
-    slides = [];
-    slideW = SLIDE_W;
-    slideH = SLIDE_H;
-    slideIndex = 0;
-    el.stage.querySelectorAll(".pptx-preview-wrapper, .pptx-preview-slide-wrapper, .deck-mount").forEach((node) => node.remove());
-    clearDeckState();
-
-    const loading = showDeckState("Rendering presentation…", "Fetching the deck and building slides.");
-    el.close.focus({ preventScroll: true });
-
-    try {
-      const [pptxPreview, buffer] = await Promise.all([loadLibrary(), getDeckBytes(file)]);
-
-      const mount = document.createElement("div");
-      mount.className = "deck-mount";
-      el.stage.appendChild(mount);
-
-      const preview = pptxPreview.init(mount, { width: SLIDE_W, height: SLIDE_H });
-      await preview.preview(buffer);
-
-      scroller = mount.querySelector(".pptx-preview-wrapper");
-      slides = Array.from(mount.querySelectorAll(".pptx-preview-slide-wrapper"));
-      if (!scroller || !slides.length) throw new Error("The deck contained no renderable slides.");
-
-      loading.remove();
-      scroller.addEventListener("scroll", syncIndexFromScroll, { passive: true });
-
-      measureSlides();
-      fit();
-      goTo(0);
-    } catch (err) {
-      loading.remove();
-      showDeckState("This deck could not be displayed.", err && err.message ? err.message : String(err));
-      el.status.textContent = "Failed to render";
-      console.error(err);
+    // Drop any previous deck and restore the loading text.
+    for (const old of el.stage.querySelectorAll("iframe")) old.remove();
+    if (el.loading) {
+      el.loading.hidden = false;
+      const detail = el.loading.querySelector(".deck-state-detail");
+      if (detail) detail.textContent = "Microsoft is fetching and rendering the deck.";
     }
+
+    const frame = document.createElement("iframe");
+    frame.className = "deck-frame";
+    frame.title = `${deckTitle(file)} — Microsoft PowerPoint viewer`;
+    frame.allowFullscreen = true;
+    frame.src = officeUrl(OFFICE_EMBED, file);
+
+    // The viewer runs on Microsoft's origin, so a failed file fetch cannot be
+    // detected from here. Hide the overlay once the viewer shell loads, and
+    // offer the full-page viewer if it is taking unusually long.
+    frame.addEventListener(
+      "load",
+      () => {
+        if (el.loading) el.loading.hidden = true;
+        if (slowTimer) {
+          clearTimeout(slowTimer);
+          slowTimer = null;
+        }
+      },
+      { once: true },
+    );
+
+    el.stage.appendChild(frame);
+
+    if (slowTimer) clearTimeout(slowTimer);
+    slowTimer = setTimeout(() => {
+      if (!el.loading || el.loading.hidden) return;
+      const detail = el.loading.querySelector(".deck-state-detail");
+      if (detail) {
+        detail.textContent =
+          "Still waiting on Microsoft. If the slides never appear, use “Open full view” above — the deck itself opens fine.";
+      }
+    }, 15000);
+
+    el.close.focus({ preventScroll: true });
   }
 
   function closeDeck() {
     if (el.viewer.hidden) return;
+
     el.viewer.hidden = true;
     document.body.classList.remove("deck-open");
-    el.stage
-      .querySelectorAll(".pptx-preview-wrapper, .pptx-preview-slide-wrapper, .deck-mount, .deck-state")
-      .forEach((node) => node.remove());
-    scroller = null;
-    slides = [];
-    slideW = SLIDE_W;
-    slideH = SLIDE_H;
-    slideIndex = 0;
+
+    // Clearing src stops the viewer and releases its network activity.
+    for (const frame of el.stage.querySelectorAll("iframe")) {
+      frame.src = "about:blank";
+      frame.remove();
+    }
+
+    if (slowTimer) {
+      clearTimeout(slowTimer);
+      slowTimer = null;
+    }
+
+    el.open.href = "#";
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus({ preventScroll: true });
   }
 
@@ -366,8 +259,6 @@
   /* ------------------------------------------------------------------ */
 
   el.close.addEventListener("click", closeDeck);
-  el.prev.addEventListener("click", () => goTo(slideIndex - 1));
-  el.next.addEventListener("click", () => goTo(slideIndex + 1));
   el.viewer.addEventListener("click", (event) => {
     if (event.target.hasAttribute("data-close")) closeDeck();
   });
@@ -375,16 +266,6 @@
   document.addEventListener("keydown", (event) => {
     if (el.viewer.hidden) return;
     if (event.key === "Escape") closeDeck();
-    else if (event.key === "ArrowLeft") goTo(slideIndex - 1);
-    else if (event.key === "ArrowRight" || event.key === " ") {
-      if (event.key === " ") event.preventDefault();
-      goTo(slideIndex + 1);
-    }
-  });
-
-  document.addEventListener("fullscreenchange", fit);
-  window.addEventListener("resize", () => {
-    if (!el.viewer.hidden) fit();
   });
 
   /* ------------------------------------------------------------------ */
@@ -409,7 +290,9 @@
 
       decks = (Array.isArray(payload.files) ? payload.files : [])
         .filter(isDeck)
-        .sort((a, b) => deckTitle(a).localeCompare(deckTitle(b), undefined, { numeric: true, sensitivity: "base" }));
+        .sort((a, b) =>
+          deckTitle(a).localeCompare(deckTitle(b), undefined, { numeric: true, sensitivity: "base" }),
+        );
 
       render();
     } catch (err) {

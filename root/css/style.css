@@ -1095,11 +1095,21 @@ body.deck-open { overflow: hidden; }
   flex-shrink: 0;
 }
 
-.deck-counter {
-  font-family: var(--font-mono);
-  font-size: 12px;
+.deck-open {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
   color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
+
+.deck-open:hover { border-color: #3a4048; color: var(--text); }
 
 .deck-close {
   display: inline-flex;
@@ -1126,16 +1136,19 @@ body.deck-open { overflow: hidden; }
   background: #08090c;
 }
 
-.deck-mount { position: absolute; inset: 0; }
-
-/* The renderer injects its own next-slide button and pagination; this viewer
-   provides a single, consistent set of controls instead. */
-.pptx-preview-wrapper-next,
-.pptx-preview-wrapper-pagination { display: none !important; }
+.deck-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #0e1116;
+}
 
 .deck-state {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1144,37 +1157,15 @@ body.deck-open { overflow: hidden; }
   padding: 32px;
   text-align: center;
   color: var(--text-muted);
+  background: #08090c;
 }
+
+/* `display: flex` above would otherwise override the default hidden state. */
+.deck-state[hidden] { display: none; }
 
 .deck-state-title { margin: 0; color: var(--text); font-size: 15px; }
 
 .deck-state-detail { margin: 0; font-size: 13px; max-width: 460px; }
-
-.deck-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: rgba(18, 21, 26, 0.9);
-  color: var(--text);
-  cursor: pointer;
-  transition: border-color 0.15s ease, opacity 0.15s ease;
-}
-
-.deck-nav:hover:not(:disabled) { border-color: #3a4048; }
-
-.deck-nav:disabled { opacity: 0.25; cursor: default; }
-
-.deck-prev { left: 14px; }
-.deck-next { right: 14px; }
 
 .deck-foot {
   display: flex;
@@ -1240,7 +1231,6 @@ body.deck-open { overflow: hidden; }
   .lb-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
   .deck-bar { padding: 12px 14px; }
   .deck-name { font-size: 13.5px; }
-  .deck-nav { width: 38px; height: 38px; }
   .deck-foot { padding: 8px 14px; }
   .deck-hint { display: none; }
 }

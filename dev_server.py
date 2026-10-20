@@ -6,6 +6,7 @@ as the Cloudflare Pages Function in `functions/api/collection/[[path]].js`:
 
     GET /api/collection/files            -> JSON manifest of the bucket
     GET /api/collection/file?path=<enc>  -> streams one file's bytes (inline preview)
+    GET /decks/<name>.pptx               -> public deck URL for the Office Web Viewer
 
 That means the Collection page behaves identically locally and in production.
 The Hugging Face token stays on the server; it is never sent to the browser.
@@ -216,6 +217,17 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _handle_api(self, parsed: urllib.parse.SplitResult) -> bool:
         route = parsed.path.rstrip("/") or "/"
+
+        # Public deck route used by the Office Web Viewer in production
+        # (`functions/decks/[[path]].js`). Mirrored locally for parity.
+        if route.startswith("/decks/"):
+            if self.token is None:
+                self._not_configured()
+                return True
+            name = urllib.parse.unquote(parsed.path[len("/decks/"):])
+            self._serve_file("presentations/" + name, decks_only=True)
+            return True
+
         if not route.startswith("/api/collection"):
             return False
 
@@ -224,7 +236,8 @@ class Handler(SimpleHTTPRequestHandler):
             return True
 
         if route.endswith("/file"):
-            self._serve_file(parsed)
+            params = urllib.parse.parse_qs(parsed.query)
+            self._serve_file((params.get("path") or [""])[0])
         else:
             self._serve_listing()
         return True
@@ -262,9 +275,7 @@ class Handler(SimpleHTTPRequestHandler):
             cache="public, max-age=60",
         )
 
-    def _serve_file(self, parsed: urllib.parse.SplitResult) -> None:
-        params = urllib.parse.parse_qs(parsed.query)
-        path = (params.get("path") or [""])[0]
+    def _serve_file(self, path: str, decks_only: bool = False) -> None:
         if not path:
             self._send_json({"error": "missing_path", "message": "A `path` query parameter is required."}, 400)
             return
@@ -282,7 +293,7 @@ class Handler(SimpleHTTPRequestHandler):
         if entry is None:
             self._send_json({"error": "not_found", "message": "No such file in this bucket."}, 404)
             return
-        if not is_servable(entry["contentType"]):
+        if not is_servable(entry["contentType"]) or (decks_only and entry["contentType"] != PPTX_TYPE):
             self._send_json({"error": "unsupported_type", "message": "Only images and PowerPoint decks can be served."}, 415)
             return
 

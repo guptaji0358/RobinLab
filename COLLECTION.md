@@ -7,8 +7,11 @@ Each bucket folder becomes one **pack**: a titled section with its images shown 
 real aspect ratio (never cropped to squares). Only images appear here.
 
 PowerPoint decks are **not** shown in the Collection. They live on their own page,
-`/presentations` (`root/presentations.html`), which fetches the same `.pptx` files through
-the same proxy and renders them client-side with the vendored `pptx-preview` bundle.
+`/presentations` (`root/presentations.html`), which embeds the deck with
+**Microsoft Office Web Viewer** (`view.officeapps.live.com`). Microsoft's servers
+download the file themselves, so decks are also exposed on a clean public route,
+`/decks/<name>.pptx` (`functions/decks/[[path]].js`), which serves only files from
+`presentations/`.
 
 It is **view-only by design**. Every user can browse and enlarge images, but the
 Download button is disabled (tooltip: *"Downloads unlock when payments are added"*)
@@ -53,6 +56,7 @@ Both endpoints are served by `functions/api/collection/[[path]].js` in productio
 | --- | --- | --- |
 | `GET` | `/api/collection/files` | JSON manifest: `bucket`, `count`, `totalSize`, `folders`, `files[]` |
 | `GET` | `/api/collection/file?path=<encoded>` | Streams one file's bytes (`image/*` or `.pptx`), always `Content-Disposition: inline` |
+| `GET` | `/decks/<name>.pptx` | Public deck URL for Office Web Viewer; serves `presentations/<name>.pptx` only |
 
 Each entry in `files[]` looks like:
 

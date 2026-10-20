@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Presentations — RobinLab</title>
-<meta name="description" content="Slide decks from the RobinLab vault, rendered in the browser.">
+<meta name="description" content="Slide decks from the RobinLab vault, rendered by Microsoft Office Web Viewer.">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -39,8 +39,8 @@
     <p class="eyebrow">robinvault</p>
     <h1>Presentations</h1>
     <p class="hero-sub">
-      Slide decks from the vault, rendered right here in the browser. Open one to
-      read it full screen — no download, no external viewer.
+      Slide decks from the vault, opened with Microsoft Office Web Viewer. Pick a
+      deck to read it full screen — no download, no PowerPoint install.
     </p>
   </section>
 
@@ -56,11 +56,11 @@
   <div class="container footer-inner">
     <span>&copy; <span id="year"></span> RobinLab</span>
     <span class="footer-sep">&middot;</span>
-    <span>robinvault</span>
+    <span>PowerPoint viewer by Microsoft</span>
   </div>
 </footer>
 
-<!-- Deck viewer -->
+<!-- Deck viewer: an iframe around Microsoft's hosted viewer. -->
 <div class="deck-viewer" id="deck-viewer" hidden>
   <div class="deck-backdrop" data-close></div>
 
@@ -71,7 +71,7 @@
         <span class="deck-sub" id="deck-sub"></span>
       </div>
       <div class="deck-actions">
-        <span class="deck-counter" id="deck-counter"></span>
+        <a class="deck-open" id="deck-open" href="#" target="_blank" rel="noopener">Open full view</a>
         <button class="deck-close" id="deck-close" type="button" aria-label="Close presentation">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M6 6l12 12M18 6L6 18"/>
@@ -81,21 +81,15 @@
     </header>
 
     <div class="deck-stage" id="deck-stage">
-      <button class="deck-nav deck-prev" id="deck-prev" type="button" aria-label="Previous slide">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M15 6l-6 6 6 6"/>
-        </svg>
-      </button>
-      <button class="deck-nav deck-next" id="deck-next" type="button" aria-label="Next slide">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 6l6 6-6 6"/>
-        </svg>
-      </button>
+      <div class="deck-state" id="deck-loading">
+        <p class="deck-state-title">Loading presentation…</p>
+        <p class="deck-state-detail">Microsoft is fetching and rendering the deck.</p>
+      </div>
     </div>
 
     <footer class="deck-foot">
-      <span id="deck-status">Rendering…</span>
-      <span class="deck-hint">← → to change slides · Esc to close</span>
+      <span>Microsoft Office Web Viewer</span>
+      <span class="deck-hint">Esc to close</span>
     </footer>
   </div>
 </div>

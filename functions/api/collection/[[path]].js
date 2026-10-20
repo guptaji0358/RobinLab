@@ -22,9 +22,9 @@ const BUCKET_ID = "robinlabdev/robinvault";
 const HF = "https://huggingface.co";
 
 // Types the proxy is willing to stream to the browser. Images power the
-// Collection grid; .pptx decks are fetched by the presentations page and
-// rendered client-side by the vendored `pptx-preview` bundle.
-const PPTX_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+// Collection grid; .pptx decks are handed to the Office Web Viewer (see
+// `functions/decks/[[path]].js`), which fetches the file from a public URL.
+export const PPTX_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 function isServable(contentType) {
   return contentType.startsWith("image/") || contentType === PPTX_TYPE;
@@ -155,12 +155,17 @@ async function handleList(env) {
   }
 }
 
-async function handleFile(env, request, url) {
+/**
+ * Stream one bucket file, but only if it exists in the bucket listing.
+ *
+ * `allow` narrows what a given route may expose: the Collection endpoint accepts
+ * images and decks, while `/decks/*` serves PowerPoint files only.
+ */
+export async function streamBucketFile(env, request, path, { allow = isServable } = {}) {
   const missing = requireToken(env);
   if (missing) return missing;
 
-  const path = url.searchParams.get("path");
-  if (!path) return json({ error: "missing_path", message: "A `path` query parameter is required." }, 400);
+  if (!path) return json({ error: "missing_path", message: "A file path is required." }, 400);
 
   // Only serve files that actually exist in the bucket. The listing also tells us
   // the true content type, so a crafted `path` cannot pull arbitrary content.
@@ -174,7 +179,7 @@ async function handleFile(env, request, url) {
   }
 
   if (!entry) return json({ error: "not_found", message: "No such file in this bucket." }, 404);
-  if (!isServable(entry.contentType)) {
+  if (!allow(entry)) {
     return json({ error: "unsupported_type", message: "Only images and PowerPoint decks can be served." }, 415);
   }
 
@@ -211,6 +216,10 @@ async function handleFile(env, request, url) {
 
   if (request.method === "HEAD") return new Response(null, { status: 200, headers });
   return new Response(upstream.body, { status: 200, headers });
+}
+
+function handleFile(env, request, url) {
+  return streamBucketFile(env, request, url.searchParams.get("path"));
 }
 
 export async function onRequest({ request, env }) {

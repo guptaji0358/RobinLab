@@ -10,9 +10,8 @@ package manager — the only build step is the project mirror described below.
 root/               main site — the ONLY directory Cloudflare publishes
   index.html        project hub (links into projects/<name>/)
   collection.html   artwork vault — one section ("pack") per bucket folder
-  presentations.html  .pptx decks rendered in the browser
+  presentations.html  .pptx decks, embedded via Microsoft Office Web Viewer
   css/ js/ assets/  site styles, scripts, and the icons used on the hub
-  vendor/           third-party browser bundles (pptx-preview), self-hosted
   projects/         GENERATED mirror of ../projects — git-ignored, never edit
 projects/           source of truth for every project
   CodeLens/
@@ -67,18 +66,25 @@ Three routes, all served from `root/`:
 | --- | --- | --- |
 | `/` | `index.html` | Project hub, activity, about, contact |
 | `/collection` | `collection.html` | Images from the bucket, grouped by folder ("packs") |
-| `/presentations` | `presentations.html` | `.pptx` decks, rendered client-side |
+| `/presentations` | `presentations.html` | `.pptx` decks, embedded via Microsoft Office Web Viewer |
 
 Both vault pages read `/api/collection/files` (the Pages Function in
-`functions/`, or `dev_server.py` locally) and load bytes through
-`/api/collection/file?path=…`. The proxy serves **images** and **`.pptx`** only;
+`functions/`, or `dev_server.py` locally). Images load through
+`/api/collection/file?path=…`; the proxy serves **images** and **`.pptx`** only,
 everything else is rejected with `415`.
+
+Decks also have a clean public route, `/decks/<name>.pptx`
+(`functions/decks/[[path]].js`), because Microsoft's viewer downloads the file
+itself and needs a public URL ending in `.pptx`. That route serves files from
+`presentations/` only; the Hugging Face token stays server-side either way.
 
 - Collection shows images only — presentations never appear there.
 - Each bucket folder becomes one pack section, images keep their real aspect
   ratio (nothing is cropped).
-- `/presentations` lazily loads `vendor/pptx-preview.umd.js` (≈1.3 MB) the first
-  time a deck is opened, so it costs nothing on other pages.
+- `/presentations` embeds `view.officeapps.live.com`; nothing is rendered by this
+  repo, so there is no JS bundle to maintain. Microsoft caches the file briefly.
+- Office Web Viewer needs the deck to be publicly reachable — it cannot see
+  localhost, so the embed only works on the deployed site (or a public tunnel).
 - Layout is responsive from 320 px up; the nav wraps to a second row below 560 px.
 
 ## Running locally
