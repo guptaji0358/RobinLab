@@ -472,39 +472,15 @@ a { color: inherit; text-decoration: none; }
 
 .about-block a:hover { text-decoration: underline; }
 
-.about-steps-intro {
-  margin: 20px 0 12px !important;
-  color: var(--text) !important;
-  font-size: 13.5px !important;
-  font-weight: 600;
-}
-
-.about-steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.about-step {
-  padding: 14px 15px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.about-step-head {
+.about-subhead {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-bottom: 7px;
+  margin: 20px 0 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
 }
-
-.about-step-head h4 { margin: 0; font-size: 13.5px; }
-
-.about-step p { margin: 0; font-size: 13px; line-height: 1.55; }
 
 .about-stack {
   display: grid;
