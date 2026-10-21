@@ -22,6 +22,7 @@ functions/          Cloudflare Pages Function: /api/collection/* proxy
 tools/
   sync_projects.py  mirrors projects/ → root/projects/
   make_thumbs.py    bucket thumbnail generator
+  make_icons.py     favicon / manifest icon set from the studio logo
 dev_server.py       local server for root/ + the collection API
 wrangler.toml       Cloudflare Pages config (pages_build_output_dir = "root")
 ```
@@ -72,6 +73,25 @@ The footer identity is the same on all three pages — **Robin Gupta Studios /
 RGS™ / Built & maintained by Robin Gupta / Copyright © <year> Robin Gupta** —
 plus `<meta name="author|publisher|copyright">` in each `<head>`. Change all
 three together; `index.html` also carries the Organization JSON-LD block.
+
+### Site icons
+
+The tab icon is the studio emblem, committed to `root/assets/` — the site never
+points at a file outside the repo. All three pages link the same set (plus
+`<meta name="theme-color" content="#0b0d10">`):
+
+| File | Used for |
+| --- | --- |
+| `assets/favicon.ico` | browser tab — 16/32/48/64, emblem zoomed in so it reads small |
+| `assets/robinlab-icon-192.png` | Android / PWA (192×192) |
+| `assets/apple-touch-icon.png` | iOS home screen (180×180, opaque) |
+| `assets/robinlab-mark.png` | PWA 512×512 (`site.webmanifest`) |
+| `assets/robinlab-logo.png` | the full logo with wordmark — `logo` in the JSON-LD |
+
+`python tools/make_icons.py` regenerates them from `root/assets/robinlab-logo.png`:
+it keeps only the emblem block (a wordmark is unreadable at 16–48 px), centres
+it on the artwork's own background and feathers the join. Pass `--source` to read
+a different logo, or `--install-logo` to also refresh `robinlab-logo.png`.
 
 Both vault pages read `/api/collection/files` (the Pages Function in
 `functions/`, or `dev_server.py` locally). Images load through
