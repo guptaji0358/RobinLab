@@ -58,6 +58,8 @@ Both endpoints are served by `functions/api/collection/[[path]].js` in productio
 | --- | --- | --- |
 | `GET` | `/api/collection/files` | JSON manifest: `bucket`, `count`, `totalSize`, `folders`, `files[]` |
 | `GET` | `/api/collection/file?path=<encoded>` | Streams one file's bytes (`image/*` or `.pptx`), always `Content-Disposition: inline` |
+| `POST` | `/api/collection/share` | Mints a signed share link for one image (30-minute lifetime) |
+| `GET` | `/api/collection/share?token=<t>` | Resolves a share token back to `{ path, url, thumbUrl, expiresAt, secondsLeft }` |
 | `GET` | `/decks/<name>.pptx` | Public deck URL for Office Web Viewer; serves `presentations/<name>.pptx` only |
 
 Each entry in `files[]` looks like:
@@ -78,6 +80,54 @@ Each entry in `files[]` looks like:
 
 `thumbUrl` is the small grid preview, or `null` when no preview exists yet — the client
 falls back to `url` in that case, so the page never breaks.
+
+---
+
+## Share links
+
+The lightbox has a **Share** button: it copies a link that opens that one image and
+stops working after **30 minutes**.
+
+```
+POST /api/collection/share   {"path":"wallpapers/foo.png"}
+  -> { "token":"<payload>.<sig>",
+       "url":"https://robinlab.pages.dev/collection?share=<token>",
+       "expiresAt":"2026-10-21T18:30:00Z", "ttlSeconds":1800 }
+
+GET  /api/collection/share?token=<token>
+  -> { "path","name","folder","size","contentType","url","thumbUrl",
+       "expiresAt","secondsLeft" }
+  -> 410 { "error":"share_expired" }   expired
+  -> 403 { "error":"share_invalid" }   forged / malformed
+  -> 404 { "error":"not_found" }       image was removed from the bucket
+```
+
+The token is `base64url(payload)` + `.` + `base64url(HMAC-SHA256(payload))`, where
+`payload = {"p": "<bucket path>", "e": <expiry, ms since epoch>}`. Because the expiry
+is *inside* the signed payload, editing the URL cannot extend the link, and the key
+never leaves the server. `SHARE_SECRET` signs it (falling back to `HF_TOKEN` when it
+is unset, so rotating the token invalidates outstanding links).
+
+`/collection?share=…` shows the normal grid plus that image in the lightbox, with a
+`shared link, N min left` note that ticks down. An expired link shows a plain
+"this shared link has expired" state instead of a broken viewer. The client falls
+back to `document.execCommand("copy")` when the Clipboard API is unavailable (and
+shows the URL itself for manual copying if both are blocked).
+
+Scope, honestly stated:
+
+- Only **images** can be shared. Decks already have their public `/decks/*` route.
+- The path is checked against the live listing, so a token can never point at
+  something the vault does not contain.
+- The 30-minute clock gates **the token**: after that the link resolves to `410`.
+  The underlying bytes still come from `/api/collection/file?path=…`, which is the
+  same view-only proxy the rest of the page uses — expiring that URL per-share would
+  require signing every image URL, a separate piece of work.
+- Anyone who receives a valid link can view the image for its remaining lifetime.
+  There is no per-person revocation; deleting the image from the bucket is the only
+  way to kill a share early.
+- Minting is `POST` and unauthenticated, so consider rate limiting (Cloudflare WAF
+  or a Turnstile check) if link creation ever gets abused.
 
 ---
 
@@ -132,6 +182,7 @@ Use the bundled dev server instead. It serves `root/`, mirrors `projects/` into
 # 1. Create a token at https://huggingface.co/settings/tokens (a Read token is enough)
 # 2. Put it in a .dev.vars file (git-ignored):
 #      HF_TOKEN=hf_xxxxxxxxxxxxxxxxx
+#      SHARE_SECRET=<any long random string>   # optional; falls back to HF_TOKEN
 #    ...or set it for the session:
 $env:HF_TOKEN = "hf_xxxxxxxxxxxxxxxxx"
 
@@ -164,6 +215,7 @@ the API are always available.
 | Build output directory | `root` |
 | Config | `wrangler.toml` (`pages_build_output_dir = "root"`) |
 | Secret | `HF_TOKEN` (encrypted, Pages → Settings → Environment variables) |
+| Secret (optional) | `SHARE_SECRET` — signs 30-minute share links; falls back to `HF_TOKEN` |
 
 The build command is required. Projects live in `projects/`, outside the published
 directory, so `tools/sync_projects.py` copies them into `root/projects/` during the
@@ -215,6 +267,9 @@ you which DNS records to create.
   returns `415`.
 - Non-`GET`/`HEAD` methods are rejected with `405`.
 - `.dev.vars` and `.env*` are git-ignored. **Never commit a token.**
+- Share tokens are HMAC-signed with `SHARE_SECRET` (or `HF_TOKEN` as fallback), and
+  verification uses a constant-time comparison, so a token cannot be forged or its
+  expiry edited.
 - Consider replacing the broad OAuth token with a **read-only, bucket-scoped** token at
   <https://huggingface.co/settings/tokens>. The write access currently used by
   `make_thumbs.py` is only needed when generating thumbnails.

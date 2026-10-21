@@ -6,6 +6,8 @@ as the Cloudflare Pages Function in `functions/api/collection/[[path]].js`:
 
     GET /api/collection/files            -> JSON manifest of the bucket
     GET /api/collection/file?path=<enc>  -> streams one file's bytes (inline preview)
+    POST /api/collection/share           -> mints a signed link valid for 30 minutes
+    GET /api/collection/share?token=<t>  -> resolves that link back to one image
     GET /decks/<name>.pptx               -> public deck URL for the Office Web Viewer
 
 That means the Collection page behaves identically locally and in production.
@@ -30,8 +32,12 @@ Nothing is hard-coded, and `.dev.vars` is git-ignored.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
+import hmac
 import http.client
 import json
+import math
 import os
 import sys
 import time
@@ -43,6 +49,10 @@ BUCKET_ID = "robinlabdev/robinvault"
 HF_HOST = "huggingface.co"
 LISTING_TTL_S = 60
 FILE_CACHE_SECONDS = 600
+
+# How long a share link stays valid. The expiry is inside the signed payload, so
+# editing the URL cannot extend it.
+SHARE_TTL_SECONDS = 30 * 60
 
 # Types the proxy will stream. Images power the Collection grid; .pptx decks are
 # fetched by the presentations page and rendered client-side.
@@ -62,10 +72,11 @@ _listing_cache: dict[str, object] = {"at": 0.0, "files": None, "thumbs": None}
 # --------------------------------------------------------------------------- #
 # Token loading
 # --------------------------------------------------------------------------- #
-def load_token(project_root: str) -> str | None:
-    token = os.environ.get("HF_TOKEN")
-    if token:
-        return token.strip()
+def load_var(project_root: str, name: str) -> str | None:
+    """Read a setting from the environment, then from `.dev.vars`."""
+    value = os.environ.get(name)
+    if value:
+        return value.strip()
 
     dev_vars = os.path.join(project_root, ".dev.vars")
     if os.path.isfile(dev_vars):
@@ -75,9 +86,64 @@ def load_token(project_root: str) -> str | None:
                 if not line or line.startswith("#") or "=" not in line:
                     continue
                 key, _, value = line.partition("=")
-                if key.strip() == "HF_TOKEN":
+                if key.strip() == name:
                     return value.strip().strip("'\"") or None
     return None
+
+
+def load_token(project_root: str) -> str | None:
+    return load_var(project_root, "HF_TOKEN")
+
+
+# --------------------------------------------------------------------------- #
+# Share links (mirrors the Cloudflare Function exactly)
+# --------------------------------------------------------------------------- #
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _iso_ms(ms: int) -> str:
+    """Milliseconds since epoch -> `2026-10-21T12:00:00Z` (what JS Date parses)."""
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ms / 1000))
+
+
+def _b64url_decode(value: str) -> bytes:
+    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def create_share_token(secret: str, path: str, ttl_ms: int) -> str:
+    """Token = base64url(payload) "." base64url(HMAC-SHA256(payload))."""
+    payload = json.dumps({"p": path, "e": int(time.time() * 1000) + ttl_ms}, separators=(",", ":")).encode("utf-8")
+    signature = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).digest()
+    return f"{_b64url(payload)}.{_b64url(signature)}"
+
+
+def read_share_token(secret: str, token: str) -> dict:
+    """Returns {"path", "expiresAt"} or {"error": "share_invalid"|"share_expired"}."""
+    payload_part, _, signature_part = token.partition(".")
+    if not payload_part or not signature_part:
+        return {"error": "share_invalid"}
+
+    try:
+        payload_bytes = _b64url_decode(payload_part)
+        signature = _b64url_decode(signature_part)
+    except (ValueError, TypeError):
+        return {"error": "share_invalid"}
+
+    expected = hmac.new(secret.encode("utf-8"), payload_bytes, hashlib.sha256).digest()
+    if not hmac.compare_digest(expected, signature):
+        return {"error": "share_invalid"}
+
+    try:
+        payload = json.loads(payload_bytes.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return {"error": "share_invalid"}
+
+    if not isinstance(payload, dict) or not isinstance(payload.get("p"), str) or not isinstance(payload.get("e"), int):
+        return {"error": "share_invalid"}
+    if int(time.time() * 1000) >= payload["e"]:
+        return {"error": "share_expired", "expiresAt": payload["e"]}
+    return {"path": payload["p"], "expiresAt": payload["e"]}
 
 
 # --------------------------------------------------------------------------- #
@@ -176,6 +242,7 @@ def open_file_stream(token: str, path: str):
 # --------------------------------------------------------------------------- #
 class Handler(SimpleHTTPRequestHandler):
     token: str | None = None
+    share_secret: str | None = None
 
     def log_message(self, fmt, *args):  # noqa: A003 - stdlib signature
         sys.stderr.write("  %s\n" % (fmt % args))
@@ -235,12 +302,139 @@ class Handler(SimpleHTTPRequestHandler):
             self._not_configured()
             return True
 
+        # Share links are the only writable endpoint: minting needs POST,
+        # resolving needs GET.
+        if route.endswith("/share"):
+            self._serve_share(parsed)
+            return True
+
+        if self.command not in ("GET", "HEAD"):
+            self._send_json({"error": "method_not_allowed"}, 405)
+            return True
+
         if route.endswith("/file"):
             params = urllib.parse.parse_qs(parsed.query)
             self._serve_file((params.get("path") or [""])[0])
         else:
             self._serve_listing()
         return True
+
+    # -- share links ------------------------------------------------------- #
+    def _serve_share(self, parsed: urllib.parse.SplitResult) -> None:
+        secret = self.share_secret
+        if not secret:
+            self._send_json(
+                {
+                    "error": "not_configured",
+                    "message": "Set SHARE_SECRET (or HF_TOKEN) to enable share links.",
+                },
+                500,
+            )
+            return
+
+        if self.command == "POST":
+            self._create_share(secret)
+        elif self.command in ("GET", "HEAD"):
+            self._resolve_share(parsed, secret)
+        else:
+            self._send_json({"error": "method_not_allowed"}, 405)
+
+    def _create_share(self, secret: str) -> None:
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = 0
+        try:
+            body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+        except (ValueError, UnicodeDecodeError, OSError):
+            body = {}
+
+        path = body.get("path", "").strip() if isinstance(body, dict) and isinstance(body.get("path"), str) else ""
+        if not path:
+            self._send_json(
+                {"error": "missing_path", "message": 'Send a JSON body like {"path":"wallpapers/foo.png"}.'},
+                400,
+            )
+            return
+
+        try:
+            listing = get_listing(self.token or "")
+        except Exception as err:  # noqa: BLE001
+            self._send_json({"error": "upstream_error", "message": str(err)}, 502)
+            return
+
+        entry = next((file for file in listing["files"] if file["path"] == path), None)
+        if entry is None:
+            self._send_json({"error": "not_found", "message": "No such file in this bucket."}, 404)
+            return
+        if not entry["previewable"]:
+            self._send_json({"error": "unsupported_type", "message": "Only images can be shared."}, 415)
+            return
+
+        ttl_ms = SHARE_TTL_SECONDS * 1000
+        token = create_share_token(secret, entry["path"], ttl_ms)
+        host = self.headers.get("Host") or "127.0.0.1:5500"
+
+        self._send_json(
+            {
+                "token": token,
+                "url": f"http://{host}/collection?share={urllib.parse.quote(token, safe='')}",
+                "expiresAt": _iso_ms(int(time.time() * 1000) + ttl_ms),
+                "ttlSeconds": SHARE_TTL_SECONDS,
+            }
+        )
+
+    def _resolve_share(self, parsed: urllib.parse.SplitResult, secret: str) -> None:
+        params = urllib.parse.parse_qs(parsed.query)
+        token = (params.get("token") or [""])[0]
+        if not token:
+            self._send_json({"error": "missing_token", "message": "A `token` query parameter is required."}, 400)
+            return
+
+        read = read_share_token(secret, token)
+        if read.get("error") == "share_expired":
+            self._send_json(
+                {"error": "share_expired", "message": "This shared link has expired. Shared links last 30 minutes."},
+                410,
+            )
+            return
+        if read.get("error"):
+            self._send_json({"error": "share_invalid", "message": "This shared link is not valid."}, 403)
+            return
+
+        try:
+            listing = get_listing(self.token or "")
+        except Exception as err:  # noqa: BLE001
+            self._send_json({"error": "upstream_error", "message": str(err)}, 502)
+            return
+
+        entry = next((file for file in listing["files"] if file["path"] == read["path"]), None)
+        if entry is None:
+            self._send_json(
+                {"error": "not_found", "message": "That artwork is no longer in the collection."}, 404
+            )
+            return
+        if not entry["previewable"]:
+            self._send_json({"error": "unsupported_type", "message": "Only images can be shared."}, 415)
+            return
+
+        def url_for(path: str) -> str:
+            return "/api/collection/file?path=" + urllib.parse.quote(path, safe="")
+
+        thumb_path = entry["thumbPath"]
+        self._send_json(
+            {
+                "path": entry["path"],
+                "name": entry["name"],
+                "folder": entry["folder"],
+                "size": entry["size"],
+                "contentType": entry["contentType"],
+                "url": url_for(entry["path"]),
+                "thumbUrl": url_for(thumb_path) if thumb_path else None,
+                "expiresAt": _iso_ms(read["expiresAt"]),
+                "secondsLeft": max(0, math.ceil((read["expiresAt"] - time.time() * 1000) / 1000)),
+            }
+        )
 
     def _serve_listing(self) -> None:
         try:
@@ -343,6 +537,12 @@ class Handler(SimpleHTTPRequestHandler):
         self._resolve_clean_url()
         super().do_HEAD()
 
+    def do_POST(self):  # noqa: N802 - stdlib naming
+        parsed = urllib.parse.urlsplit(self.path)
+        if self._handle_api(parsed):
+            return
+        self._send_json({"error": "method_not_allowed"}, 405)
+
 
 # --------------------------------------------------------------------------- #
 # Entry point
@@ -378,6 +578,9 @@ def main() -> int:
 
     Handler.directory = os.path.abspath(args.dir)
     Handler.token = load_token(project_root)
+    # Prefer a dedicated secret so links survive a token rotation; the HF token
+    # is a safe local fallback (both stay server-side).
+    Handler.share_secret = load_var(project_root, "SHARE_SECRET") or Handler.token
 
     # Pass `directory` explicitly: SimpleHTTPRequestHandler resets it to the CWD
     # when the argument is omitted, which would ignore --dir.

@@ -1,9 +1,11 @@
 /**
  * Hugging Face bucket proxy — Cloudflare Pages Function.
  *
- * Endpoints (this single catch-all file serves both):
- *   GET /api/collection/files            -> JSON manifest of the private bucket
- *   GET /api/collection/file?path=<enc>  -> streams one file's bytes (inline, view-only)
+ * Endpoints (this single catch-all file serves all of them):
+ *   GET  /api/collection/files            -> JSON manifest of the private bucket
+ *   GET  /api/collection/file?path=<enc>  -> streams one file's bytes (inline, view-only)
+ *   POST /api/collection/share            -> mints a signed link valid for 30 minutes
+ *   GET  /api/collection/share?token=<t>  -> resolves that link back to one image
  *
  * The Hugging Face access token never reaches the browser. It is read from the
  * `HF_TOKEN` secret (Pages -> Settings -> Environment variables) and used only
@@ -43,11 +45,100 @@ const FILE_CACHE_SECONDS = 600;
 // collection itself, so the grid and its folder counts stay about real files.
 const THUMB_PREFIX = "_thumbs/";
 
+// How long a share link stays valid. Enforced on the server: the expiry is part
+// of the signed payload, so editing the URL cannot extend it.
+const SHARE_TTL_SECONDS = 30 * 60;
+
 // Module-level cache. Cloudflare reuses isolates, so this is effective in practice.
 let listingCache = { at: 0, files: null, thumbs: null };
 
 /** Same-origin proxy URL for a bucket path. */
 const fileUrl = (path) => `/api/collection/file?path=${encodeURIComponent(path)}`;
+
+/* -------------------------------------------------------------------------- */
+/* Share links                                                                */
+/* -------------------------------------------------------------------------- */
+
+const shareEncoder = new TextEncoder();
+const shareDecoder = new TextDecoder();
+
+/** base64url without padding, so the token survives being pasted in a URL. */
+function b64urlEncode(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function b64urlDecode(value) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/**
+ * The HMAC key. `SHARE_SECRET` is preferred so links survive a token rotation;
+ * `HF_TOKEN` is the fallback so the feature works without extra configuration.
+ */
+function shareSecret(env) {
+  return env.SHARE_SECRET || env.HF_TOKEN || null;
+}
+
+function shareKey(secret) {
+  return crypto.subtle.importKey("raw", shareEncoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+    "sign",
+    "verify",
+  ]);
+}
+
+/** Token = base64url(payload) "." base64url(HMAC-SHA256(payload)), payload = {p, e}. */
+async function createShareToken(secret, path, ttlMs) {
+  const payload = shareEncoder.encode(JSON.stringify({ p: path, e: Date.now() + ttlMs }));
+  const signature = await crypto.subtle.sign("HMAC", await shareKey(secret), payload);
+  return `${b64urlEncode(payload)}.${b64urlEncode(new Uint8Array(signature))}`;
+}
+
+/**
+ * Verify a token. Returns `{ path, expiresAt }` on success, or `{ error }` where
+ * error is `share_invalid` (bad signature / malformed) or `share_expired`.
+ */
+async function readShareToken(secret, token) {
+  const dot = token.indexOf(".");
+  if (dot < 1 || dot === token.length - 1) return { error: "share_invalid" };
+
+  let payloadBytes;
+  let signature;
+  try {
+    payloadBytes = b64urlDecode(token.slice(0, dot));
+    signature = b64urlDecode(token.slice(dot + 1));
+  } catch {
+    return { error: "share_invalid" };
+  }
+
+  // `verify` compares in constant time, so a forged signature cannot be probed.
+  let valid = false;
+  try {
+    valid = await crypto.subtle.verify("HMAC", await shareKey(secret), signature, payloadBytes);
+  } catch {
+    valid = false;
+  }
+  if (!valid) return { error: "share_invalid" };
+
+  let payload;
+  try {
+    payload = JSON.parse(shareDecoder.decode(payloadBytes));
+  } catch {
+    return { error: "share_invalid" };
+  }
+
+  if (!payload || typeof payload.p !== "string" || typeof payload.e !== "number") {
+    return { error: "share_invalid" };
+  }
+  if (Date.now() >= payload.e) return { error: "share_expired", expiresAt: payload.e };
+
+  return { path: payload.p, expiresAt: payload.e };
+}
 
 function json(body, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {
@@ -222,13 +313,131 @@ function handleFile(env, request, url) {
   return streamBucketFile(env, request, url.searchParams.get("path"));
 }
 
+/* -------------------------------------------------------------------------- */
+/* /api/collection/share                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Mint a share link for one image.
+ *
+ * The path is checked against the live listing first, so a link can only ever
+ * point at something the vault really contains. Only images are shareable —
+ * decks already have their own public `/decks/*` route.
+ */
+async function createShare(env, request, url, secret) {
+  const body = await request.json().catch(() => null);
+  const path = body && typeof body.path === "string" ? body.path.trim() : "";
+  if (!path) {
+    return json({ error: "missing_path", message: 'Send a JSON body like {"path":"wallpapers/foo.png"}.' }, 400);
+  }
+
+  let entry;
+  try {
+    const { files } = await getListing(env.HF_TOKEN);
+    entry = files.find((file) => file.path === path);
+  } catch (err) {
+    return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
+  }
+
+  if (!entry) return json({ error: "not_found", message: "No such file in this bucket." }, 404);
+  if (!entry.previewable) {
+    return json({ error: "unsupported_type", message: "Only images can be shared." }, 415);
+  }
+
+  const ttlMs = SHARE_TTL_SECONDS * 1000;
+  const token = await createShareToken(secret, entry.path, ttlMs);
+  const expiresAt = Date.now() + ttlMs;
+
+  return json({
+    token,
+    // Built from the request origin so preview deployments and localhost work.
+    url: `${url.origin}/collection?share=${encodeURIComponent(token)}`,
+    expiresAt: new Date(expiresAt).toISOString(),
+    ttlSeconds: SHARE_TTL_SECONDS,
+  });
+}
+
+/** Turn a token back into the one image it names, refusing expired links. */
+async function resolveShare(env, url, secret) {
+  const token = url.searchParams.get("token") || "";
+  if (!token) {
+    return json({ error: "missing_token", message: "A `token` query parameter is required." }, 400);
+  }
+
+  const read = await readShareToken(secret, token);
+  if (read.error === "share_expired") {
+    return json(
+      { error: "share_expired", message: "This shared link has expired. Shared links last 30 minutes." },
+      410,
+    );
+  }
+  if (read.error) return json({ error: "share_invalid", message: "This shared link is not valid." }, 403);
+
+  let entry;
+  let thumbPath = null;
+  try {
+    const listing = await getListing(env.HF_TOKEN);
+    entry = listing.files.find((file) => file.path === read.path);
+    if (entry) {
+      const candidate = `${THUMB_PREFIX}${entry.path}.webp`;
+      // Thumbnails are not in `files[]`, so ask the separate index.
+      if (listing.thumbs.has(candidate)) thumbPath = candidate;
+    }
+  } catch (err) {
+    return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
+  }
+
+  if (!entry) {
+    return json({ error: "not_found", message: "That artwork is no longer in the collection." }, 404);
+  }
+  if (!entry.previewable) {
+    return json({ error: "unsupported_type", message: "Only images can be shared." }, 415);
+  }
+
+  return json({
+    path: entry.path,
+    name: entry.name,
+    folder: entry.folder,
+    size: entry.size,
+    contentType: entry.contentType,
+    url: fileUrl(entry.path),
+    thumbUrl: thumbPath ? fileUrl(thumbPath) : null,
+    expiresAt: new Date(read.expiresAt).toISOString(),
+    secondsLeft: Math.max(0, Math.ceil((read.expiresAt - Date.now()) / 1000)),
+  });
+}
+
+async function handleShare(env, request, url) {
+  const missing = requireToken(env);
+  if (missing) return missing;
+
+  const secret = shareSecret(env);
+  if (!secret) {
+    return json(
+      {
+        error: "not_configured",
+        message: "Set the SHARE_SECRET (or HF_TOKEN) secret to enable share links.",
+      },
+      500,
+    );
+  }
+
+  if (request.method === "POST") return createShare(env, request, url, secret);
+  if (request.method === "GET" || request.method === "HEAD") return resolveShare(env, url, secret);
+
+  return json({ error: "method_not_allowed" }, 405, { Allow: "GET, HEAD, POST" });
+}
+
 export async function onRequest({ request, env }) {
+  const url = new URL(request.url);
+  const pathname = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
+
+  // Share links are the only writable endpoint: minting needs POST, resolving GET.
+  if (pathname.endsWith("/share")) return handleShare(env, request, url);
+
   if (request.method !== "GET" && request.method !== "HEAD") {
     return json({ error: "method_not_allowed" }, 405, { Allow: "GET, HEAD" });
   }
-
-  const url = new URL(request.url);
-  const pathname = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
 
   if (pathname.endsWith("/file")) return handleFile(env, request, url);
   return handleList(env);

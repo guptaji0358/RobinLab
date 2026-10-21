@@ -68,10 +68,21 @@ Three routes, all served from `root/`:
 | `/collection` | `collection.html` | Images from the bucket, grouped by folder ("packs") |
 | `/presentations` | `presentations.html` | `.pptx` decks, embedded via Microsoft Office Web Viewer |
 
+The footer identity is the same on all three pages — **Robin Gupta Studios /
+RGS™ / Built & maintained by Robin Gupta / Copyright © <year> Robin Gupta** —
+plus `<meta name="author|publisher|copyright">` in each `<head>`. Change all
+three together; `index.html` also carries the Organization JSON-LD block.
+
 Both vault pages read `/api/collection/files` (the Pages Function in
 `functions/`, or `dev_server.py` locally). Images load through
 `/api/collection/file?path=…`; the proxy serves **images** and **`.pptx`** only,
 everything else is rejected with `415`.
+
+The lightbox's **Share** button calls `POST /api/collection/share`, which mints an
+HMAC-signed link (`/collection?share=<token>`) for that one image. The expiry is
+part of the signed payload, so links die after **30 minutes** and `GET
+/api/collection/share?token=…` answers `410` afterwards. `SHARE_SECRET` is the
+signing key (falls back to `HF_TOKEN`). See `COLLECTION.md` → Share links.
 
 Decks also have a clean public route, `/decks/<name>.pptx`
 (`functions/decks/[[path]].js`), because Microsoft's viewer downloads the file
@@ -119,6 +130,7 @@ Cloudflare Pages, project `robinlab`, connected to GitHub.
 | Build output directory | `root` |
 | Production URL | https://robinlab.pages.dev |
 | Secret | `HF_TOKEN` (Pages → Settings → Environment variables) |
+| Optional secret | `SHARE_SECRET` for 30-minute share links (falls back to `HF_TOKEN`) |
 
 The build command is mandatory: without it `root/projects/` is empty and every
 project link 404s. `wrangler.toml` pins the output directory, and the Function

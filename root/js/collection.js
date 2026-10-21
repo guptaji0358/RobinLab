@@ -13,12 +13,17 @@
  *
  * Only images appear here — .pptx decks live on /presentations.
  *
+ * Visitors can share one image with a signed link (`POST /api/collection/share`).
+ * The token is HMAC-signed and carries its own expiry, so a link stops working
+ * after 30 minutes; the server refuses expired tokens with `410`.
+ *
  * Downloads are intentionally disabled — the UI is view-only for now.
  */
 (() => {
   "use strict";
 
   const LIST_ENDPOINT = "/api/collection/files";
+  const SHARE_ENDPOINT = "/api/collection/share";
 
   const el = {
     search: document.getElementById("col-search"),
@@ -36,6 +41,8 @@
     lbClose: document.getElementById("lb-close"),
     lbPrev: document.getElementById("lb-prev"),
     lbNext: document.getElementById("lb-next"),
+    lbShare: document.getElementById("lb-share"),
+    toast: document.getElementById("toast"),
   };
 
   let allFiles = [];
@@ -46,6 +53,12 @@
   let sort = "name";
   let lbPos = -1;
   let lastFocused = null;
+  let lbDims = "";
+  // Set only while the lightbox was opened from a shared link: drives the
+  // "N min left" note and stops when the viewer closes.
+  let shareSession = null;
+  let shareTimer = 0;
+  let toastTimer = 0;
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                             */
@@ -104,6 +117,45 @@
   function hideState() {
     el.state.hidden = true;
     el.state.textContent = "";
+  }
+
+  /** Small transient message at the bottom of the screen. */
+  function toast(message, kind = "ok", duration = 3600) {
+    if (!el.toast) return;
+    el.toast.textContent = message;
+    el.toast.className = `toast toast-${kind}`;
+    el.toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => {
+      el.toast.hidden = true;
+    }, duration);
+  }
+
+  /** Clipboard first, legacy textarea fallback for browsers that block it. */
+  async function copyText(text) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        // fall through to execCommand
+      }
+    }
+    try {
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.top = "-1000px";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      const ok = document.execCommand("copy");
+      area.remove();
+      return ok;
+    } catch {
+      return false;
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -290,6 +342,38 @@
   /* Lightbox                                                            */
   /* ------------------------------------------------------------------ */
 
+  function metaText(file) {
+    let text = `${folderLabel(file)} · ${formatBytes(file.size)}${lbDims}`;
+    if (shareSession) {
+      const msLeft = shareSession.expiresAt - Date.now();
+      text +=
+        msLeft > 0
+          ? ` — shared link, ${Math.max(1, Math.ceil(msLeft / 60000))} min left`
+          : " — shared link expired";
+    }
+    return text;
+  }
+
+  function paintMeta(file) {
+    el.lbMeta.textContent = metaText(file);
+  }
+
+  function startShareTicker() {
+    stopShareTicker();
+    shareTimer = window.setInterval(() => {
+      if (el.lightbox.hidden) return;
+      const file = visible[lbPos];
+      if (file) paintMeta(file);
+    }, 15000);
+  }
+
+  function stopShareTicker() {
+    if (shareTimer) {
+      clearInterval(shareTimer);
+      shareTimer = 0;
+    }
+  }
+
   function openLightbox(index) {
     lbPos = index;
     if (lbPos < 0 || lbPos >= visible.length) return;
@@ -306,6 +390,8 @@
     el.lightbox.hidden = true;
     document.body.classList.remove("lb-open");
     lbPos = -1;
+    shareSession = null;
+    stopShareTicker();
     el.lbImg.removeAttribute("src");
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus({ preventScroll: true });
   }
@@ -314,12 +400,13 @@
     const file = visible[lbPos];
     if (!file) return;
 
+    lbDims = "";
     el.lbImg.addEventListener(
       "load",
       () => {
         const { naturalWidth: w, naturalHeight: h } = el.lbImg;
-        const dims = w && h ? ` · ${w}×${h}` : "";
-        el.lbMeta.textContent = `${folderLabel(file)} · ${formatBytes(file.size)}${dims}`;
+        if (w && h) lbDims = ` · ${w}×${h}`;
+        paintMeta(file);
       },
       { once: true },
     );
@@ -328,7 +415,7 @@
     el.lbImg.alt = humanName(file);
     el.lbName.textContent = humanName(file);
     el.lbName.title = file.path;
-    el.lbMeta.textContent = `${folderLabel(file)} · ${formatBytes(file.size)}`;
+    paintMeta(file);
     el.lbCounter.textContent = `${lbPos + 1} / ${visible.length}`;
   }
 
@@ -336,6 +423,43 @@
     if (!visible.length) return;
     lbPos = (lbPos + delta + visible.length) % visible.length;
     paintLightbox();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Sharing                                                             */
+  /* ------------------------------------------------------------------ */
+
+  /** Ask the server for a signed 30-minute link, then copy it. */
+  async function shareCurrent() {
+    const file = visible[lbPos];
+    if (!file || !el.lbShare) return;
+
+    el.lbShare.disabled = true;
+    try {
+      const response = await fetch(SHARE_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ path: file.path }),
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload.url) {
+        throw new Error(payload.message || `The server responded with HTTP ${response.status}.`);
+      }
+
+      if (await copyText(payload.url)) {
+        const minutes = Math.round((payload.ttlSeconds || 1800) / 60);
+        toast(`Link copied — it works for ${minutes} minutes.`);
+      } else {
+        // Clipboard blocked: leave the URL selectable instead of losing it.
+        toast(payload.url, "warn", 15000);
+      }
+    } catch (err) {
+      toast(`Could not create a link: ${err?.message || err}`, "warn", 6000);
+      console.error(err);
+    } finally {
+      el.lbShare.disabled = false;
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -355,6 +479,7 @@
   el.lbClose.addEventListener("click", closeLightbox);
   el.lbPrev.addEventListener("click", () => step(-1));
   el.lbNext.addEventListener("click", () => step(1));
+  if (el.lbShare) el.lbShare.addEventListener("click", shareCurrent);
   el.lightbox.addEventListener("click", (event) => {
     if (event.target.hasAttribute("data-close")) closeLightbox();
   });
@@ -382,6 +507,7 @@
   /* Boot                                                                */
   /* ------------------------------------------------------------------ */
 
+  /** Returns true when the grid rendered, so the share bootstrap can rely on it. */
   async function load() {
     el.packs.textContent = "";
     showState("loading", "Loading the vault…", "Fetching the collection index.");
@@ -398,7 +524,7 @@
             ? "The API endpoint was not found. Deploy the Cloudflare Pages Function, or run `python dev_server.py` instead of a plain static server."
             : `The server responded with HTTP ${response.status}.`);
         showState("error", "The collection could not be loaded.", detail);
-        return;
+        return false;
       }
 
       // Presentations have their own page — this view is images only.
@@ -413,6 +539,7 @@
 
       renderChips();
       render();
+      return true;
     } catch (err) {
       showState(
         "error",
@@ -420,9 +547,69 @@
         "Could not reach the API. If you are previewing locally, serve the site with `python dev_server.py` so the bucket proxy is available.",
       );
       console.error(err);
+      return false;
     }
   }
 
-  if (el.year) el.year.textContent = new Date().getFullYear();
-  load();
+  /**
+   * `/collection?share=<token>` — resolve the signed token and open that image.
+   * Expired links (`410`) get a clear explanation instead of a broken viewer.
+   */
+  async function openShared() {
+    const token = new URLSearchParams(window.location.search).get("share");
+    if (!token) return;
+
+    let payload;
+    try {
+      const response = await fetch(`${SHARE_ENDPOINT}?token=${encodeURIComponent(token)}`, {
+        headers: { Accept: "application/json" },
+      });
+      payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (payload.error === "share_expired") {
+          showState(
+            "error",
+            "This shared link has expired.",
+            "Shared links last 30 minutes — ask whoever sent it for a fresh one.",
+          );
+        } else if (payload.error === "not_found") {
+          showState(
+            "error",
+            "That artwork is no longer in the collection.",
+            "It may have been moved or deleted from the vault.",
+          );
+        } else {
+          showState("error", "This shared link is not valid.", payload.message || "Ask the sender to create a new link.");
+        }
+        return;
+      }
+    } catch (err) {
+      showState(
+        "error",
+        "The shared link could not be opened.",
+        "The share API is unreachable. Locally, run `python dev_server.py`.",
+      );
+      console.error(err);
+      return;
+    }
+
+    const index = visible.findIndex((file) => file.path === payload.path);
+    if (index === -1) {
+      showState("error", "That artwork is not available.", "It was not found in the collection index.");
+      return;
+    }
+
+    shareSession = { expiresAt: Date.parse(payload.expiresAt) || Date.now() };
+    startShareTicker();
+    openLightbox(index);
+  }
+
+  async function boot() {
+    if (el.year) el.year.textContent = new Date().getFullYear();
+    // The grid is built first so the lightbox has an index to open.
+    if (await load()) await openShared();
+  }
+
+  boot();
 })();

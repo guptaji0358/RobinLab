@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Collection — RobinLab</title>
 <meta name="description" content="Browse the private RobinLab vault — artwork streamed from a Hugging Face bucket.">
+<meta name="author" content="Robin Gupta">
+<meta name="publisher" content="Robin Gupta Studios">
+<meta name="copyright" content="Copyright &copy; Robin Gupta">
+<meta name="application-name" content="RobinLab">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -52,6 +56,7 @@
     <p class="hero-sub">
       Artwork streamed live from a private RobinLab bucket. Every folder is a
       pack — browse at full size, nothing to install, nothing to download.
+      Open any image to grab a share link that lasts 30 minutes.
     </p>
     <div class="col-notice">
       <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -90,18 +95,26 @@
 
     <p class="col-stats" id="col-stats" aria-live="polite"></p>
 
-    <div class="col-packs" id="col-packs"></div>
-
     <div class="col-state" id="col-state" hidden></div>
+
+    <div class="col-packs" id="col-packs"></div>
   </section>
 
 </main>
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <span>&copy; <span id="year"></span> RobinLab</span>
-    <span class="footer-sep">&middot;</span>
-    <span>robinvault</span>
+    <div class="footer-brand">
+      <span class="footer-company">Robin Gupta Studios</span>
+      <span class="footer-tm" title="Robin Gupta Studios">RGS&trade;</span>
+    </div>
+    <p class="footer-legal">
+      <span>Built &amp; maintained by <strong>Robin Gupta</strong></span>
+      <span class="footer-sep">&middot;</span>
+      <span>Copyright &copy; <span id="year"></span> Robin Gupta</span>
+      <span class="footer-sep">&middot;</span>
+      <span>All rights reserved</span>
+    </p>
   </div>
 </footer>
 
@@ -141,6 +154,15 @@
       </div>
       <div class="lb-actions">
         <span class="lb-counter" id="lb-counter"></span>
+        <button class="lb-share" id="lb-share" type="button" title="Copy a link that works for 30 minutes">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="18" cy="5" r="3"/>
+            <circle cx="6" cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/>
+          </svg>
+          Share
+        </button>
         <span class="lb-lock" title="Downloads unlock when payments are added">
           <button class="lb-download" type="button" disabled aria-disabled="true">
             <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -155,6 +177,8 @@
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="js/collection.js"></script>
 </body>
