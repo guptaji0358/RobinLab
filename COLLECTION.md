@@ -210,29 +210,37 @@ the API are always available.
 | Host | Cloudflare Pages |
 | Project | `robinlab` |
 | Production URL | <https://robinlab.pages.dev> |
-| Source | GitHub repo, Cloudflare builds on push |
-| Build command | `python3 tools/sync_projects.py` |
-| Build output directory | `root` |
+| Source | **Direct Upload** — a `git push` does *not* deploy (`Git Provider: No`) |
+| Build step | none on Cloudflare; run `python tools/sync_projects.py` locally first |
+| Publish directory | `root` |
 | Config | `wrangler.toml` (`pages_build_output_dir = "root"`) |
 | Secret | `HF_TOKEN` (encrypted, Pages → Settings → Environment variables) |
 | Secret (optional) | `SHARE_SECRET` — signs 30-minute share links; falls back to `HF_TOKEN` |
 
-The build command is required. Projects live in `projects/`, outside the published
-directory, so `tools/sync_projects.py` copies them into `root/projects/` during the
-build. Without it every `/projects/<name>/` link 404s.
+The mirror step is required. Projects live in `projects/`, outside the published
+directory, so `tools/sync_projects.py` copies them into `root/projects/`. Cloudflare
+never runs it for a Direct Upload project, so run it locally before every deploy —
+otherwise every `/projects/<name>/` link 404s or points at stale files.
 
-Only a **Git-connected** Pages project exposes a build command (Settings → Builds &
-deployments → Build configurations). A **Direct Upload** project — the kind created by
-`wrangler pages deploy` — has no build step and no build command field, and cannot be
-converted in place; create a new Git-connected project from
-<https://github.com/guptaji0358/RobinLab> instead.
+> **A `git push` is not a deploy here.** Check
+> `wrangler pages deployment list --project-name=robinlab` against
+> `git rev-parse HEAD` when a change seems not to have landed.
 
-Deploy manually with:
+A **Direct Upload** project — the kind created by `wrangler pages deploy` — has no
+build step and no build command field, and cannot be converted in place; create a
+new Git-connected project from <https://github.com/guptaji0358/RobinLab> instead if
+you want pushes to deploy automatically (build command
+`python3 tools/sync_projects.py`, output directory `root`, then re-add the secrets).
+
+Deploy with:
 
 ```powershell
 python tools/sync_projects.py
 npx wrangler pages deploy root --project-name=robinlab --branch=master
 ```
+
+`npx` is blocked by the PowerShell execution policy on this machine — use
+`cmd /c "npx wrangler pages deploy ..."` there.
 
 `wrangler.toml` points at `root/` for static assets; the Function in `functions/` is
 picked up automatically from the project root.

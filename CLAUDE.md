@@ -122,39 +122,47 @@ The collection API needs `HF_TOKEN` in the environment or in a git-ignored
 
 ## Deployment
 
-Cloudflare Pages, project `robinlab`, connected to GitHub.
+Cloudflare Pages, project `robinlab` — **Direct Upload, not Git-connected**
+(`wrangler pages project list` shows `Git Provider: No`). Pushing to GitHub does
+**not** deploy anything; a deploy is always two local commands.
 
 | Setting | Value |
 | --- | --- |
-| Build command | `python3 tools/sync_projects.py` |
-| Build output directory | `root` |
+| Project type | Direct Upload (no Git integration, no Cloudflare build step) |
+| Publish directory | `root` (`pages_build_output_dir` in `wrangler.toml`) |
+| Build step | run `python tools/sync_projects.py` locally **before** deploying |
 | Production URL | https://robinlab.pages.dev |
 | Secret | `HF_TOKEN` (Pages → Settings → Environment variables) |
 | Optional secret | `SHARE_SECRET` for 30-minute share links (falls back to `HF_TOKEN`) |
-
-The build command is mandatory: without it `root/projects/` is empty and every
-project link 404s. `wrangler.toml` pins the output directory, and the Function
-in `functions/` is picked up from the repo root automatically.
-
-Repository: <https://github.com/guptaji0358/RobinLab> (branch `master`).
-
-> **Pages project type matters.** Only a *Git-connected* Pages project has
-> Settings → Builds & deployments → Build configurations. A *Direct Upload*
-> project (created by `wrangler pages deploy`) has no build step at all, so no
-> build command field ever appears. Direct Upload projects **cannot** be
-> converted — create a new Git-connected project (delete the old one first if you
-> want to keep the `robinlab` name and the `robinlab.pages.dev` URL), then re-add
-> the `HF_TOKEN` variable.
-
-Manual deploy instead:
 
 ```powershell
 python tools/sync_projects.py
 npx wrangler pages deploy root --project-name=robinlab --branch=master
 ```
 
-`compatibility_date` in `wrangler.toml` must not be in the future relative to
-Cloudflare's clock or the deploy fails.
+`npx` is blocked by PowerShell's execution policy on this machine; use
+`cmd /c "npx wrangler pages deploy ..."` if you hit `npx.ps1 cannot be loaded`.
+
+The mirror step is mandatory: Cloudflare has no build command to run it, so
+`root/projects/` would otherwise be stale or empty and project links would 404.
+Wrangler uploads `functions/` from the repo root automatically, so the collection
+proxy goes out with the same deploy.
+
+Repository: <https://github.com/guptaji0358/RobinLab> (branch `master`). The repo
+is the source of truth, but a `git push` alone never reaches production.
+
+> **Why this matters.** On 2026-10-21 a push landed on GitHub while the live site
+> kept serving an older commit; the newest Pages deployment was two commits
+> behind. Nothing was broken — the project simply never built on push. If a change
+> "did nothing", run `wrangler pages deployment list --project-name=robinlab` and
+> compare the newest deployment's commit with `git rev-parse HEAD` before
+> debugging the code.
+
+> **Converting to Git-connected.** Direct Upload projects cannot be converted in
+> place. Create a new Git-connected project (delete the old one first if you want
+> to keep the `robinlab` name and `robinlab.pages.dev` URL), set the build command
+> to `python3 tools/sync_projects.py` and the output directory to `root`, then
+> re-add `HF_TOKEN` (and `SHARE_SECRET`). After that, pushes deploy themselves.
 
 ## Docs
 
