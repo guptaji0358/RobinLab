@@ -78,6 +78,13 @@
   </section>
 
   <section class="col-body container">
+    <div class="col-tabs" id="col-tabs" role="tablist" aria-label="Collection views">
+      <button type="button" class="col-tab" role="tab" data-tab="packs" aria-selected="false">Packs <span class="col-tab-count" id="col-tab-packs-count"></span></button>
+      <button type="button" class="col-tab" role="tab" data-tab="images" aria-selected="true">All images <span class="col-tab-count" id="col-tab-images-count"></span></button>
+    </div>
+
+    <div class="col-packlist" id="col-packlist" hidden></div>
+
     <div class="col-toolbar">
       <div class="col-search">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

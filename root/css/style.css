@@ -764,6 +764,109 @@ a { color: inherit; text-decoration: none; }
   color: var(--text);
 }
 
+/* Tabs: Packs | All images */
+
+.col-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.col-tab {
+  padding: 10px 16px;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.col-tab:hover { color: var(--text); }
+
+.col-tab[aria-selected="true"] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.col-tab-count {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.65;
+}
+
+.col-packlist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 22px;
+}
+
+.col-packlist[hidden],
+.col-toolbar[hidden],
+.col-chips[hidden],
+.col-packs[hidden] { display: none; }
+
+.col-packcard {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.col-packcard:hover { border-color: #333a44; transform: translateY(-2px); }
+
+.col-packcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.col-packcover {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  aspect-ratio: 16 / 10;
+  background: #0f1216;
+}
+
+.col-packcover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.col-packcover img:first-child { grid-row: 1 / 3; }
+
+.col-packcover.is-single { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+
+.col-packinfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px 14px;
+}
+
+.col-packname { font-size: 16px; font-weight: 600; }
+
+.col-packmeta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* Folder chips */
 
 .col-chips {

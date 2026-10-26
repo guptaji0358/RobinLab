@@ -44,6 +44,11 @@
     lbNext: document.getElementById("lb-next"),
     lbShare: document.getElementById("lb-share"),
     toast: document.getElementById("toast"),
+    tabs: document.querySelectorAll(".col-tab"),
+    packList: document.getElementById("col-packlist"),
+    tabPacksCount: document.getElementById("col-tab-packs-count"),
+    tabImagesCount: document.getElementById("col-tab-images-count"),
+    toolbar: document.querySelector(".col-toolbar"),
   };
 
   const MANIFEST_KEY = "rl-collection-manifest-v1";
@@ -85,6 +90,7 @@
   let shareSession = null;
   let shareTimer = 0;
   let toastTimer = 0;
+  let tabChosen = false;
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                             */
@@ -242,6 +248,76 @@
 
       el.folders.appendChild(chip);
     }
+  }
+
+  /** Packs tab: one card per bucket folder, with a small cover collage. */
+  function renderPackList() {
+    if (!el.packList) return;
+    el.packList.textContent = "";
+
+    const folders = [...packs.keys()].sort((a, b) => {
+      if (a === "") return -1;
+      if (b === "") return 1;
+      return a.localeCompare(b);
+    });
+
+    if (el.tabPacksCount) el.tabPacksCount.textContent = String(folders.length);
+    if (el.tabImagesCount) el.tabImagesCount.textContent = String(allFiles.length);
+
+    for (const folder of folders) {
+      const files = packs.get(folder).slice().sort(sorters.name);
+      const bytes = files.reduce((sum, file) => sum + file.size, 0);
+
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "col-packcard";
+      card.title = `Open ${packName(folder)}`;
+
+      const cover = document.createElement("span");
+      cover.className = "col-packcover";
+      const covers = files.slice(0, 3);
+      if (covers.length < 3) cover.classList.add("is-single");
+      for (const file of covers.length < 3 ? covers.slice(0, 1) : covers) {
+        const img = document.createElement("img");
+        img.alt = "";
+        img.loading = "lazy";
+        img.decoding = "async";
+        img.draggable = false;
+        img.src = file.thumbUrl || file.url;
+        cover.appendChild(img);
+      }
+
+      const info = document.createElement("span");
+      info.className = "col-packinfo";
+      const name = document.createElement("span");
+      name.className = "col-packname";
+      name.textContent = packName(folder);
+      const meta = document.createElement("span");
+      meta.className = "col-packmeta";
+      meta.textContent = `${files.length} ${files.length === 1 ? "image" : "images"} · ${formatBytes(bytes)}`;
+      info.append(name, meta);
+
+      card.append(cover, info);
+      card.addEventListener("click", () => {
+        activeFolder = folder;
+        for (const chip of el.folders.querySelectorAll(".col-chip")) {
+          chip.setAttribute("aria-pressed", String(chip.dataset.folder === folder));
+        }
+        setTab("images");
+        window.scrollTo({ top: 0 });
+      });
+      el.packList.appendChild(card);
+    }
+  }
+
+  function setTab(name) {
+    if (!el.packList) return;
+    const showPacks = name === "packs";
+    for (const tab of el.tabs) tab.setAttribute("aria-selected", String(tab.dataset.tab === name));
+    el.packList.hidden = !showPacks;
+    for (const node of [el.toolbar, el.folders, el.stats, el.packs]) if (node) node.hidden = showPacks;
+    if (showPacks) hideState();
+    else render();
   }
 
   function renderStats() {
@@ -527,6 +603,19 @@
     if (saved === "landscape") setView(saved);
   }
 
+  for (const tab of el.tabs) {
+    tab.addEventListener("click", () => {
+      tabChosen = true;
+      if (tab.dataset.tab === "images") activeFolder = "";
+      if (tab.dataset.tab === "images") {
+        for (const chip of el.folders.querySelectorAll(".col-chip")) {
+          chip.setAttribute("aria-pressed", String(chip.dataset.folder === ""));
+        }
+      }
+      setTab(tab.dataset.tab);
+    });
+  }
+
   el.lbClose.addEventListener("click", closeLightbox);
   el.lbPrev.addEventListener("click", () => step(-1));
   el.lbNext.addEventListener("click", () => step(1));
@@ -572,7 +661,14 @@
     }
 
     renderChips();
-    render();
+    renderPackList();
+    // The collection opens on the Packs tab; certificates have no tab bar.
+    if (el.packList && !tabChosen) {
+      tabChosen = true;
+      setTab(new URLSearchParams(window.location.search).has("share") ? "images" : "packs");
+    } else {
+      render();
+    }
   }
 
   function setView(view) {
