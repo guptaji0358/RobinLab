@@ -3,8 +3,17 @@
 The **Collection** page (`root/collection.html`) lists and previews the artwork in the
 private Hugging Face bucket **`robinlabdev/robinvault`**.
 
-Each bucket folder becomes one **pack**: a titled section with its images shown at their
-real aspect ratio (never cropped to squares). Only images appear here.
+Folders become **packs** at any nesting depth, with images shown at their real aspect ratio
+(never cropped to squares). Only images appear here. The Packs tab has two modes, set by
+`DEFAULT_PACK_MODE` in `root/js/collection.js` (or `?packs=all` / `?packs=nested` on the URL):
+
+- `nested` (current): only a folder that has subfolders is a pack. Each image is filed under its
+  nearest such folder; everything else (folders without subfolders, loose images) is one **General** pack.
+- `all` (planned for a large vault): every folder that holds images is its own pack, e.g.
+  `Naruto / Uchiha itachi`; loose images in a folder that has subfolders are `<folder> / General`.
+
+A lone top-level folder (such as `wallpapers/`) is treated as a container, not a pack. New folders
+appear on the next page load; no code change is needed.
 
 PowerPoint decks are **not** shown in the Collection. They live on their own page,
 `/presentations` (`root/presentations.html`), which embeds the deck with

@@ -51,6 +51,17 @@
     toolbar: document.querySelector(".col-toolbar"),
   };
 
+  // How folders become packs.
+  //  "nested": only a folder that has subfolders is a pack. Every image is filed
+  //            under its nearest such folder; the rest (folders without subfolders,
+  //            loose images) is one "General" pack.
+  //  "all":    every folder that holds images is its own pack, at any depth.
+  // Switch DEFAULT_PACK_MODE to "all" once the vault grows, or try it ad hoc
+  // with /collection?packs=all (and ?packs=nested to compare).
+  const DEFAULT_PACK_MODE = "nested";
+  const modeParam = new URLSearchParams(window.location.search).get("packs");
+  const PACK_MODE = modeParam === "all" || modeParam === "nested" ? modeParam : DEFAULT_PACK_MODE;
+
   const MANIFEST_KEY = "rl-collection-manifest-v1";
   const VIEW_KEY = "rl-collection-view";
   // /certificates reuses this script; certificates never appear in the collection.
@@ -92,7 +103,8 @@
   let toastTimer = 0;
   let tabChosen = false;
   let activeExact = false;
-  let packBase = ""; // lone container folder (e.g. wallpapers) the Packs tab opens inside
+  let packBase = ""; // lone container folder (e.g. wallpapers) — its own loose images are "General"
+  let parents = new Set(); // every folder that has at least one subfolder below it
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                             */
@@ -125,14 +137,16 @@
       .join(" / ");
   }
 
-  // Pack title relative to the container folder. A folder that also has
-  // subfolders names its own loose images "<folder> / General".
-  function shortPackName(folder) {
-    const rel = packBase && folder.startsWith(packBase + "/") ? folder.slice(packBase.length + 1) : folder === packBase ? "" : folder;
-    const hasSubs = allFiles.some((file) => (file.folder || "").startsWith(folder ? folder + "/" : "/"));
+  const relToBase = (folder) =>
+    packBase && folder.startsWith(packBase + "/") ? folder.slice(packBase.length + 1) : folder === packBase ? "" : folder;
+
+  // Title of a pack key. In "all" mode a folder that also has subfolders calls its
+  // own loose images "<folder> / General".
+  function packTitle(key) {
+    const rel = relToBase(key);
     if (!rel) return "General";
     const name = packName(rel);
-    return hasSubs ? `${name} / General` : name;
+    return PACK_MODE === "all" && parents.has(key) ? `${name} / General` : name;
   }
 
   function isPreviewable(file) {
@@ -226,13 +240,7 @@
   function renderChips() {
     el.folders.textContent = "";
 
-    const folders = [...packs.keys()].sort((a, b) => {
-      if (a === "") return -1;
-      if (b === "") return 1;
-      return a.localeCompare(b);
-    });
-
-    const entries = [["", allFiles.length], ...folders.filter(Boolean).map((f) => [f, packs.get(f).length])];
+    const entries = [["", allFiles.length], ...sortedPackKeys().map((key) => [key, packs.get(key).length])];
 
     for (const [folder, count] of entries) {
       const isAll = folder === "";
@@ -242,8 +250,8 @@
       chip.className = "col-chip";
       chip.dataset.folder = folder;
       chip.setAttribute("aria-pressed", String(folder === activeFolder));
-      chip.textContent = isAll ? "Everything" : packName(folder);
-      chip.title = isAll ? "Show every pack" : `Show only ${packName(folder)}`;
+      chip.textContent = isAll ? "Everything" : packTitle(folder);
+      chip.title = isAll ? "Show every pack" : `Show only ${packTitle(folder)}`;
 
       const badge = document.createElement("span");
       badge.className = "col-chip-count";
@@ -319,48 +327,28 @@
     return card;
   }
 
-  /**
-   * Packs tab. Every folder that holds images is its own pack, at any depth
-   * (Death Note and Death Note / L are two packs). Images sitting directly in a
-   * folder that also has subfolders are that folder's "General" pack.
-   */
+  /** Pack keys in display order: the container's General first, then by title. */
+  function sortedPackKeys() {
+    return [...packs.keys()].sort((a, b) => {
+      if (a === packBase) return -1;
+      if (b === packBase) return 1;
+      return packTitle(a).localeCompare(packTitle(b), undefined, { numeric: true, sensitivity: "base" });
+    });
+  }
+
+  /** Packs tab: one card per pack (see PACK_MODE). */
   function renderPackList() {
     if (!el.packList) return;
     el.packList.textContent = "";
     if (el.tabImagesCount) el.tabImagesCount.textContent = String(allFiles.length);
 
-    // A lone top-level folder (e.g. wallpapers/) is only a container.
-    let base = "";
-    for (;;) {
-      const tops = new Set(
-        allFiles.filter((file) => underFolder(file, base)).map((file) => (file.folder || "").slice(base ? base.length + 1 : 0).split("/")[0]),
-      );
-      if (tops.size !== 1 || allFiles.some((file) => inFolder(file, base))) break;
-      base = base ? `${base}/${[...tops][0]}` : [...tops][0];
-    }
-    packBase = base;
-
-    const byFolder = new Map();
-    for (const file of allFiles) {
-      const folder = file.folder || "";
-      if (!byFolder.has(folder)) byFolder.set(folder, []);
-      byFolder.get(folder).push(file);
-    }
-
-    const folders = [...byFolder.keys()].sort((a, b) => {
-      if (a === base) return -1;
-      if (b === base) return 1;
-      return shortPackName(a).localeCompare(shortPackName(b), undefined, { numeric: true, sensitivity: "base" });
-    });
-
-    if (el.tabPacksCount) el.tabPacksCount.textContent = String(folders.length);
+    const keys = sortedPackKeys();
+    if (el.tabPacksCount) el.tabPacksCount.textContent = String(keys.length);
 
     const grid = document.createElement("div");
     grid.className = "col-packgrid";
-    for (const folder of folders) {
-      grid.appendChild(
-        packCard(shortPackName(folder), byFolder.get(folder), () => openScope(folder, true), `Open ${shortPackName(folder)}`),
-      );
+    for (const key of keys) {
+      grid.appendChild(packCard(packTitle(key), packs.get(key), () => openScope(key, true), `Open ${packTitle(key)}`));
     }
     el.packList.appendChild(grid);
   }
@@ -452,7 +440,7 @@
 
     const title = document.createElement("h3");
     title.className = "col-pack-title";
-    title.textContent = shortPackName(folder);
+    title.textContent = packTitle(folder);
 
     const meta = document.createElement("span");
     meta.className = "col-pack-meta";
@@ -479,16 +467,7 @@
     visible = [];
 
     const sorter = sorters[sort] || sorters.name;
-    const folders = [...packs.keys()]
-      .filter((folder) => {
-        if (activeExact) return folder === activeFolder;
-        return !activeFolder || folder === activeFolder || folder.startsWith(activeFolder + "/");
-      })
-      .sort((a, b) => {
-        if (a === "") return -1;
-        if (b === "") return 1;
-        return a.localeCompare(b);
-      });
+    const folders = sortedPackKeys().filter((key) => !activeExact || key === activeFolder);
 
     const frag = document.createDocumentFragment();
 
@@ -704,18 +683,49 @@
   /* Boot                                                                */
   /* ------------------------------------------------------------------ */
 
+  /** Work out the container folder, the folders that have subfolders, and each image's pack. */
+  function buildPacks() {
+    parents = new Set();
+    for (const file of allFiles) {
+      const parts = (file.folder || "").split("/").filter(Boolean);
+      for (let i = 1; i < parts.length; i++) parents.add(parts.slice(0, i).join("/"));
+    }
+
+    // A lone top-level folder (e.g. wallpapers/) is only a container, not a pack.
+    let base = "";
+    for (;;) {
+      const tops = new Set(
+        allFiles.filter((file) => underFolder(file, base)).map((file) => (file.folder || "").slice(base ? base.length + 1 : 0).split("/")[0]),
+      );
+      if (tops.size !== 1 || allFiles.some((file) => inFolder(file, base))) break;
+      base = base ? `${base}/${[...tops][0]}` : [...tops][0];
+    }
+    packBase = base;
+
+    const keyOf = (file) => {
+      const folder = file.folder || "";
+      if (PACK_MODE === "all") return folder;
+      for (let f = folder; f && f !== base; f = f.includes("/") ? f.slice(0, f.lastIndexOf("/")) : "") {
+        if (parents.has(f)) return f;
+      }
+      return base;
+    };
+
+    packs = new Map();
+    for (const file of allFiles) {
+      const key = keyOf(file);
+      if (!packs.has(key)) packs.set(key, []);
+      packs.get(key).push(file);
+    }
+  }
+
   function ingest(files) {
     // Presentations have their own page — this view is images only.
     allFiles = (Array.isArray(files) ? files : [])
       .filter(isPreviewable)
       .filter((file) => isCertificate(file) === CERT_SCOPE);
 
-    packs = new Map();
-    for (const file of allFiles) {
-      const folder = file.folder || "";
-      if (!packs.has(folder)) packs.set(folder, []);
-      packs.get(folder).push(file);
-    }
+    buildPacks();
 
     renderChips();
     renderPackList();
