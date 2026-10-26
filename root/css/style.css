@@ -891,6 +891,31 @@ a { color: inherit; text-decoration: none; }
   color: var(--text-muted);
 }
 
+/* Packs tab tree: groups nest to any depth */
+
+.col-packgroup { display: flex; flex-direction: column; gap: 22px; }
+
+.col-packgroup .col-packgroup {
+  margin: 12px 0 0 clamp(8px, 2vw, 20px);
+  padding-left: clamp(10px, 2vw, 20px);
+  border-left: 2px solid var(--border);
+}
+
+.col-packgroup-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.col-packgroup-head h3 { margin: 0; font-size: 18px; letter-spacing: -0.01em; }
+
+.col-packgroup-head span {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* Folder chips */
 
 .col-chips {

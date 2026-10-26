@@ -336,7 +336,57 @@
     });
   }
 
-  /** Packs tab: one card per pack (see PACK_MODE). */
+  /**
+   * "all" mode on the Packs tab: the folder tree, to any depth. A folder with
+   * subfolders is a group (heading + its own General card + its leaf folders as
+   * cards) and each subfolder that has subfolders of its own nests inside it.
+   */
+  function buildPackTree() {
+    const folders = new Set([...packs.keys(), ...parents]);
+    const parentOf = (f) => (f.includes("/") ? f.slice(0, f.lastIndexOf("/")) : "");
+    const lastOf = (f) => f.slice(f.lastIndexOf("/") + 1);
+    const inside = (f) => (packBase ? f.startsWith(packBase + "/") : !!f);
+    const byName = (a, b) => lastOf(a).localeCompare(lastOf(b), undefined, { numeric: true, sensitivity: "base" });
+    const countUnder = (f) =>
+      [...packs.entries()].reduce((n, [key, list]) => (key === f || key.startsWith(f + "/") ? n + list.length : n), 0);
+
+    const group = (folder, isRoot) => {
+      const wrap = document.createElement("section");
+      wrap.className = "col-packgroup";
+
+      if (!isRoot) {
+        const head = document.createElement("div");
+        head.className = "col-packgroup-head";
+        const title = document.createElement("h3");
+        title.textContent = packName(lastOf(folder));
+        const meta = document.createElement("span");
+        const n = countUnder(folder);
+        meta.textContent = `${n} ${n === 1 ? "image" : "images"}`;
+        head.append(title, meta);
+        wrap.appendChild(head);
+      }
+
+      const grid = document.createElement("div");
+      grid.className = "col-packgrid";
+      const nested = [];
+      if (packs.has(folder)) {
+        const title = isRoot || parents.has(folder) ? "General" : packName(lastOf(folder));
+        grid.appendChild(packCard(title, packs.get(folder), () => openScope(folder, true), `Open ${packTitle(folder)}`));
+      }
+      const kids = [...folders].filter((f) => f && f !== folder && inside(f) && parentOf(f) === folder).sort(byName);
+      for (const kid of kids) {
+        if (parents.has(kid)) nested.push(kid);
+        else grid.appendChild(packCard(packName(lastOf(kid)), packs.get(kid), () => openScope(kid, true), `Open ${packTitle(kid)}`));
+      }
+      if (grid.children.length) wrap.appendChild(grid);
+      for (const kid of nested) wrap.appendChild(group(kid, false));
+      return wrap;
+    };
+
+    return group(packBase, true);
+  }
+
+  /** Packs tab: the folder tree ("all" mode) or one flat card per pack ("nested"). */
   function renderPackList() {
     if (!el.packList) return;
     el.packList.textContent = "";
@@ -344,6 +394,11 @@
 
     const keys = sortedPackKeys();
     if (el.tabPacksCount) el.tabPacksCount.textContent = String(keys.length);
+
+    if (PACK_MODE === "all") {
+      el.packList.appendChild(buildPackTree());
+      return;
+    }
 
     const grid = document.createElement("div");
     grid.className = "col-packgrid";
