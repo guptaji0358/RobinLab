@@ -45,6 +45,27 @@
     toast: document.getElementById("toast"),
   };
 
+  const MANIFEST_KEY = "rl-collection-manifest-v1";
+  const EAGER_COUNT = 12;
+
+  // Browsers' native lazy-loading waits until an image is a viewport or two
+  // away, which on a proxied grid shows blank cards while scrolling. Starting
+  // 1500px ahead keeps the images ready before they are seen.
+  const imageObserver =
+    "IntersectionObserver" in window
+      ? new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              const img = entry.target;
+              imageObserver.unobserve(img);
+              img.src = img.dataset.src;
+            }
+          },
+          { rootMargin: "1500px 0px" },
+        )
+      : null;
+
   let allFiles = [];
   let packs = new Map();
   let visible = [];
@@ -240,16 +261,28 @@
     media.className = "col-card-media";
 
     const img = document.createElement("img");
-    img.loading = "lazy";
     img.decoding = "async";
     img.draggable = false;
     img.alt = humanName(file);
     // Grid cards use the generated WebP preview (tens of KB) rather than the
     // full-resolution original, which is often several megabytes. The original
     // is only fetched once the lightbox actually opens.
-    img.src = file.thumbUrl || file.url;
+    img.dataset.src = file.thumbUrl || file.url;
+    img.addEventListener("load", () => card.classList.add("is-loaded"));
     img.addEventListener("error", () => card.classList.add("is-broken"));
     media.appendChild(img);
+
+    // The first screenful starts downloading immediately at high priority; the
+    // rest begin well before they scroll into view (see `watchImages`).
+    if (index < EAGER_COUNT) {
+      img.fetchPriority = "high";
+      img.src = img.dataset.src;
+    } else if (imageObserver) {
+      imageObserver.observe(img);
+    } else {
+      img.loading = "lazy";
+      img.src = img.dataset.src;
+    }
 
     const overlay = document.createElement("span");
     overlay.className = "col-card-overlay";
@@ -304,6 +337,7 @@
   }
 
   function render() {
+    if (imageObserver) imageObserver.disconnect();
     el.packs.textContent = "";
     visible = [];
 
@@ -507,11 +541,51 @@
   /* Boot                                                                */
   /* ------------------------------------------------------------------ */
 
+  function ingest(files) {
+    // Presentations have their own page — this view is images only.
+    allFiles = (Array.isArray(files) ? files : []).filter(isPreviewable);
+
+    packs = new Map();
+    for (const file of allFiles) {
+      const folder = file.folder || "";
+      if (!packs.has(folder)) packs.set(folder, []);
+      packs.get(folder).push(file);
+    }
+
+    renderChips();
+    render();
+  }
+
+  /** Last manifest this browser saw, so a repeat visit paints before the network answers. */
+  function readCachedManifest() {
+    try {
+      const files = JSON.parse(localStorage.getItem(MANIFEST_KEY) || "null");
+      return Array.isArray(files) && files.length ? files : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeCachedManifest(files) {
+    try {
+      localStorage.setItem(MANIFEST_KEY, JSON.stringify(files));
+    } catch {
+      // storage full or blocked — the cache is only an optimisation
+    }
+  }
+
   /** Returns true when the grid rendered, so the share bootstrap can rely on it. */
   async function load() {
     el.packs.textContent = "";
-    showState("loading", "Loading the vault…", "Fetching the collection index.");
     el.stats.textContent = "";
+
+    const cached = readCachedManifest();
+    if (cached) {
+      hideState();
+      ingest(cached);
+    } else {
+      showState("loading", "Loading the vault…", "Fetching the collection index.");
+    }
 
     try {
       const response = await fetch(LIST_ENDPOINT, { headers: { Accept: "application/json" } });
@@ -523,24 +597,19 @@
           (response.status === 404
             ? "The API endpoint was not found. Deploy the Cloudflare Pages Function, or run `python dev_server.py` instead of a plain static server."
             : `The server responded with HTTP ${response.status}.`);
+        if (cached) return true;
         showState("error", "The collection could not be loaded.", detail);
         return false;
       }
 
-      // Presentations have their own page — this view is images only.
-      allFiles = (Array.isArray(payload.files) ? payload.files : []).filter(isPreviewable);
-
-      packs = new Map();
-      for (const file of allFiles) {
-        const folder = file.folder || "";
-        if (!packs.has(folder)) packs.set(folder, []);
-        packs.get(folder).push(file);
-      }
-
-      renderChips();
-      render();
+      const fresh = Array.isArray(payload.files) ? payload.files : [];
+      const changed = !cached || JSON.stringify(cached) !== JSON.stringify(fresh);
+      writeCachedManifest(fresh);
+      // Skip the rebuild when nothing changed so painted images don't flicker.
+      if (changed) ingest(fresh);
       return true;
     } catch (err) {
+      if (cached) return true;
       showState(
         "error",
         "The collection could not be loaded.",

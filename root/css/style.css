@@ -851,13 +851,38 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 
+.col-card-media {
+  min-height: 160px;
+  background: linear-gradient(110deg, #0e1116 30%, #171c24 50%, #0e1116 70%) 0 0 / 200% 100%;
+  animation: col-shimmer 1.4s linear infinite;
+}
+
+.col-card.is-loaded .col-card-media,
+.col-card.is-broken .col-card-media {
+  min-height: 0;
+  animation: none;
+  background: #0e1116;
+}
+
+@keyframes col-shimmer {
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .col-card-media { animation: none; }
+}
+
 .col-card-media img {
   display: block;
   width: 100%;
   height: auto;
+  opacity: 0;
+  transition: opacity 0.25s ease;
   -webkit-user-drag: none;
   user-select: none;
 }
+
+.col-card.is-loaded .col-card-media img { opacity: 1; }
 
 .col-card.is-broken .col-card-media::after {
   content: "Preview unavailable";
