@@ -802,11 +802,33 @@ a { color: inherit; text-decoration: none; }
   opacity: 0.65;
 }
 
-.col-packlist {
+.col-packgrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: 22px;
 }
+
+.col-crumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.col-crumb-back {
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.col-crumb-back:hover { border-color: #333a44; }
 
 .col-packlist[hidden],
 .col-toolbar[hidden],

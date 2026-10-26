@@ -91,6 +91,8 @@
   let shareTimer = 0;
   let toastTimer = 0;
   let tabChosen = false;
+  let activeExact = false;
+  let packPath = "";
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                             */
@@ -240,9 +242,8 @@
 
       chip.addEventListener("click", () => {
         activeFolder = folder;
-        for (const other of el.folders.querySelectorAll(".col-chip")) {
-          other.setAttribute("aria-pressed", String(other.dataset.folder === folder));
-        }
+        activeExact = !isAll;
+        syncChips();
         render();
       });
 
@@ -250,64 +251,137 @@
     }
   }
 
-  /** Packs tab: one card per bucket folder, with a small cover collage. */
+  /** Open the images view scoped to one folder (exact = only files directly in it). */
+  function openScope(folder, exact) {
+    activeFolder = folder;
+    activeExact = exact;
+    syncChips();
+    setTab("images");
+    window.scrollTo({ top: 0 });
+  }
+
+  function syncChips() {
+    for (const chip of el.folders.querySelectorAll(".col-chip")) {
+      const f = chip.dataset.folder;
+      const on = f === "" ? !activeFolder && !activeExact : f === activeFolder;
+      chip.setAttribute("aria-pressed", String(on));
+    }
+  }
+
+  const inFolder = (file, folder) => (file.folder || "") === folder;
+  const underFolder = (file, folder) => (folder ? (file.folder || "").startsWith(folder + "/") : !!file.folder);
+
+  function packCard(title, files, onOpen, hint) {
+    const bytes = files.reduce((sum, file) => sum + file.size, 0);
+
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "col-packcard";
+    card.title = hint;
+
+    const cover = document.createElement("span");
+    cover.className = "col-packcover";
+    const covers = files.slice().sort(sorters.name).slice(0, 3);
+    const shown = covers.length < 3 ? covers.slice(0, 1) : covers;
+    if (shown.length < 3) cover.classList.add("is-single");
+    for (const file of shown) {
+      const img = document.createElement("img");
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.draggable = false;
+      img.src = file.thumbUrl || file.url;
+      cover.appendChild(img);
+    }
+
+    const info = document.createElement("span");
+    info.className = "col-packinfo";
+    const name = document.createElement("span");
+    name.className = "col-packname";
+    name.textContent = title;
+    const meta = document.createElement("span");
+    meta.className = "col-packmeta";
+    meta.textContent = `${files.length} ${files.length === 1 ? "image" : "images"} · ${formatBytes(bytes)}`;
+    info.append(name, meta);
+
+    card.append(cover, info);
+    card.addEventListener("click", onOpen);
+    return card;
+  }
+
+  /**
+   * Packs tab. Every subfolder of the current level is a pack; a subfolder that
+   * has subfolders of its own opens another level. Images sitting directly in a
+   * folder that also has subfolders are collected into that folder's "General".
+   */
   function renderPackList() {
     if (!el.packList) return;
     el.packList.textContent = "";
-
-    const folders = [...packs.keys()].sort((a, b) => {
-      if (a === "") return -1;
-      if (b === "") return 1;
-      return a.localeCompare(b);
-    });
-
-    if (el.tabPacksCount) el.tabPacksCount.textContent = String(folders.length);
     if (el.tabImagesCount) el.tabImagesCount.textContent = String(allFiles.length);
 
-    for (const folder of folders) {
-      const files = packs.get(folder).slice().sort(sorters.name);
-      const bytes = files.reduce((sum, file) => sum + file.size, 0);
-
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "col-packcard";
-      card.title = `Open ${packName(folder)}`;
-
-      const cover = document.createElement("span");
-      cover.className = "col-packcover";
-      const covers = files.slice(0, 3);
-      if (covers.length < 3) cover.classList.add("is-single");
-      for (const file of covers.length < 3 ? covers.slice(0, 1) : covers) {
-        const img = document.createElement("img");
-        img.alt = "";
-        img.loading = "lazy";
-        img.decoding = "async";
-        img.draggable = false;
-        img.src = file.thumbUrl || file.url;
-        cover.appendChild(img);
-      }
-
-      const info = document.createElement("span");
-      info.className = "col-packinfo";
-      const name = document.createElement("span");
-      name.className = "col-packname";
-      name.textContent = packName(folder);
-      const meta = document.createElement("span");
-      meta.className = "col-packmeta";
-      meta.textContent = `${files.length} ${files.length === 1 ? "image" : "images"} · ${formatBytes(bytes)}`;
-      info.append(name, meta);
-
-      card.append(cover, info);
-      card.addEventListener("click", () => {
-        activeFolder = folder;
-        for (const chip of el.folders.querySelectorAll(".col-chip")) {
-          chip.setAttribute("aria-pressed", String(chip.dataset.folder === folder));
-        }
-        setTab("images");
-        window.scrollTo({ top: 0 });
-      });
-      el.packList.appendChild(card);
+    const level = packPath;
+    const direct = allFiles.filter((file) => inFolder(file, level));
+    const children = new Map(); // child folder name -> files under it
+    for (const file of allFiles) {
+      if (!underFolder(file, level)) continue;
+      const rest = (file.folder || "").slice(level ? level.length + 1 : 0);
+      const name = rest.split("/")[0];
+      if (!children.has(name)) children.set(name, []);
+      children.get(name).push(file);
     }
+
+    if (el.tabPacksCount && !level) el.tabPacksCount.textContent = String(children.size + (direct.length ? 1 : 0));
+
+    if (level) {
+      const crumb = document.createElement("div");
+      crumb.className = "col-crumb";
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "col-crumb-back";
+      back.textContent = "← All packs";
+      back.addEventListener("click", () => {
+        const parts = level.split("/");
+        parts.pop();
+        packPath = parts.join("/");
+        renderPackList();
+      });
+      const here = document.createElement("span");
+      here.textContent = packName(level);
+      crumb.append(back, here);
+      el.packList.appendChild(crumb);
+    }
+
+    const grid = document.createElement("div");
+    grid.className = "col-packgrid";
+
+    const names = [...children.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+    for (const name of names) {
+      const path = level ? `${level}/${name}` : name;
+      const files = children.get(name);
+      const hasSub = files.some((file) => underFolder(file, path));
+      grid.appendChild(
+        packCard(
+          packName(name),
+          files,
+          () => {
+            if (hasSub) {
+              packPath = path;
+              renderPackList();
+              window.scrollTo({ top: 0 });
+            } else {
+              openScope(path, true);
+            }
+          },
+          hasSub ? `Open ${packName(name)} packs` : `Open ${packName(name)}`,
+        ),
+      );
+    }
+
+    if (direct.length) {
+      grid.appendChild(packCard("General", direct, () => openScope(level, true), "Images that sit directly in this folder"));
+    }
+
+    el.packList.appendChild(grid);
   }
 
   function setTab(name) {
@@ -425,7 +499,10 @@
 
     const sorter = sorters[sort] || sorters.name;
     const folders = [...packs.keys()]
-      .filter((folder) => !activeFolder || folder === activeFolder)
+      .filter((folder) => {
+        if (activeExact) return folder === activeFolder;
+        return !activeFolder || folder === activeFolder || folder.startsWith(activeFolder + "/");
+      })
       .sort((a, b) => {
         if (a === "") return -1;
         if (b === "") return 1;
@@ -606,11 +683,10 @@
   for (const tab of el.tabs) {
     tab.addEventListener("click", () => {
       tabChosen = true;
-      if (tab.dataset.tab === "images") activeFolder = "";
       if (tab.dataset.tab === "images") {
-        for (const chip of el.folders.querySelectorAll(".col-chip")) {
-          chip.setAttribute("aria-pressed", String(chip.dataset.folder === ""));
-        }
+        activeFolder = "";
+        activeExact = false;
+        syncChips();
       }
       setTab(tab.dataset.tab);
     });
