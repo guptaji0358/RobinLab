@@ -56,9 +56,9 @@
   //            under its nearest such folder; the rest (folders without subfolders,
   //            loose images) is one "General" pack.
   //  "all":    every folder that holds images is its own pack, at any depth.
-  // Switch DEFAULT_PACK_MODE to "all" once the vault grows, or try it ad hoc
+  // Change DEFAULT_PACK_MODE to switch modes, or try one ad hoc
   // with /collection?packs=all (and ?packs=nested to compare).
-  const DEFAULT_PACK_MODE = "nested";
+  const DEFAULT_PACK_MODE = "all";
   const modeParam = new URLSearchParams(window.location.search).get("packs");
   const PACK_MODE = modeParam === "all" || modeParam === "nested" ? modeParam : DEFAULT_PACK_MODE;
 

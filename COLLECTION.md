@@ -7,9 +7,9 @@ Folders become **packs** at any nesting depth, with images shown at their real a
 (never cropped to squares). Only images appear here. The Packs tab has two modes, set by
 `DEFAULT_PACK_MODE` in `root/js/collection.js` (or `?packs=all` / `?packs=nested` on the URL):
 
-- `nested` (current): only a folder that has subfolders is a pack. Each image is filed under its
+- `nested`: only a folder that has subfolders is a pack. Each image is filed under its
   nearest such folder; everything else (folders without subfolders, loose images) is one **General** pack.
-- `all` (planned for a large vault): every folder that holds images is its own pack, e.g.
+- `all` (current default): every folder that holds images is its own pack, e.g.
   `Naruto / Uchiha itachi`; loose images in a folder that has subfolders are `<folder> / General`.
 
 A lone top-level folder (such as `wallpapers/`) is treated as a container, not a pack. New folders
