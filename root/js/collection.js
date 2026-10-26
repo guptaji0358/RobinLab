@@ -319,20 +319,35 @@
     el.packList.textContent = "";
     if (el.tabImagesCount) el.tabImagesCount.textContent = String(allFiles.length);
 
+    const childrenOf = (folder) => {
+      const map = new Map(); // child folder name -> files under it
+      for (const file of allFiles) {
+        if (!underFolder(file, folder)) continue;
+        const rest = (file.folder || "").slice(folder ? folder.length + 1 : 0);
+        const name = rest.split("/")[0];
+        if (!map.has(name)) map.set(name, []);
+        map.get(name).push(file);
+      }
+      return map;
+    };
+
+    // A lone top-level folder (e.g. wallpapers/) is only a container: its
+    // subfolders are the packs, so start inside it instead of showing it as one.
+    let base = "";
+    for (;;) {
+      const kids = childrenOf(base);
+      if (kids.size !== 1 || allFiles.some((file) => inFolder(file, base))) break;
+      base = base ? `${base}/${[...kids.keys()][0]}` : [...kids.keys()][0];
+    }
+    if (!packPath.startsWith(base)) packPath = base;
+
     const level = packPath;
     const direct = allFiles.filter((file) => inFolder(file, level));
-    const children = new Map(); // child folder name -> files under it
-    for (const file of allFiles) {
-      if (!underFolder(file, level)) continue;
-      const rest = (file.folder || "").slice(level ? level.length + 1 : 0);
-      const name = rest.split("/")[0];
-      if (!children.has(name)) children.set(name, []);
-      children.get(name).push(file);
-    }
+    const children = childrenOf(level);
 
-    if (el.tabPacksCount && !level) el.tabPacksCount.textContent = String(children.size + (direct.length ? 1 : 0));
+    if (el.tabPacksCount && level === base) el.tabPacksCount.textContent = String(children.size + (direct.length ? 1 : 0));
 
-    if (level) {
+    if (level !== base) {
       const crumb = document.createElement("div");
       crumb.className = "col-crumb";
       const back = document.createElement("button");
@@ -343,6 +358,7 @@
         const parts = level.split("/");
         parts.pop();
         packPath = parts.join("/");
+        if (!packPath.startsWith(base)) packPath = base;
         renderPackList();
       });
       const here = document.createElement("span");
