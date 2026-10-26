@@ -92,7 +92,6 @@
   let toastTimer = 0;
   let tabChosen = false;
   let activeExact = false;
-  let packPath = "";
   let packBase = ""; // lone container folder (e.g. wallpapers) the Packs tab opens inside
 
   /* ------------------------------------------------------------------ */
@@ -126,11 +125,14 @@
       .join(" / ");
   }
 
-  // Pack title relative to the container folder; a folder's own loose images are "General".
+  // Pack title relative to the container folder. A folder that also has
+  // subfolders names its own loose images "<folder> / General".
   function shortPackName(folder) {
-    if (!folder || folder === packBase) return "General";
-    const rel = packBase && folder.startsWith(packBase + "/") ? folder.slice(packBase.length + 1) : folder;
-    return packName(rel);
+    const rel = packBase && folder.startsWith(packBase + "/") ? folder.slice(packBase.length + 1) : folder === packBase ? "" : folder;
+    const hasSubs = allFiles.some((file) => (file.folder || "").startsWith(folder ? folder + "/" : "/"));
+    if (!rel) return "General";
+    const name = packName(rel);
+    return hasSubs ? `${name} / General` : name;
   }
 
   function isPreviewable(file) {
@@ -318,113 +320,48 @@
   }
 
   /**
-   * Packs tab. Every subfolder of the current level is a pack; a subfolder that
-   * has subfolders of its own opens another level. Images sitting directly in a
-   * folder that also has subfolders are collected into that folder's "General".
+   * Packs tab. Every folder that holds images is its own pack, at any depth
+   * (Death Note and Death Note / L are two packs). Images sitting directly in a
+   * folder that also has subfolders are that folder's "General" pack.
    */
   function renderPackList() {
     if (!el.packList) return;
     el.packList.textContent = "";
     if (el.tabImagesCount) el.tabImagesCount.textContent = String(allFiles.length);
 
-    const childrenOf = (folder) => {
-      const map = new Map(); // child folder name -> files under it
-      for (const file of allFiles) {
-        if (!underFolder(file, folder)) continue;
-        const rest = (file.folder || "").slice(folder ? folder.length + 1 : 0);
-        const name = rest.split("/")[0];
-        if (!map.has(name)) map.set(name, []);
-        map.get(name).push(file);
-      }
-      return map;
-    };
-
-    // A lone top-level folder (e.g. wallpapers/) is only a container: its
-    // subfolders are the packs, so start inside it instead of showing it as one.
+    // A lone top-level folder (e.g. wallpapers/) is only a container.
     let base = "";
     for (;;) {
-      const kids = childrenOf(base);
-      if (kids.size !== 1 || allFiles.some((file) => inFolder(file, base))) break;
-      base = base ? `${base}/${[...kids.keys()][0]}` : [...kids.keys()][0];
+      const tops = new Set(
+        allFiles.filter((file) => underFolder(file, base)).map((file) => (file.folder || "").slice(base ? base.length + 1 : 0).split("/")[0]),
+      );
+      if (tops.size !== 1 || allFiles.some((file) => inFolder(file, base))) break;
+      base = base ? `${base}/${[...tops][0]}` : [...tops][0];
     }
-    if (!packPath.startsWith(base)) packPath = base;
     packBase = base;
 
-    const level = packPath;
-    const direct = allFiles.filter((file) => inFolder(file, level));
-    const children = childrenOf(level);
-
-    if (el.tabPacksCount && level === base) el.tabPacksCount.textContent = String(children.size + (direct.length ? 1 : 0));
-
-    if (level !== base) {
-      const crumb = document.createElement("nav");
-      crumb.className = "col-crumb";
-      crumb.setAttribute("aria-label", "Pack path");
-      const go = (path) => {
-        packPath = path;
-        renderPackList();
-        window.scrollTo({ top: 0 });
-      };
-      const link = (label, path) => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "col-crumb-back";
-        b.textContent = label;
-        b.addEventListener("click", () => go(path));
-        return b;
-      };
-      const sep = () => {
-        const i = document.createElement("span");
-        i.textContent = "›";
-        return i;
-      };
-      crumb.appendChild(link("Packs", base));
-      let acc = base;
-      const parts = level.slice(base ? base.length + 1 : 0).split("/");
-      parts.forEach((part, i) => {
-        acc = acc ? `${acc}/${part}` : part;
-        crumb.appendChild(sep());
-        if (i === parts.length - 1) {
-          const here = document.createElement("strong");
-          here.textContent = packName(part);
-          crumb.appendChild(here);
-        } else {
-          crumb.appendChild(link(packName(part), acc));
-        }
-      });
-      el.packList.appendChild(crumb);
+    const byFolder = new Map();
+    for (const file of allFiles) {
+      const folder = file.folder || "";
+      if (!byFolder.has(folder)) byFolder.set(folder, []);
+      byFolder.get(folder).push(file);
     }
+
+    const folders = [...byFolder.keys()].sort((a, b) => {
+      if (a === base) return -1;
+      if (b === base) return 1;
+      return shortPackName(a).localeCompare(shortPackName(b), undefined, { numeric: true, sensitivity: "base" });
+    });
+
+    if (el.tabPacksCount) el.tabPacksCount.textContent = String(folders.length);
 
     const grid = document.createElement("div");
     grid.className = "col-packgrid";
-
-    const names = [...children.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
-    for (const name of names) {
-      const path = level ? `${level}/${name}` : name;
-      const files = children.get(name);
-      const hasSub = files.some((file) => underFolder(file, path));
+    for (const folder of folders) {
       grid.appendChild(
-        packCard(
-          packName(name),
-          files,
-          () => {
-            if (hasSub) {
-              packPath = path;
-              renderPackList();
-              window.scrollTo({ top: 0 });
-            } else {
-              openScope(path, true);
-            }
-          },
-          hasSub ? `Open ${packName(name)} packs` : `Open ${packName(name)}`,
-        ),
+        packCard(shortPackName(folder), byFolder.get(folder), () => openScope(folder, true), `Open ${shortPackName(folder)}`),
       );
     }
-
-    if (direct.length) {
-      grid.appendChild(packCard("General", direct, () => openScope(level, true), "Images that sit directly in this folder"));
-    }
-
     el.packList.appendChild(grid);
   }
 
