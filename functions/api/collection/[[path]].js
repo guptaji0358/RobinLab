@@ -34,7 +34,7 @@ function isServable(contentType) {
 
 // How long a cached bucket listing stays valid (ms). Keeps browsing snappy and
 // avoids hammering the Hub on every image request.
-const LISTING_TTL_MS = 60_000;
+const LISTING_TTL_MS = 10_000;
 
 // Browser/CDN cache lifetime for image bytes (seconds). Files in the vault are
 // immutable, so this can be generous.
@@ -242,7 +242,7 @@ async function handleList(env) {
         })),
       },
       200,
-      { "Cache-Control": "public, max-age=60, stale-while-revalidate=600" },
+      { "Cache-Control": "no-cache" },
     );
   } catch (err) {
     return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
