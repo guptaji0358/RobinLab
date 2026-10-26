@@ -828,6 +828,8 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
 }
 
+.col-crumb strong { color: var(--text); }
+
 .col-crumb-back:hover { border-color: #333a44; }
 
 .col-packlist[hidden],

@@ -93,6 +93,7 @@
   let tabChosen = false;
   let activeExact = false;
   let packPath = "";
+  let packBase = ""; // lone container folder (e.g. wallpapers) the Packs tab opens inside
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                             */
@@ -123,6 +124,13 @@
       .split("/")
       .map((part) => part.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase()))
       .join(" / ");
+  }
+
+  // Pack title relative to the container folder; a folder's own loose images are "General".
+  function shortPackName(folder) {
+    if (!folder || folder === packBase) return "General";
+    const rel = packBase && folder.startsWith(packBase + "/") ? folder.slice(packBase.length + 1) : folder;
+    return packName(rel);
   }
 
   function isPreviewable(file) {
@@ -340,6 +348,7 @@
       base = base ? `${base}/${[...kids.keys()][0]}` : [...kids.keys()][0];
     }
     if (!packPath.startsWith(base)) packPath = base;
+    packBase = base;
 
     const level = packPath;
     const direct = allFiles.filter((file) => inFolder(file, level));
@@ -348,22 +357,41 @@
     if (el.tabPacksCount && level === base) el.tabPacksCount.textContent = String(children.size + (direct.length ? 1 : 0));
 
     if (level !== base) {
-      const crumb = document.createElement("div");
+      const crumb = document.createElement("nav");
       crumb.className = "col-crumb";
-      const back = document.createElement("button");
-      back.type = "button";
-      back.className = "col-crumb-back";
-      back.textContent = "← All packs";
-      back.addEventListener("click", () => {
-        const parts = level.split("/");
-        parts.pop();
-        packPath = parts.join("/");
-        if (!packPath.startsWith(base)) packPath = base;
+      crumb.setAttribute("aria-label", "Pack path");
+      const go = (path) => {
+        packPath = path;
         renderPackList();
+        window.scrollTo({ top: 0 });
+      };
+      const link = (label, path) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "col-crumb-back";
+        b.textContent = label;
+        b.addEventListener("click", () => go(path));
+        return b;
+      };
+      const sep = () => {
+        const i = document.createElement("span");
+        i.textContent = "›";
+        return i;
+      };
+      crumb.appendChild(link("Packs", base));
+      let acc = base;
+      const parts = level.slice(base ? base.length + 1 : 0).split("/");
+      parts.forEach((part, i) => {
+        acc = acc ? `${acc}/${part}` : part;
+        crumb.appendChild(sep());
+        if (i === parts.length - 1) {
+          const here = document.createElement("strong");
+          here.textContent = packName(part);
+          crumb.appendChild(here);
+        } else {
+          crumb.appendChild(link(packName(part), acc));
+        }
       });
-      const here = document.createElement("span");
-      here.textContent = packName(level);
-      crumb.append(back, here);
       el.packList.appendChild(crumb);
     }
 
@@ -487,7 +515,7 @@
 
     const title = document.createElement("h3");
     title.className = "col-pack-title";
-    title.textContent = packName(folder);
+    title.textContent = shortPackName(folder);
 
     const meta = document.createElement("span");
     meta.className = "col-pack-meta";
