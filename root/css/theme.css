@@ -1,0 +1,103 @@
+/* RobinLab signature theme — layered over style.css on every page.
+   Aurora accent, glass surfaces, a drifting light on cards. Remove the
+   <link> to this file to fall back to the base look. */
+
+:root {
+  --aurora-1: #76a8ff;
+  --aurora-2: #b48cff;
+  --aurora-3: #4fe3c1;
+  --aurora: linear-gradient(110deg, var(--aurora-1), var(--aurora-2) 55%, var(--aurora-3));
+  --glass: rgba(14, 20, 38, 0.62);
+  --glow: 0 0 0 1px rgba(118, 168, 255, 0.28), 0 18px 48px -18px rgba(118, 168, 255, 0.45);
+}
+
+::selection { background: rgba(180, 140, 255, 0.35); color: #fff; }
+
+/* Slim aurora scrollbar */
+html { scrollbar-color: #4a5f9a transparent; scrollbar-width: thin; }
+
+/* Aurora rule along the top of the header */
+.site-header {
+  position: relative;
+  background: rgba(5, 7, 17, 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+}
+.site-header::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: var(--aurora);
+  opacity: 0.55;
+}
+
+/* Gradient headline text */
+.hero h1,
+.section-heading {
+  background: var(--aurora);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.eyebrow { letter-spacing: 0.16em; color: var(--aurora-3); }
+
+/* Primary buttons: aurora fill with a soft glow */
+.btn-primary {
+  background: var(--aurora);
+  color: #060914;
+  border: 0;
+  font-weight: 650;
+  box-shadow: 0 8px 28px -10px rgba(118, 168, 255, 0.7);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+.btn-primary:hover { transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 12px 34px -10px rgba(180, 140, 255, 0.75); }
+.btn-ghost { backdrop-filter: blur(6px); transition: border-color 0.18s ease, background 0.18s ease; }
+.btn-ghost:hover { border-color: var(--aurora-1); background: rgba(118, 168, 255, 0.1); }
+
+/* Glass cards (lift + glow on hover) */
+.project-card,
+.pr-card,
+.col-card,
+.about-block {
+  position: relative;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.project-card::before,
+.pr-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--aurora);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.project-card:hover,
+.pr-card:hover,
+.col-card:hover { transform: translateY(-4px); box-shadow: var(--glow); }
+.project-card:hover::before,
+.pr-card:hover::before { opacity: 1; }
+
+.project-tag,
+.col-chip { border-radius: 999px; }
+
+.site-footer { border-top: 1px solid transparent; border-image: var(--aurora) 1; }
+
+:focus-visible { outline: 2px solid var(--aurora-3); outline-offset: 3px; border-radius: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .project-card, .pr-card, .col-card, .btn-primary { transition: none; }
+  .project-card:hover, .pr-card:hover, .col-card:hover, .btn-primary:hover { transform: none; }
+}
