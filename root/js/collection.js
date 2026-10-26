@@ -28,6 +28,7 @@
   const el = {
     search: document.getElementById("col-search"),
     sort: document.getElementById("col-sort"),
+    viewBtns: document.querySelectorAll(".col-view-btn"),
     folders: document.getElementById("col-folders"),
     stats: document.getElementById("col-stats"),
     packs: document.getElementById("col-packs"),
@@ -46,6 +47,8 @@
   };
 
   const MANIFEST_KEY = "rl-collection-manifest-v1";
+  const VIEW_KEY = "rl-collection-view";
+  let urlFilterApplied = false;
   const EAGER_COUNT = 12;
 
   // Browsers' native lazy-loading waits until an image is a viewport or two
@@ -510,6 +513,17 @@
     render();
   });
 
+  for (const btn of el.viewBtns) btn.addEventListener("click", () => setView(btn.dataset.view));
+  {
+    let saved = "";
+    try {
+      saved = localStorage.getItem(VIEW_KEY) || "";
+    } catch {
+      // ignore
+    }
+    if (saved === "landscape") setView(saved);
+  }
+
   el.lbClose.addEventListener("click", closeLightbox);
   el.lbPrev.addEventListener("click", () => step(-1));
   el.lbNext.addEventListener("click", () => step(1));
@@ -552,8 +566,33 @@
       packs.get(folder).push(file);
     }
 
+    if (!urlFilterApplied) applyUrlFilter();
     renderChips();
     render();
+  }
+
+  /** `/collection?pack=certificate` opens the matching folder, or searches for the term. */
+  function applyUrlFilter() {
+    urlFilterApplied = true;
+    const term = (new URLSearchParams(window.location.search).get("pack") || "").trim().toLowerCase();
+    if (!term) return;
+    const folder = [...packs.keys()].find((f) => f && f.toLowerCase().includes(term));
+    if (folder !== undefined) {
+      activeFolder = folder;
+    } else {
+      query = term;
+      el.search.value = term;
+    }
+  }
+
+  function setView(view) {
+    el.packs.classList.toggle("is-landscape", view === "landscape");
+    for (const btn of el.viewBtns) btn.setAttribute("aria-pressed", String(btn.dataset.view === view));
+    try {
+      localStorage.setItem(VIEW_KEY, view);
+    } catch {
+      // preference only
+    }
   }
 
   /** Last manifest this browser saw, so a repeat visit paints before the network answers. */

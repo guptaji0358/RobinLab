@@ -735,6 +735,35 @@ a { color: inherit; text-decoration: none; }
 
 .col-sort select:focus { border-color: var(--accent); }
 
+.col-view {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.col-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: 0;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.col-view-btn + .col-view-btn { border-left: 1px solid var(--border); }
+
+.col-view-btn:hover { color: var(--text); }
+
+.col-view-btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
 /* Folder chips */
 
 .col-chips {
@@ -817,6 +846,24 @@ a { color: inherit; text-decoration: none; }
   grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: 24px;
   align-items: start;
+}
+
+/* Landscape view — wide 16:9 cards; the image is letterboxed, never cropped. */
+.col-packs.is-landscape .col-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(460px, 100%), 1fr));
+}
+
+.col-packs.is-landscape .col-card-media {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.col-packs.is-landscape .col-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .col-card {
