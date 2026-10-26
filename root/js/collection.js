@@ -48,7 +48,9 @@
 
   const MANIFEST_KEY = "rl-collection-manifest-v1";
   const VIEW_KEY = "rl-collection-view";
-  let urlFilterApplied = false;
+  // /certificates reuses this script; certificates never appear in the collection.
+  const CERT_SCOPE = document.body.dataset.scope === "certificates";
+  const isCertificate = (file) => /certificate/i.test(file.folder || "");
   const EAGER_COUNT = 12;
 
   // Browsers' native lazy-loading waits until an image is a viewport or two
@@ -98,16 +100,17 @@
   }
 
   function humanName(file) {
-    return file.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+    // The real file name, extension included — never the folder path.
+    return file.name;
   }
 
   function folderLabel(file) {
-    return file.folder || "Vault root";
+    return file.folder || "General";
   }
 
   // A folder is a pack. Keep the bucket's own name, just make it readable.
   function packName(folder) {
-    if (!folder) return "Vault root";
+    if (!folder) return "General";
     return folder
       .split("/")
       .map((part) => part.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase()))
@@ -257,7 +260,7 @@
     const card = document.createElement("button");
     card.type = "button";
     card.className = "col-card";
-    card.title = `${humanName(file)} — click to preview`;
+    card.title = `${file.name} — click to preview`;
     card.addEventListener("click", () => openLightbox(index));
 
     const media = document.createElement("span");
@@ -364,7 +367,7 @@
     if (!visible.length) {
       showState(
         "empty",
-        allFiles.length ? "Nothing matches your filters." : "The vault is empty.",
+        allFiles.length ? "Nothing matches your filters." : CERT_SCOPE ? "No certificates yet." : "The vault is empty.",
         allFiles.length ? "Try a different search term or pick another pack." : "",
       );
     } else {
@@ -451,7 +454,6 @@
     el.lbImg.src = file.url;
     el.lbImg.alt = humanName(file);
     el.lbName.textContent = humanName(file);
-    el.lbName.title = file.path;
     paintMeta(file);
     el.lbCounter.textContent = `${lbPos + 1} / ${visible.length}`;
   }
@@ -484,6 +486,7 @@
         throw new Error(payload.message || `The server responded with HTTP ${response.status}.`);
       }
 
+      if (CERT_SCOPE) payload.url = payload.url.replace("/collection?", "/certificates?");
       if (await copyText(payload.url)) {
         const minutes = Math.round((payload.ttlSeconds || 1800) / 60);
         toast(`Link copied — it works for ${minutes} minutes.`);
@@ -557,7 +560,9 @@
 
   function ingest(files) {
     // Presentations have their own page — this view is images only.
-    allFiles = (Array.isArray(files) ? files : []).filter(isPreviewable);
+    allFiles = (Array.isArray(files) ? files : [])
+      .filter(isPreviewable)
+      .filter((file) => isCertificate(file) === CERT_SCOPE);
 
     packs = new Map();
     for (const file of allFiles) {
@@ -566,23 +571,8 @@
       packs.get(folder).push(file);
     }
 
-    if (!urlFilterApplied) applyUrlFilter();
     renderChips();
     render();
-  }
-
-  /** `/collection?pack=certificate` opens the matching folder, or searches for the term. */
-  function applyUrlFilter() {
-    urlFilterApplied = true;
-    const term = (new URLSearchParams(window.location.search).get("pack") || "").trim().toLowerCase();
-    if (!term) return;
-    const folder = [...packs.keys()].find((f) => f && f.toLowerCase().includes(term));
-    if (folder !== undefined) {
-      activeFolder = folder;
-    } else {
-      query = term;
-      el.search.value = term;
-    }
   }
 
   function setView(view) {
