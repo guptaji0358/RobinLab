@@ -191,7 +191,7 @@ def get_listing(token: str) -> dict:
         path = entry["path"]
         if path.startswith(THUMB_PREFIX):
             continue
-        slash = path.find("/")
+        slash = path.rfind("/")
         content_type = entry.get("contentType") or "application/octet-stream"
         thumb_path = f"{THUMB_PREFIX}{path}.webp"
         files.append(

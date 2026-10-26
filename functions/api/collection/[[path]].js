@@ -182,12 +182,12 @@ async function getListing(token) {
   const files = entries
     .filter((entry) => entry.type === "file" && !entry.path.startsWith(THUMB_PREFIX))
     .map((entry) => {
-      const slash = entry.path.indexOf("/");
+      const slash = entry.path.lastIndexOf("/");
       const contentType = entry.contentType || "application/octet-stream";
       const thumbPath = `${THUMB_PREFIX}${entry.path}.webp`;
       return {
         path: entry.path,
-        name: slash === -1 ? entry.path : entry.path.slice(entry.path.lastIndexOf("/") + 1),
+        name: slash === -1 ? entry.path : entry.path.slice(slash + 1),
         folder: slash === -1 ? "" : entry.path.slice(0, slash),
         size: entry.size,
         contentType,
