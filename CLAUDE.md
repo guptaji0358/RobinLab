@@ -65,7 +65,7 @@ Three routes, all served from `root/`:
 
 | Route | File | Content |
 | --- | --- | --- |
-| `/` | `index.html` | Project hub, activity, about, contact |
+| `/` | `index.html` | Project hub, about, contact |
 | `/collection` | `collection.html` | Images from the bucket, grouped by folder ("packs") |
 | `/presentations` | `presentations.html` | `.pptx` decks, embedded via Microsoft Office Web Viewer |
 
