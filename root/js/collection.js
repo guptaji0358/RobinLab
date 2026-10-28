@@ -43,6 +43,12 @@
     lbPrev: document.getElementById("lb-prev"),
     lbNext: document.getElementById("lb-next"),
     lbShare: document.getElementById("lb-share"),
+    lbInfo: document.getElementById("lb-info"),
+    lbDetails: document.getElementById("lb-details"),
+    lbDName: document.getElementById("lb-d-name"),
+    lbDFolder: document.getElementById("lb-d-folder"),
+    lbDPath: document.getElementById("lb-d-path"),
+    lbDSize: document.getElementById("lb-d-size"),
     toast: document.getElementById("toast"),
     tabs: document.querySelectorAll(".col-tab"),
     packList: document.getElementById("col-packlist"),
@@ -68,6 +74,8 @@
   const CERT_SCOPE = document.body.dataset.scope === "certificates";
   const isCertificate = (file) => /certificate/i.test(file.folder || "");
   const EAGER_COUNT = 12;
+  const EAGER_COVERS = 12;
+  let coverSeq = 0; // pack-cover images created so far in this render
 
   // Browsers' native lazy-loading waits until an image is a viewport or two
   // away, which on a proxied grid shows blank cards while scrolling. Starting
@@ -305,11 +313,22 @@
     for (const file of shown) {
       const img = document.createElement("img");
       img.alt = "";
-      img.loading = "lazy";
       img.decoding = "async";
       img.draggable = false;
-      img.src = file.thumbUrl || file.url;
       cover.appendChild(img);
+      // Same strategy as the grid: the first covers load at once, the rest start
+      // 1500px before they scroll in (native lazy-loading waits much longer).
+      const src = file.thumbUrl || file.url;
+      if (coverSeq++ < EAGER_COVERS) {
+        img.fetchPriority = "high";
+        img.src = src;
+      } else if (imageObserver) {
+        img.dataset.src = src;
+        imageObserver.observe(img);
+      } else {
+        img.loading = "lazy";
+        img.src = src;
+      }
     }
 
     const info = document.createElement("span");
@@ -390,6 +409,7 @@
   function renderPackList() {
     if (!el.packList) return;
     el.packList.textContent = "";
+    coverSeq = 0;
     if (el.tabImagesCount) el.tabImagesCount.textContent = String(allFiles.length);
 
     const keys = sortedPackKeys();
@@ -624,6 +644,22 @@
     el.lbName.textContent = humanName(file);
     paintMeta(file);
     el.lbCounter.textContent = `${lbPos + 1} / ${visible.length}`;
+    paintDetails(file);
+  }
+
+  function paintDetails(file) {
+    if (!el.lbDetails) return;
+    el.lbDName.textContent = humanName(file);
+    el.lbDFolder.textContent = folderLabel(file);
+    el.lbDPath.textContent = file.path || file.name;
+    el.lbDSize.textContent = `${formatBytes(file.size)} (${Number(file.size || 0).toLocaleString()} bytes)`;
+  }
+
+  function toggleDetails() {
+    if (!el.lbDetails) return;
+    const open = el.lbDetails.hidden;
+    el.lbDetails.hidden = !open;
+    el.lbInfo.setAttribute("aria-expanded", String(open));
   }
 
   function step(delta) {
@@ -711,6 +747,7 @@
   el.lbPrev.addEventListener("click", () => step(-1));
   el.lbNext.addEventListener("click", () => step(1));
   if (el.lbShare) el.lbShare.addEventListener("click", shareCurrent);
+  if (el.lbInfo) el.lbInfo.addEventListener("click", toggleDetails);
   el.lightbox.addEventListener("click", (event) => {
     if (event.target.hasAttribute("data-close")) closeLightbox();
   });
@@ -720,6 +757,7 @@
     if (event.key === "Escape") closeLightbox();
     else if (event.key === "ArrowLeft") step(-1);
     else if (event.key === "ArrowRight") step(1);
+    else if ((event.key === "i" || event.key === "I") && !event.ctrlKey && !event.metaKey && !event.altKey) toggleDetails();
   });
 
   // View-only hardening: block the image context menu and drag-to-save.

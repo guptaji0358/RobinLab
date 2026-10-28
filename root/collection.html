@@ -166,6 +166,13 @@
       </button>
     </div>
 
+    <dl class="lb-details" id="lb-details" hidden>
+      <div><dt>Name</dt><dd id="lb-d-name"></dd></div>
+      <div><dt>Folder</dt><dd id="lb-d-folder"></dd></div>
+      <div><dt>Path</dt><dd id="lb-d-path"></dd></div>
+      <div><dt>Size</dt><dd id="lb-d-size"></dd></div>
+    </dl>
+
     <div class="lb-bar">
       <div class="lb-info">
         <span class="lb-name" id="lb-name"></span>
@@ -173,6 +180,13 @@
       </div>
       <div class="lb-actions">
         <span class="lb-counter" id="lb-counter"></span>
+        <button class="lb-infobtn" id="lb-info" type="button" aria-expanded="false" aria-controls="lb-details" title="Show file details (I)">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 11v5M12 8h.01"/>
+          </svg>
+          Details
+        </button>
         <button class="lb-share" id="lb-share" type="button" title="Copy a link that works for 30 minutes">
           <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="18" cy="5" r="3"/>
