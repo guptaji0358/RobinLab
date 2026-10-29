@@ -16,6 +16,7 @@
 <meta name="theme-color" content="#0b0d10">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/profile.css">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -67,19 +68,85 @@
 
 <main>
 
-  <section class="hero container">
-    <p class="eyebrow">robinlab.dev</p>
-    <h1>Software, built and maintained by Robin.</h1>
-    <p class="hero-sub">
-      RobinLab is a personal software studio — a home for the tools and
-      applications I design, build, and ship. Below are the projects
-      currently in development.
-    </p>
-    <div class="hero-actions">
-      <a href="#projects" class="btn btn-primary">View projects</a>
-      <a href="#contact" class="btn btn-ghost">Get in touch</a>
-      <a class="btn btn-primary" href="/collection">View a new wallpaper</a>
-      <a class="btn btn-primary" href="/certificates">View a new certificate</a>
+  <section class="pf-hero container" aria-label="Introduction">
+    <div class="pf-avatar">
+      <img src="assets/robinlab-mark.png" alt="Robin Gupta">
+    </div>
+    <div>
+      <span class="pf-status">Open to learning, building &amp; collaborating</span>
+      <h1 class="pf-name">Robin Gupta</h1>
+      <p class="pf-role">Developer &middot; BCA student &middot; Creator</p>
+      <p class="pf-bio">
+        I turn everyday frustrations into software &mdash; desktop apps, developer
+        tools and creative collections. This is my personal space: everything I
+        build, learn and make, in one place.
+      </p>
+      <ul class="pf-chips">
+        <li>Python</li>
+        <li>C++</li>
+        <li>PySide6 / Qt</li>
+        <li>Web</li>
+        <li>AI-assisted dev</li>
+      </ul>
+      <div class="pf-actions">
+        <a href="#projects" class="btn btn-primary">See my work</a>
+        <a href="#contact" class="btn btn-ghost">Get in touch</a>
+        <a href="https://github.com/guptaji0358" class="btn btn-ghost" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="container" aria-label="Everything about me at a glance">
+    <div class="pf-bento">
+      <a class="pf-tile pf-span-4" href="#projects">
+        <span class="pf-kicker">Projects</span>
+        <span class="pf-stat">4 live</span>
+        <p>PyWix, CodeLens, Contact Book and Motiva &mdash; with more on the way.</p>
+        <span class="pf-go">Browse projects &rarr;</span>
+      </a>
+      <a class="pf-tile pf-span-4" href="/collection">
+        <span class="pf-kicker">Collection</span>
+        <h3>Anime desktop wallpapers</h3>
+        <p>My creative side: wallpapers grouped into themed packs.</p>
+        <span class="pf-go">Open the vault &rarr;</span>
+      </a>
+      <a class="pf-tile pf-span-4" href="/certificates">
+        <span class="pf-kicker">Certificates</span>
+        <h3>What I&rsquo;ve learned</h3>
+        <p>Courses and credentials from my learning journey.</p>
+        <span class="pf-go">View certificates &rarr;</span>
+      </a>
+
+      <div class="pf-tile pf-span-7">
+        <span class="pf-kicker">Toolbox</span>
+        <h3>What I work with</h3>
+        <div class="pf-skills">
+          <span>Python</span><span>C++</span><span>PySide6</span><span>Qt</span>
+          <span>HTML</span><span>CSS</span><span>JavaScript</span>
+          <span>NumPy</span><span>Pandas</span><span>Matplotlib</span>
+          <span>MySQL</span><span>Git</span><span>GitHub</span>
+        </div>
+      </div>
+      <div class="pf-tile pf-span-5">
+        <span class="pf-kicker">Journey</span>
+        <ul class="pf-timeline">
+          <li><strong>Before BCA</strong>Learned through offline coaching and Udemy&rsquo;s 100 Days of Code (Python), then built PyWix, CodeLens, Contact Book &amp; Motiva</li>
+          <li><strong>Now</strong>Pursuing BCA in Computer Science</li>
+          <li><strong>Next</strong>Wallpaper packs &amp; new RobinLab apps</li>
+        </ul>
+      </div>
+
+      <a class="pf-tile pf-span-6" href="/presentations">
+        <span class="pf-kicker">Presentations</span>
+        <h3>Decks you can view or download</h3>
+        <p>Slides I&rsquo;ve put together, viewable right in the browser.</p>
+        <span class="pf-go">See decks &rarr;</span>
+      </a>
+      <a class="pf-tile pf-span-6" href="#about">
+        <span class="pf-kicker">About</span>
+        <p class="pf-quote">&ldquo;A learner who builds, a developer who solves problems, and a creator who keeps exploring.&rdquo;</p>
+        <span class="pf-go">Read my story &rarr;</span>
+      </a>
     </div>
   </section>
 
@@ -340,9 +407,11 @@
         builder, and lifelong learner who loves turning ideas into reality.
       </p>
       <p>
-        I&rsquo;m currently pursuing my BCA in Computer Science, exploring programming,
-        experimenting with technologies, and building software that solves real
-        problems. My journey is not just about learning languages or writing code;
+        I learned programming before college &mdash; through offline coaching and
+        Udemy&rsquo;s 100 Days of Code for Python &mdash; and built my projects
+        before joining BCA. I&rsquo;m now pursuing my BCA in Computer Science,
+        exploring programming, experimenting with technologies, and building
+        software that solves real problems. My journey is not just about learning languages or writing code;
         it&rsquo;s about understanding how things work, discovering what&rsquo;s
         missing, and creating something useful in its place.
       </p>
