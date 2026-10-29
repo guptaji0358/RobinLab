@@ -300,7 +300,7 @@
   /* Pack cover slideshow ------------------------------------------------ */
 
   const SLIDE_COUNT = 5; // images cycled per pack card
-  const SLIDE_MS = 3200; // time each image stays on screen
+  const SLIDE_MS = 1800; // time each image stays on screen
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const slideshows = new Set(); // { cover, slides, dots, index, nextAt, onscreen, paused }
 
@@ -341,7 +341,7 @@
       dots: dots.children,
       index: 0,
       // Random head start so a grid of cards doesn't flip in unison.
-      nextAt: performance.now() + SLIDE_MS * (0.4 + Math.random()),
+      nextAt: performance.now() + SLIDE_MS * (0.15 + Math.random() * 0.7),
       onscreen: !screenObserver,
       paused: false,
     };
@@ -360,7 +360,14 @@
       const next = (show.index + step) % show.slides.length;
       const img = show.slides[next];
       if (!img.complete || !img.naturalWidth) continue;
-      show.slides[show.index].classList.remove("is-active");
+      const leaving = show.slides[show.index];
+      leaving.classList.remove("is-active");
+      leaving.classList.add("is-leaving");
+      window.setTimeout(() => leaving.classList.remove("is-leaving"), 1000);
+      // Restart the light bloom that rides every change.
+      show.cover.classList.remove("is-pulse");
+      void show.cover.offsetWidth;
+      show.cover.classList.add("is-pulse");
       show.dots[show.index].classList.remove("is-active");
       img.classList.add("is-active");
       show.dots[next].classList.add("is-active");
@@ -382,7 +389,7 @@
           show.nextAt = now + SLIDE_MS;
         }
       }
-    }, 400);
+    }, 250);
   }
 
   function packCard(title, files, onOpen, hint) {
