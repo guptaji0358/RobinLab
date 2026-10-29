@@ -101,3 +101,64 @@ html { scrollbar-color: #4a5f9a transparent; scrollbar-width: thin; }
   .project-card, .pr-card, .col-card, .btn-primary { transition: none; }
   .project-card:hover, .pr-card:hover, .col-card:hover, .btn-primary:hover { transform: none; }
 }
+
+/* ---- Project cards: per-project colour, glow stage, cursor spotlight ---- */
+.project-card { --c: var(--aurora-1); padding: 26px; isolation: isolate; }
+.project-card:not(.project-card-placeholder) {
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--c) 22%, transparent), transparent 55%),
+    var(--glass);
+}
+/* spotlight that follows the pointer */
+.project-card:not(.project-card-placeholder)::after {
+  content: "";
+  position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--c) 28%, transparent), transparent 70%);
+  opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+}
+.project-card:hover::after { opacity: 1; }
+.project-card:not(.project-card-placeholder)::before {
+  background: linear-gradient(135deg, var(--c), transparent 60%, var(--c));
+}
+.project-card:not(.project-card-placeholder):hover {
+  border-color: transparent;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent), 0 24px 56px -20px color-mix(in srgb, var(--c) 60%, transparent);
+}
+/* big floating emblem */
+.project-card:not(.project-card-placeholder) .project-watermark {
+  top: 18px; left: auto; right: 18px;
+  width: 84px; height: 84px;
+  transform: rotate(8deg);
+  opacity: 0.9;
+  filter: drop-shadow(0 10px 22px color-mix(in srgb, var(--c) 70%, transparent));
+  animation: pc-float 6s ease-in-out infinite;
+  transition: transform 0.35s cubic-bezier(.2,.8,.2,1);
+}
+.project-card:hover .project-watermark { transform: rotate(-4deg) scale(1.12); animation-play-state: paused; }
+@keyframes pc-float { 50% { translate: 0 -8px; } }
+.project-card:not(.project-card-placeholder) .project-card-top { margin-bottom: 62px; }
+.project-card:not(.project-card-placeholder) .project-tag {
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+}
+.project-card:not(.project-card-placeholder) .project-title { font-size: 24px; letter-spacing: -0.02em; margin-bottom: 10px; }
+.project-card:not(.project-card-placeholder) .project-logo {
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent);
+}
+.project-card .claude-badge { align-self: flex-start; margin-bottom: 18px; }
+/* link becomes a pill button */
+.project-card:not(.project-card-placeholder) .project-link {
+  align-self: stretch; justify-content: space-between;
+  padding: 11px 16px; border-radius: 12px;
+  color: #060914; font-weight: 650; text-decoration: none;
+  background: linear-gradient(110deg, var(--c), color-mix(in srgb, var(--c) 55%, #fff));
+  transition: filter 0.2s ease, box-shadow 0.2s ease;
+}
+.project-card .project-link .icon { transition: transform 0.25s ease; }
+.project-card:hover .project-link { filter: brightness(1.08); box-shadow: 0 10px 26px -10px var(--c); }
+.project-card:hover .project-link .icon { transform: translateX(5px); }
+@media (prefers-reduced-motion: reduce) {
+  .project-watermark { animation: none !important; }
+}
