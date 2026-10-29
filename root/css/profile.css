@@ -4,8 +4,8 @@
 .pf-hero {
   /* .container supplies max-width/margin; the card needs its own side padding, so
      the 24px gutter is restored by narrowing it on desktop below. */
-  width: calc(100% - 48px);
-  max-width: calc(var(--max-width) - 48px);
+  width: calc(100% - 2 * var(--gutter));
+  max-width: calc(var(--max-width) - 2 * var(--gutter));
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 32px 44px;
@@ -178,7 +178,7 @@ a.pf-tile:hover {
   .pf-span-3, .pf-span-4, .pf-span-5, .pf-span-6, .pf-span-7, .pf-span-8 { grid-column: span 6; }
 }
 @media (max-width: 720px) {
-  .pf-hero { grid-template-columns: 1fr; width: calc(100% - 32px); padding: 26px 20px; margin-top: 24px; justify-items: start; }
+  .pf-hero { grid-template-columns: 1fr; padding: 26px 20px; margin-top: 24px; justify-items: start; }
   .pf-avatar { width: 120px; height: 120px; }
 }
 @media (max-width: 560px) {
