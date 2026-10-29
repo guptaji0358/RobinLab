@@ -297,6 +297,94 @@
   const inFolder = (file, folder) => (file.folder || "") === folder;
   const underFolder = (file, folder) => (folder ? (file.folder || "").startsWith(folder + "/") : !!file.folder);
 
+  /* Pack cover slideshow ------------------------------------------------ */
+
+  const SLIDE_COUNT = 5; // images cycled per pack card
+  const SLIDE_MS = 3200; // time each image stays on screen
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const slideshows = new Set(); // { cover, slides, dots, index, nextAt, onscreen, paused }
+
+  // Evenly spaced through the sorted pack, so the slideshow shows its range
+  // rather than five neighbours.
+  function pickSlides(files) {
+    const sorted = files.slice().sort(sorters.name);
+    if (sorted.length <= SLIDE_COUNT) return sorted;
+    return Array.from({ length: SLIDE_COUNT }, (_, i) => sorted[Math.round((i * (sorted.length - 1)) / (SLIDE_COUNT - 1))]);
+  }
+
+  const screenObserver =
+    "IntersectionObserver" in window
+      ? new IntersectionObserver((entries) => {
+          for (const entry of entries) {
+            for (const show of slideshows) {
+              if (show.cover === entry.target) show.onscreen = entry.isIntersecting;
+            }
+          }
+        })
+      : null;
+
+  function registerSlideshow(cover, count) {
+    const slides = cover.querySelectorAll(".col-slide");
+    if (slides[0]) slides[0].classList.add("is-active");
+    if (count < 2) return;
+
+    const dots = document.createElement("span");
+    dots.className = "col-dots";
+    dots.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < count; i++) dots.appendChild(document.createElement("i"));
+    dots.children[0].classList.add("is-active");
+    cover.appendChild(dots);
+
+    const show = {
+      cover,
+      slides,
+      dots: dots.children,
+      index: 0,
+      // Random head start so a grid of cards doesn't flip in unison.
+      nextAt: performance.now() + SLIDE_MS * (0.4 + Math.random()),
+      onscreen: !screenObserver,
+      paused: false,
+    };
+    slideshows.add(show);
+    if (screenObserver) screenObserver.observe(cover);
+    cover.addEventListener("mouseenter", () => (show.paused = true));
+    cover.addEventListener("mouseleave", () => {
+      show.paused = false;
+      show.nextAt = performance.now() + SLIDE_MS;
+    });
+  }
+
+  function advance(show) {
+    // Skip images that haven't arrived yet rather than fading to a blank card.
+    for (let step = 1; step < show.slides.length; step++) {
+      const next = (show.index + step) % show.slides.length;
+      const img = show.slides[next];
+      if (!img.complete || !img.naturalWidth) continue;
+      show.slides[show.index].classList.remove("is-active");
+      show.dots[show.index].classList.remove("is-active");
+      img.classList.add("is-active");
+      show.dots[next].classList.add("is-active");
+      show.index = next;
+      return;
+    }
+  }
+
+  if (!reduceMotion) {
+    window.setInterval(() => {
+      if (document.hidden) return;
+      const now = performance.now();
+      for (const show of slideshows) {
+        if (!show.cover.isConnected) {
+          slideshows.delete(show);
+          if (screenObserver) screenObserver.unobserve(show.cover);
+        } else if (show.onscreen && !show.paused && now >= show.nextAt) {
+          advance(show);
+          show.nextAt = now + SLIDE_MS;
+        }
+      }
+    }, 400);
+  }
+
   function packCard(title, files, onOpen, hint) {
     const bytes = files.reduce((sum, file) => sum + file.size, 0);
 
@@ -307,11 +395,10 @@
 
     const cover = document.createElement("span");
     cover.className = "col-packcover";
-    const covers = files.slice().sort(sorters.name).slice(0, 3);
-    const shown = covers.length < 3 ? covers.slice(0, 1) : covers;
-    if (shown.length < 3) cover.classList.add("is-single");
+    const shown = pickSlides(files);
     for (const file of shown) {
       const img = document.createElement("img");
+      img.className = "col-slide";
       img.alt = "";
       img.decoding = "async";
       img.draggable = false;
@@ -330,6 +417,8 @@
         img.src = src;
       }
     }
+
+    registerSlideshow(cover, shown.length);
 
     const info = document.createElement("span");
     info.className = "col-packinfo";
