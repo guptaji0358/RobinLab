@@ -1,4 +1,4 @@
-/* RobinLab "living lab" layer — home page only.
+/* RobinLab "living lab" layer — shared by every page.
    Everything here is progressive enhancement driven by js/fx.js: the page is
    fully readable if this file or the script fails. Hidden start-states are
    only ever applied by JS (data-fx attributes), never by CSS alone. */
@@ -11,7 +11,7 @@
 }
 
 /* ---------- typography ---------- */
-h1, h2, h3, .pf-stat, .brand-name, .project-title { font-family: var(--fx-display); }
+h1, h2, h3, .pf-stat, .col-pack-title, .pr-card-title, .col-packname, .brand-name, .project-title { font-family: var(--fx-display); }
 .pf-kicker, .pf-chips li, .pf-skills span, .project-tag, .pf-status, .pf-go {
   font-family: var(--fx-mono);
 }
@@ -169,13 +169,13 @@ html.fx-js [data-fx].in:not([data-fx="words"]) { opacity: 1; translate: 0 0; sca
   background: linear-gradient(var(--aurora-3), var(--aurora-3)) 50% 100% / 0 2px no-repeat;
   transition: background-size 0.35s var(--fx-ease), color 0.2s ease;
 }
-.site-nav > a:hover, .site-nav > a.is-active { background-size: 70% 2px; }
-.site-nav > a.is-active { color: var(--text); }
+.site-nav > a:hover, .site-nav > a.is-active, .site-nav > a[aria-current="page"] { background-size: 70% 2px; }
+.site-nav > a.is-active, .site-nav > a[aria-current="page"] { color: var(--text); }
 
 /* ---------- hero ---------- */
-.pf-hero { position: relative; overflow: hidden; isolation: isolate; }
+.pf-hero, .col-hero, .pr-hero { position: relative; overflow: hidden; isolation: isolate; }
 /* HUD corner brackets */
-.pf-hero::before {
+.pf-hero::before, .col-hero::before, .pr-hero::before {
   content: "";
   position: absolute; inset: 12px; z-index: -1; pointer-events: none;
   --k: var(--aurora-3);
@@ -193,7 +193,7 @@ html.fx-js [data-fx].in:not([data-fx="words"]) { opacity: 1; translate: 0 0; sca
 }
 @keyframes fx-bracket { 50% { inset: 18px; opacity: 0.25; } }
 /* scanner sweep */
-.pf-hero::after {
+.pf-hero::after, .col-hero::after, .pr-hero::after {
   content: "";
   position: absolute; left: 0; right: 0; top: -30%; height: 30%;
   z-index: -1; pointer-events: none;
@@ -239,8 +239,8 @@ html.fx-js [data-fx].in:not([data-fx="words"]) { opacity: 1; translate: 0 0; sca
 @keyframes fx-spin { to { rotate: 360deg; } }
 
 /* name: glitch twins */
-.pf-name { position: relative; display: block; width: fit-content; }
-.pf-name::before, .pf-name::after {
+.pf-name, .fx-title { position: relative; display: block; width: fit-content; }
+.pf-name::before, .pf-name::after, .fx-title::before, .fx-title::after {
   content: attr(data-text);
   position: absolute; left: 0; top: 0; width: 100%;
   -webkit-text-fill-color: currentColor;
@@ -248,10 +248,10 @@ html.fx-js [data-fx].in:not([data-fx="words"]) { opacity: 1; translate: 0 0; sca
   opacity: 0; pointer-events: none;
   mix-blend-mode: screen;
 }
-.pf-name::before { color: var(--fx-hot); }
-.pf-name::after { color: var(--aurora-3); }
-.pf-name.glitch::before { opacity: 0.85; animation: fx-glitch-a 0.42s steps(2) 1; }
-.pf-name.glitch::after { opacity: 0.85; animation: fx-glitch-b 0.42s steps(2) 1; }
+.pf-name::before, .fx-title::before { color: var(--fx-hot); }
+.pf-name::after, .fx-title::after { color: var(--aurora-3); }
+.pf-name.glitch::before, .fx-title.glitch::before { opacity: 0.85; animation: fx-glitch-a 0.42s steps(2) 1; }
+.pf-name.glitch::after, .fx-title.glitch::after { opacity: 0.85; animation: fx-glitch-b 0.42s steps(2) 1; }
 @keyframes fx-glitch-a {
   0% { transform: translate(-4px, 1px); clip-path: inset(10% 0 60% 0); }
   25% { transform: translate(3px, -2px); clip-path: inset(55% 0 12% 0); }
@@ -266,7 +266,8 @@ html.fx-js [data-fx].in:not([data-fx="words"]) { opacity: 1; translate: 0 0; sca
   75% { transform: translate(-5px, 0); clip-path: inset(18% 0 55% 0); }
   100% { transform: translate(0); clip-path: inset(0 0 100% 0); }
 }
-.pf-name.scrambling::before, .pf-name.scrambling::after { display: none; }
+.pf-name.scrambling::before, .pf-name.scrambling::after,
+.fx-title.scrambling::before, .fx-title.scrambling::after { display: none; }
 
 /* typed role line */
 .pf-role { font-family: var(--fx-mono); min-height: 1.5em; }
@@ -413,7 +414,20 @@ main { counter-reset: fxsec; }
   .fx-words .w { opacity: 1; translate: none; filter: none; transition: none; }
   .fx-scrub .w { color: var(--text); }
   .fx-orbs i, .fx-grain, .fx-orbit, .pf-hero::before, .pf-hero::after, .pf-avatar, .fx-caret { animation: none; }
-  .pf-hero::after { display: none; }
+  .pf-hero::after, .col-hero::after, .pr-hero::after { display: none; }
   .section-heading h2::after { transform: scaleX(1); transition: none; }
   .fx-grain { display: none; }
 }
+
+/* ---------- inner pages: hero + cards ---------- */
+.col-hero, .pr-hero { padding-bottom: 48px; }
+.col-hero .fx-hud, .pr-hero .fx-hud { display: none; }
+@media (min-width: 760px) { .col-hero .fx-hud, .pr-hero .fx-hud { display: block; } }
+.pr-card::after, .col-packcard::after {
+  content: "";
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 0%), rgba(118, 168, 255, 0.18), transparent 70%);
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.pr-card:hover::after, .col-packcard:hover::after { opacity: 1; }
+.col-pack-title::before { content: "/ "; font-family: var(--fx-mono); color: var(--aurora-3); }

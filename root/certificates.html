@@ -16,8 +16,32 @@
 <meta name="theme-color" content="#0b0d10">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/theme.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/fx.css">
+<script>
+  /* Set before first paint so the boot curtain never flashes. fx.js removes it. */
+  (function (r) {
+    r.classList.add('fx-js');
+    try {
+      if (!sessionStorage.getItem('fx-boot') && !matchMedia('(prefers-reduced-motion: reduce)').matches) r.classList.add('fx-booting');
+    } catch (e) {}
+  })(document.documentElement);
+</script>
 </head>
 <body class="col-page" data-scope="certificates">
+
+<div class="fx-loader" aria-hidden="true">
+  <div class="fx-loader-panel top"></div>
+  <div class="fx-loader-panel bot"></div>
+  <div class="fx-boot">
+    <pre class="fx-boot-log"></pre>
+    <div class="fx-boot-bar"><i></i></div>
+    <div class="fx-boot-pct">0%</div>
+    <div class="fx-boot-skip">click or press any key to skip</div>
+  </div>
+</div>
 
 <header class="site-header">
   <div class="container header-inner">
@@ -188,5 +212,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="js/collection.js"></script>
+<script src="js/fx.js"></script>
 </body>
 </html>

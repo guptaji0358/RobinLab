@@ -1,4 +1,4 @@
-/* RobinLab "living lab" — animation engine for the home page.
+/* RobinLab "living lab" — animation engine shared by every page.
    No dependencies. Every module is independent and fails soft: if one throws,
    the rest still run and the page stays readable. */
 (function () {
@@ -205,11 +205,12 @@
   }
 
   function hero() {
-    var h = $('.pf-hero');
+    var h = $('.pf-hero, .col-hero, .pr-hero');
     if (!h) return;
 
-    // name
-    var name = $('.pf-name', h);
+    // name (home: .pf-name, inner pages: the page h1)
+    var name = $('.pf-name', h) || $('h1', h);
+    if (name && !name.classList.contains('pf-name')) name.classList.add('fx-title');
     if (name) {
       var text = name.textContent.trim();
       name.setAttribute('data-text', text);
@@ -340,23 +341,26 @@
   }
 
   /* ----------------------------------------------- tilt + magnetic + spotlight */
+  function bindTilt(el) {
+    if (!fine || reduce || el.classList.contains('fx-tilt')) return;
+    el.classList.add('fx-tilt');
+    el.addEventListener('pointermove', function (e) {
+      var r = el.getBoundingClientRect();
+      var px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+      el.style.setProperty('--ry', ((px - .5) * 9).toFixed(2) + 'deg');
+      el.style.setProperty('--rx', ((.5 - py) * 7).toFixed(2) + 'deg');
+      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+    el.addEventListener('pointerleave', function () {
+      el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg');
+    });
+  }
+
   function interactions() {
     if (!fine || reduce) return;
 
-    $$('.pf-tile, .project-card:not(.project-card-placeholder), .about-block').forEach(function (el) {
-      el.classList.add('fx-tilt');
-      el.addEventListener('pointermove', function (e) {
-        var r = el.getBoundingClientRect();
-        var px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-        el.style.setProperty('--ry', ((px - .5) * 9).toFixed(2) + 'deg');
-        el.style.setProperty('--rx', ((.5 - py) * 7).toFixed(2) + 'deg');
-        el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-        el.style.setProperty('--my', (e.clientY - r.top) + 'px');
-      });
-      el.addEventListener('pointerleave', function () {
-        el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg');
-      });
-    });
+    $$('.pf-tile, .project-card:not(.project-card-placeholder), .about-block').forEach(bindTilt);
 
     $$('.btn, .contact-link, .icon-link, .brand').forEach(function (el) {
       el.classList.add('fx-mag');
@@ -406,6 +410,16 @@
     tag('.contact-links', '', 0);
     tag('.contact .about-text', '', 0);
 
+    // inner pages (collection / certificates / presentations)
+    ['.col-hero', '.pr-hero'].forEach(function (sel) {
+      var hero = $(sel); if (!hero) return;
+      Array.prototype.forEach.call(hero.children, function (el, i) {
+        if (el.tagName === 'H1') return;       // the title is scrambled in, not faded
+        el.setAttribute('data-fx', ''); el.style.setProperty('--d', 120 + i * 110 + 'ms');
+      });
+    });
+    tag('.col-tabs, .col-toolbar, .col-chips, .col-stats, .pr-note, .site-footer', '', 60);
+
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (!en.isIntersecting) return;
@@ -418,6 +432,28 @@
       });
     }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
     $$('[data-fx]').forEach(function (el) { io.observe(el); });
+
+    // Cards rendered later by collection.js / presentations.js. Only the big
+    // blocks are animated - hundreds of blurred thumbnails would stutter.
+    var dyn = '.col-pack, .col-packcard, .col-packgroup, .pr-card';
+    function adopt(node) {
+      if (node.nodeType !== 1) return;
+      var list = node.matches(dyn) ? [node] : $$(dyn, node);
+      list.forEach(function (el, i) {
+        if (el.hasAttribute('data-fx')) return;
+        el.setAttribute('data-fx', '');
+        el.style.setProperty('--d', Math.min(i * 70, 560) + 'ms');
+        io.observe(el);
+        if (el.matches('.pr-card, .col-packcard')) bindTilt(el);
+      });
+    }
+    ['col-packs', 'col-packlist', 'pr-grid'].forEach(function (id) {
+      var host = d.getElementById(id); if (!host) return;
+      adopt(host);
+      new MutationObserver(function (ms) {
+        ms.forEach(function (m) { Array.prototype.forEach.call(m.addedNodes, adopt); });
+      }).observe(host, { childList: true, subtree: true });
+    });
   }
 
   /* ------------------------------------------ scroll-scrubbed "read me" text */
