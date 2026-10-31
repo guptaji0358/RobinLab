@@ -29,6 +29,7 @@ inside the `_thumbs/` prefix.
 from __future__ import annotations
 
 import argparse
+import base64
 import concurrent.futures
 import io
 import json
@@ -46,6 +47,8 @@ THUMB_PREFIX = "_thumbs/"
 
 DEFAULT_WIDTH = 720
 DEFAULT_QUALITY = 78
+LQIP_PATH = THUMB_PREFIX + "_lqip.json"
+LQIP_EDGE = 24  # px - the blurred placeholder is a ~200 byte WebP
 DEFAULT_JOBS = 6
 UPLOAD_BATCH = 8
 
@@ -148,12 +151,31 @@ def make_thumb(data: bytes, max_edge: int, quality: int) -> tuple[bytes, tuple[i
         return buffer.getvalue(), img.size
 
 
+def make_lqip(data: bytes) -> list:
+    """[width, height, base64 WebP] - a tiny blurred stand-in that also fixes the aspect ratio."""
+    from PIL import Image
+
+    with Image.open(io.BytesIO(data)) as img:
+        width, height = img.size
+        img = img.convert("RGB")
+        img.thumbnail((LQIP_EDGE, LQIP_EDGE), Image.LANCZOS)
+        buffer = io.BytesIO()
+        img.save(buffer, "WEBP", quality=40, method=6)
+    return [width, height, base64.b64encode(buffer.getvalue()).decode("ascii")]
+
+
+def process_lqip(entry: dict, token: str) -> tuple[str, list]:
+    """Placeholder for an image whose preview already exists: read the small preview, not the original."""
+    return entry["path"], make_lqip(fetch_bytes(token, thumb_remote_path(entry["path"])))
+
+
 def process(entry: dict, token: str, max_edge: int, quality: int) -> dict:
     """Download one image and return its encoded thumbnail."""
     path = entry["path"]
     original = fetch_bytes(token, path)
     thumb, size = make_thumb(original, max_edge, quality)
     return {
+        "lqip": make_lqip(thumb),
         "path": path,
         "remote": thumb_remote_path(path),
         "data": thumb,
@@ -268,10 +290,40 @@ def main() -> int:
             )
             print(f"  uploaded {min(start + UPLOAD_BATCH, len(results))}/{len(results)}")
 
+    # -- placeholders ------------------------------------------------------ #
+    lqip: dict = {}
+    if LQIP_PATH in existing_thumbs:
+        try:
+            lqip = json.loads(fetch_bytes(token, LQIP_PATH).decode("utf-8"))
+        except Exception:  # noqa: BLE001 - rebuilt below
+            lqip = {}
+    before = dict(lqip)
+    for item in results:
+        lqip[item["path"]] = item["lqip"]
+    have_thumb = existing_thumbs | {item["remote"] for item in results}
+    todo = [e for e in originals if e["path"] not in lqip and thumb_remote_path(e["path"]) in have_thumb]
+    if todo:
+        print(f"\nBuilding {len(todo)} blurred placeholder(s) from the existing previews ...")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+            for future in concurrent.futures.as_completed([pool.submit(process_lqip, e, token) for e in todo]):
+                try:
+                    path, value = future.result()
+                    lqip[path] = value
+                except Exception as err:  # noqa: BLE001
+                    print(f"  placeholder failed: {err}")
+    live_paths = {entry["path"] for entry in originals}
+    lqip = {path: value for path, value in lqip.items() if path in live_paths}
+    if lqip != before:
+        from huggingface_hub import HfApi
+
+        payload = json.dumps(lqip, separators=(",", ":")).encode("utf-8")
+        HfApi().batch_bucket_files(BUCKET_ID, add=[(payload, LQIP_PATH)], token=token)
+        print(f"Uploaded {LQIP_PATH}: {len(lqip)} placeholder(s), {len(payload) // 1024} KB")
+
     # -- prune ------------------------------------------------------------- #
     if args.prune:
         live = {thumb_remote_path(entry["path"]) for entry in originals}
-        orphans = sorted(existing_thumbs - live)
+        orphans = sorted(existing_thumbs - live - {LQIP_PATH})
         if orphans:
             from huggingface_hub import HfApi
 

@@ -77,6 +77,14 @@
   const EAGER_COVERS = 12;
   let coverSeq = 0; // pack-cover images created so far in this render
 
+  /* Thumbnails are plain <img> tags: the browser decodes them progressively and
+   * keeps them in its HTTP cache (the proxy marks previews immutable for a year),
+   * so revisiting a pack is instant and nothing is held in JS memory. */
+  function setThumbSrc(img, url, priority) {
+    if (priority === "high") img.fetchPriority = "high";
+    img.src = url;
+  }
+
   // Browsers' native lazy-loading waits until an image is a viewport or two
   // away, which on a proxied grid shows blank cards while scrolling. Starting
   // 1500px ahead keeps the images ready before they are seen.
@@ -88,7 +96,7 @@
               if (!entry.isIntersecting) continue;
               const img = entry.target;
               imageObserver.unobserve(img);
-              img.src = img.dataset.src;
+              setThumbSrc(img, img.dataset.src);
             }
           },
           { rootMargin: "1500px 0px" },
@@ -104,6 +112,7 @@
   let lbPos = -1;
   let lastFocused = null;
   let lbDims = "";
+  let lbToken = 0; // bumped per paint so a slow original never overwrites a newer image
   // Set only while the lightbox was opened from a shared link: drives the
   // "N min left" note and stops when the viewer closes.
   let shareSession = null;
@@ -415,13 +424,12 @@
       const src = file.thumbUrl || file.url;
       if (coverSeq++ < EAGER_COVERS) {
         img.fetchPriority = "high";
-        img.src = src;
+        setThumbSrc(img, src, "high");
       } else if (imageObserver) {
         img.dataset.src = src;
         imageObserver.observe(img);
       } else {
-        img.loading = "lazy";
-        img.src = src;
+        setThumbSrc(img, src);
       }
     }
 
@@ -530,8 +538,10 @@
     for (const tab of el.tabs) tab.setAttribute("aria-selected", String(tab.dataset.tab === name));
     el.packList.hidden = !showPacks;
     for (const node of [el.toolbar, el.folders, el.stats, el.packs]) if (node) node.hidden = showPacks;
-    if (showPacks) hideState();
-    else render();
+    if (showPacks) {
+      hideState();
+      renderPackList();
+    } else render();
   }
 
   function renderStats() {
@@ -555,6 +565,13 @@
 
     const media = document.createElement("span");
     media.className = "col-card-media";
+    // A ~200 byte blurred preview and the real aspect ratio come with the file
+    // list, so the card holds its final shape and shows colour straight away.
+    if (file.blur && file.w && file.h) {
+      media.classList.add("has-ratio");
+      media.style.setProperty("--ar", `${file.w} / ${file.h}`);
+      media.style.backgroundImage = `url("${file.blur}")`;
+    }
 
     const img = document.createElement("img");
     img.decoding = "async";
@@ -572,12 +589,11 @@
     // rest begin well before they scroll into view (see `watchImages`).
     if (index < EAGER_COUNT) {
       img.fetchPriority = "high";
-      img.src = img.dataset.src;
+      setThumbSrc(img, img.dataset.src, "high");
     } else if (imageObserver) {
       imageObserver.observe(img);
     } else {
-      img.loading = "lazy";
-      img.src = img.dataset.src;
+      setThumbSrc(img, img.dataset.src);
     }
 
     const overlay = document.createElement("span");
@@ -716,6 +732,7 @@
     lbPos = -1;
     shareSession = null;
     stopShareTicker();
+    lbToken++;
     el.lbImg.removeAttribute("src");
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus({ preventScroll: true });
   }
@@ -725,22 +742,42 @@
     if (!file) return;
 
     lbDims = "";
-    el.lbImg.addEventListener(
-      "load",
-      () => {
-        const { naturalWidth: w, naturalHeight: h } = el.lbImg;
-        if (w && h) lbDims = ` · ${w}×${h}`;
-        paintMeta(file);
-      },
-      { once: true },
-    );
+    const full = new Image();
+    const token = ++lbToken;
+    full.decoding = "async";
+    full.onload = () => {
+      if (token !== lbToken) return;
+      el.lbImg.src = file.url;
+      el.lbImg.classList.remove("is-preview");
+      const { naturalWidth: w, naturalHeight: h } = full;
+      if (w && h) lbDims = ` · ${w}×${h}`;
+      paintMeta(file);
+    };
+    // The grid thumbnail is already cached, so the viewer opens instantly and
+    // sharpens once the original arrives.
+    if (file.thumbUrl) {
+      el.lbImg.src = file.thumbUrl;
+      el.lbImg.classList.add("is-preview");
+    } else {
+      el.lbImg.removeAttribute("src");
+    }
+    full.src = file.url;
+    preloadNeighbours();
 
-    el.lbImg.src = file.url;
     el.lbImg.alt = humanName(file);
     el.lbName.textContent = humanName(file);
     paintMeta(file);
     el.lbCounter.textContent = `${lbPos + 1} / ${visible.length}`;
     paintDetails(file);
+  }
+
+  /** Warm the next and previous originals so arrow-key browsing feels instant. */
+  function preloadNeighbours() {
+    if (visible.length < 2) return;
+    for (const delta of [1, -1]) {
+      const near = visible[(lbPos + delta + visible.length) % visible.length];
+      if (near) new Image().src = near.url;
+    }
   }
 
   function paintDetails(file) {
@@ -917,11 +954,14 @@
     buildPacks();
 
     renderChips();
-    renderPackList();
+    if (el.tabImagesCount) el.tabImagesCount.textContent = String(allFiles.length);
+    if (el.tabPacksCount) el.tabPacksCount.textContent = String(packs.size);
     // The collection opens on the Packs tab; certificates have no tab bar.
     if (el.packList && !tabChosen) {
       tabChosen = true;
       setTab(new URLSearchParams(window.location.search).has("share") ? "images" : "packs");
+    } else if (el.packList && !el.packList.hidden) {
+      renderPackList();
     } else {
       render();
     }

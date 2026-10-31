@@ -34,11 +34,12 @@ function isServable(contentType) {
 
 // How long a cached bucket listing stays valid (ms). Keeps browsing snappy and
 // avoids hammering the Hub on every image request.
-const LISTING_TTL_MS = 10_000;
+const LISTING_TTL_MS = 120_000;
+const LISTING_EDGE_SECONDS = 60;
 
 // Browser/CDN cache lifetime for image bytes (seconds). Files in the vault are
 // immutable, so this can be generous.
-const FILE_CACHE_SECONDS = 600;
+const FILE_CACHE_SECONDS = 86_400;
 
 // Generated previews never change for a given path, so cache them for a year.
 const THUMB_CACHE_SECONDS = 31_536_000;
@@ -48,12 +49,17 @@ const THUMB_CACHE_SECONDS = 31_536_000;
 // collection itself, so the grid and its folder counts stay about real files.
 const THUMB_PREFIX = "_thumbs/";
 
+// Tiny blurred placeholders + aspect ratios, written by `tools/make_thumbs.py`
+// as { "<path>": [width, height, "<base64 webp>"] }. Read once per listing refresh.
+const LQIP_PATH = `${THUMB_PREFIX}_lqip.json`;
+
 // How long a share link stays valid. Enforced on the server: the expiry is part
 // of the signed payload, so editing the URL cannot extend it.
 const SHARE_TTL_SECONDS = 30 * 60;
 
 // Module-level cache. Cloudflare reuses isolates, so this is effective in practice.
 let listingCache = { at: 0, files: null, thumbs: null };
+let lqipCache = { key: "", map: {} };
 
 /** Same-origin proxy URL for a bucket path. */
 const fileUrl = (path) => `/api/collection/file?path=${encodeURIComponent(path)}`;
@@ -154,6 +160,39 @@ function json(body, status = 200, extraHeaders = {}) {
   });
 }
 
+/** Resolve one bucket object, following the private bucket's signed redirect. */
+async function fetchBucketObject(token, path) {
+  // `encodeURIComponent` encodes "/" as %2F, which the Hub's resolve route accepts.
+  const resolveUrl = `${HF}/buckets/${BUCKET_ID}/resolve/${encodeURIComponent(path)}`;
+  let upstream = await fetch(resolveUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+    redirect: "manual",
+  });
+  // Private buckets answer 302 -> signed CDN URL. Follow it without the token.
+  if (upstream.status >= 300 && upstream.status < 400) {
+    const location = upstream.headers.get("Location");
+    if (!location) throw new Error("Resolve returned a redirect with no target.");
+    upstream = await fetch(location);
+  }
+  return upstream;
+}
+
+/** The placeholder manifest, refetched only when the file in the bucket changes. */
+async function getLqip(token, thumbs) {
+  const entry = thumbs.get(LQIP_PATH);
+  if (!entry) return {};
+  const key = `${entry.size}|${entry.uploadedAt || ""}`;
+  if (lqipCache.key === key) return lqipCache.map;
+  try {
+    const res = await fetchBucketObject(token, LQIP_PATH);
+    if (!res.ok) return lqipCache.map;
+    lqipCache = { key, map: await res.json() };
+  } catch {
+    // placeholders are cosmetic — never fail the listing over them
+  }
+  return lqipCache.map;
+}
+
 /** Fetch (and cache) the bucket listing: the visible files plus the thumbnail index. */
 async function getListing(token) {
   const now = Date.now();
@@ -179,6 +218,8 @@ async function getListing(token) {
     }
   }
 
+  const lqip = await getLqip(token, thumbs);
+
   const files = entries
     .filter((entry) => entry.type === "file" && !entry.path.startsWith(THUMB_PREFIX))
     .map((entry) => {
@@ -197,6 +238,7 @@ async function getListing(token) {
         // Set only when a generated preview actually exists for this file. The
         // client falls back to the full-resolution original when it is null.
         thumbPath: thumbs.has(thumbPath) ? thumbPath : null,
+        lqip: lqip[entry.path] || null,
       };
     })
     .sort((a, b) => a.path.localeCompare(b.path));
@@ -220,30 +262,49 @@ function requireToken(env) {
   return null;
 }
 
-async function handleList(env) {
+async function handleList(env, request, url, ctx) {
   const missing = requireToken(env);
   if (missing) return missing;
+
+  // The manifest is the same for everyone, so serve it from the edge cache and
+  // skip the Hugging Face round trip entirely on a hit.
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const cacheKey = new Request(url.toString(), { method: "GET" });
+  if (cache && request.method === "GET") {
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit;
+  }
 
   try {
     const { files } = await getListing(env.HF_TOKEN);
     const folders = [...new Set(files.map((file) => file.folder))].sort((a, b) => a.localeCompare(b));
 
-    return json(
+    const response = json(
       {
         bucket: BUCKET_ID,
         count: files.length,
         totalSize: files.reduce((sum, file) => sum + file.size, 0),
         folders,
-        files: files.map(({ thumbPath, ...file }) => ({
+        files: files.map(({ thumbPath, lqip, ...file }) => ({
           ...file,
+          // Aspect ratio + a ~200-byte blurred preview, so cards reserve their
+          // space and show colour before the real preview arrives.
+          ...(lqip ? { w: lqip[0], h: lqip[1], blur: `data:image/webp;base64,${lqip[2]}` } : {}),
           url: fileUrl(file.path),
           // Lightweight grid preview; null means "use `url`" (see collection.js).
           thumbUrl: thumbPath ? fileUrl(thumbPath) : null,
         })),
       },
       200,
-      { "Cache-Control": "no-cache" },
+      // Browsers revalidate every time; the edge keeps it for LISTING_EDGE_SECONDS.
+      { "Cache-Control": `public, max-age=0, s-maxage=${LISTING_EDGE_SECONDS}` },
     );
+    if (cache && request.method === "GET") {
+      const copy = response.clone();
+      if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(cacheKey, copy));
+      else await cache.put(cacheKey, copy);
+    }
+    return response;
   } catch (err) {
     return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
   }
@@ -264,12 +325,18 @@ export async function streamBucketFile(env, request, path, { allow = (entry) => 
   // Only serve files that actually exist in the bucket. The listing also tells us
   // the true content type, so a crafted `path` cannot pull arbitrary content.
   // Generated thumbnails are valid targets too, but stay out of the listing.
+  // Previews skip the listing lookup (a whole round trip): they are WebP files
+  // under the reserved prefix, and Hugging Face 404s anything that is not there.
   let entry;
-  try {
-    const { files, thumbs } = await getListing(env.HF_TOKEN);
-    entry = files.find((file) => file.path === path) || thumbs.get(path);
-  } catch (err) {
-    return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
+  if (path.startsWith(THUMB_PREFIX) && path.endsWith(".webp") && !path.includes("..")) {
+    entry = { contentType: "image/webp" };
+  } else {
+    try {
+      const { files, thumbs } = await getListing(env.HF_TOKEN);
+      entry = files.find((file) => file.path === path) || thumbs.get(path);
+    } catch (err) {
+      return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
+    }
   }
 
   if (!entry) return json({ error: "not_found", message: "No such file in this bucket." }, 404);
@@ -277,23 +344,14 @@ export async function streamBucketFile(env, request, path, { allow = (entry) => 
     return json({ error: "unsupported_type", message: "Only images and PowerPoint decks can be served." }, 415);
   }
 
-  // `encodeURIComponent` encodes "/" as %2F, which the Hub's resolve route accepts.
-  const resolveUrl = `${HF}/buckets/${BUCKET_ID}/resolve/${encodeURIComponent(path)}`;
-
-  let upstream = await fetch(resolveUrl, {
-    headers: { Authorization: `Bearer ${env.HF_TOKEN}` },
-    redirect: "manual",
-  });
-
-  // Private buckets answer 302 -> signed CDN URL. Follow it without the token.
-  if (upstream.status >= 300 && upstream.status < 400) {
-    const location = upstream.headers.get("Location");
-    if (!location) {
-      return json({ error: "upstream_error", message: "Resolve returned a redirect with no target." }, 502);
-    }
-    upstream = await fetch(location);
+  let upstream;
+  try {
+    upstream = await fetchBucketObject(env.HF_TOKEN, path);
+  } catch (err) {
+    return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
   }
 
+  if (upstream.status === 404) return json({ error: "not_found", message: "No such file in this bucket." }, 404);
   if (!upstream.ok) {
     return json({ error: "upstream_error", message: `Resolve failed (HTTP ${upstream.status})` }, 502);
   }
@@ -317,7 +375,35 @@ export async function streamBucketFile(env, request, path, { allow = (entry) => 
  * and both Hugging Face round trips, which is most of the latency of a grid card.
  * Thumbnails are generated once per file, so they are cached for a year.
  */
+/**
+ * Keep images inside the site. Browsers tell us how a request was made, so we
+ * refuse other sites embedding our images (hotlinking) and people opening an
+ * image URL as its own page to save it. Requests from the page itself — the
+ * grid, lightbox and share links — are same-origin image loads and pass.
+ * This stops casual saving and leeching; it cannot stop screenshots.
+ */
+function isHotlink(request, url) {
+  const site = request.headers.get("Sec-Fetch-Site");
+  const dest = request.headers.get("Sec-Fetch-Dest");
+  if (site) {
+    if (site === "cross-site") return true;
+    return dest === "document" || dest === "iframe" || dest === "embed" || dest === "object";
+  }
+  // Older browsers: fall back to the Referer when one is sent.
+  const referer = request.headers.get("Referer");
+  if (!referer) return false;
+  try {
+    return new URL(referer).host !== url.host;
+  } catch {
+    return true;
+  }
+}
+
 async function handleFile(env, request, url, ctx) {
+  if (isHotlink(request, url)) {
+    return json({ error: "forbidden", message: "Open images from the collection page." }, 403);
+  }
+
   const path = url.searchParams.get("path");
   const isThumb = !!path && path.startsWith(THUMB_PREFIX);
   const cache = typeof caches !== "undefined" ? caches.default : null;
@@ -330,11 +416,14 @@ async function handleFile(env, request, url, ctx) {
 
   const response = await streamBucketFile(env, request, path);
 
-  if (isThumb && response.ok) {
+  if (response.ok && request.method === "GET") {
     const headers = new Headers(response.headers);
-    headers.set("Cache-Control", `public, max-age=${THUMB_CACHE_SECONDS}, immutable`);
+    headers.set(
+      "Cache-Control",
+      isThumb ? `public, max-age=${THUMB_CACHE_SECONDS}, immutable` : `public, max-age=${FILE_CACHE_SECONDS}`,
+    );
     const cached = new Response(response.body, { status: response.status, headers });
-    if (cache && request.method === "GET") {
+    if (cache) {
       const copy = cached.clone();
       if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(cacheKey, copy));
       else await cache.put(cacheKey, copy);
@@ -472,5 +561,5 @@ export async function onRequest({ request, env, waitUntil }) {
   }
 
   if (pathname.endsWith("/file")) return handleFile(env, request, url, { waitUntil });
-  return handleList(env);
+  return handleList(env, request, url, { waitUntil });
 }
