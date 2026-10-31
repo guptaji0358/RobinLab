@@ -86,8 +86,8 @@
       W = innerWidth; H = innerHeight;
       c.width = W * dpr; c.height = H * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      var n = Math.round(clamp(W * H / 9500, 45, 170));
-      if (W < 700) n = Math.min(n, 60);
+      var n = Math.round(clamp(W * H / 22000, 30, 70));
+      if (W < 700) n = Math.min(n, 35);
       while (pts.length < n) pts.push(spawn());
       pts.length = n;
       if (reduce) draw(0);
@@ -146,7 +146,7 @@
     }
     function loop(t) {
       var dt = Math.min(40, t - last) / 16.67; last = t;
-      draw(dt);
+      if (!d.hidden) draw(dt);
       requestAnimationFrame(loop);
     }
 
