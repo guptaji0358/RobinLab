@@ -430,3 +430,26 @@ main { counter-reset: fxsec; }
 }
 .pr-card:hover::after, .col-packcard:hover::after { opacity: 1; }
 .col-pack-title::before { content: "/ "; font-family: var(--fx-mono); color: var(--aurora-3); }
+
+/* ---------- smoothness on touch / small / low-power devices ---------- */
+html { -webkit-text-size-adjust: 100%; }
+body { overflow-x: clip; -webkit-tap-highlight-color: transparent; }
+.fx-h-pin { height: calc(100dvh - 64px); }
+
+/* a radial gradient looks like the blurred orb but costs nothing to paint */
+.fx-orbs i { filter: none; background-color: transparent; }
+.fx-orbs i:nth-child(1) { background: radial-gradient(closest-side, #3b61dc, transparent); }
+.fx-orbs i:nth-child(2) { background: radial-gradient(closest-side, #7a3fd8, transparent); }
+.fx-orbs i:nth-child(3) { background: radial-gradient(closest-side, #14b8a0, transparent); }
+
+/* backdrop blur re-samples everything behind it every frame; drop it where it hurts */
+@media (max-width: 900px), (pointer: coarse) {
+  *, *::before, *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .fx-orbs i { will-change: auto; }
+}
+@media (hover: none) {
+  .pr-card::after, .col-packcard::after { display: none; }
+}

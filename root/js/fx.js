@@ -82,12 +82,13 @@
       };
     }
     function size() {
-      dpr = Math.min(devicePixelRatio || 1, 2);
+      dpr = fine ? Math.min(devicePixelRatio || 1, 2) : 1;
       W = innerWidth; H = innerHeight;
       c.width = W * dpr; c.height = H * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       var n = Math.round(clamp(W * H / 22000, 30, 70));
       if (W < 700) n = Math.min(n, 35);
+      if ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4) n = Math.min(n, 24);
       while (pts.length < n) pts.push(spawn());
       pts.length = n;
       if (reduce) draw(0);
@@ -147,12 +148,17 @@
     function loop(t) {
       var dt = Math.min(40, t - last) / 16.67; last = t;
       if (!d.hidden) draw(dt);
-      requestAnimationFrame(loop);
+      if (!d.hidden) requestAnimationFrame(loop);
     }
 
     size();
     addEventListener('resize', size);
-    if (!reduce) requestAnimationFrame(function (t) { last = t; loop(t); });
+    function start() { requestAnimationFrame(function (t) { last = t; loop(t); }); }
+    if (!reduce) {
+      start();
+      // stop burning battery in background tabs; resume on return
+      d.addEventListener('visibilitychange', function () { if (!d.hidden) start(); });
+    }
 
     // click anywhere → burst of particles
     addEventListener('pointerdown', function (e) {
