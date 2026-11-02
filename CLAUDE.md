@@ -61,13 +61,14 @@ automatically.
 
 ## Pages
 
-Three routes, all served from `root/`:
+Four routes, all served from `root/`:
 
 | Route | File | Content |
 | --- | --- | --- |
 | `/` | `index.html` | Project hub, about, contact |
 | `/collection` | `collection.html` | Images from the bucket, grouped by folder ("packs") |
 | `/presentations` | `presentations.html` | `.pptx` decks, embedded via Microsoft Office Web Viewer |
+| `/skills` | `skills.html` | Claude skills from the bucket's `Claude Skills/` folder, plus a how-to-use method |
 
 The footer identity is the same on all three pages — **Robin Gupta Studios /
 RGS™ / Built & maintained by Robin Gupta / Copyright © <year> Robin Gupta** —
@@ -109,6 +110,7 @@ Decks also have a clean public route, `/decks/<name>.pptx`
 itself and needs a public URL ending in `.pptx`. That route serves files from
 `presentations/` only; the Hugging Face token stays server-side either way.
 
+- `/skills` reads `GET /api/collection/skills`, which returns only each skill's title, description and `##` outline. The full text is served one skill at a time by `GET /api/collection/skill?id=…` (public, fetched only on **Copy skill** or when a card is dragged out as a `.md` file; `&download=1` adds `Content-Disposition`). Drag sets only a `DownloadURL` payload (Chrome/Edge) so it can't paste into text fields. New `.md` files in `Claude Skills/` appear automatically.
 - Collection shows images only — presentations never appear there.
 - Each bucket folder becomes one pack section, images keep their real aspect
   ratio (nothing is cropped).

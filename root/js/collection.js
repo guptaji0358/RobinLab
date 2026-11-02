@@ -240,7 +240,7 @@
 
   const sorters = {
     name: (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }),
-    recent: (a, b) => Date.parse(b.uploadedAt || 0) - Date.parse(a.uploadedAt || 0) || a.name.localeCompare(b.name),
+    recent: (a, b) => (Date.parse(b.uploadedAt) || 0) - (Date.parse(a.uploadedAt) || 0) || a.name.localeCompare(b.name),
     largest: (a, b) => b.size - a.size,
     smallest: (a, b) => a.size - b.size,
   };
@@ -257,7 +257,9 @@
   function renderChips() {
     el.folders.textContent = "";
 
-    const entries = [["", allFiles.length], ...sortedPackKeys().map((key) => [key, packs.get(key).length])];
+    const entries = [["", allFiles.length], ...sortedPackKeys()
+        .filter((key) => key !== "") // loose root images: "Everything" already covers them
+        .map((key) => [key, packs.get(key).length])];
 
     for (const [folder, count] of entries) {
       const isAll = folder === "";

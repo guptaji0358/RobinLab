@@ -8,6 +8,8 @@ as the Cloudflare Pages Function in `functions/api/collection/[[path]].js`:
     GET /api/collection/file?path=<enc>  -> streams one file's bytes (inline preview)
     POST /api/collection/share           -> mints a signed link valid for 30 minutes
     GET /api/collection/share?token=<t>  -> resolves that link back to one image
+    GET /api/collection/skills           -> title, description and outline of each Claude skill
+    GET /api/collection/skill?id=...     -> full text of one skill (Copy / drag)
     GET /decks/<name>.pptx               -> public deck URL for the Office Web Viewer
 
 That means the Collection page behaves identically locally and in production.
@@ -39,6 +41,7 @@ import http.client
 import json
 import math
 import os
+import re
 import sys
 import time
 import urllib.parse
@@ -71,6 +74,10 @@ LQIP_PATH = THUMB_PREFIX + "_lqip.json"
 _lqip_cache: dict[str, object] = {"key": "", "map": {}}
 
 _listing_cache: dict[str, object] = {"at": 0.0, "files": None, "thumbs": None}
+
+# Bucket folder holding the Claude skill files (.md) listed on /skills.
+SKILLS_FOLDER = "Claude Skills"
+_skills_cache: dict[str, object] = {"at": 0.0, "items": None}
 
 
 # --------------------------------------------------------------------------- #
@@ -267,6 +274,81 @@ def open_file_stream(token: str, path: str):
 
 
 # --------------------------------------------------------------------------- #
+# Claude skills (mirrors the /skills handler in the Pages Function)
+# --------------------------------------------------------------------------- #
+def parse_front_matter(text: str) -> tuple[dict[str, str], str]:
+    match = re.match(r"^---\n([\s\S]*?)\n---\n?", text)
+    if not match:
+        return {}, text
+    meta: dict[str, str] = {}
+    for line in match.group(1).split("\n"):
+        kv = re.match(r"^([\w-]+):\s*(.*)$", line)
+        if kv:
+            meta[kv.group(1)] = re.sub(r"^([\"'])([\s\S]*)\1$", r"\2", kv.group(2).strip())
+    return meta, text[match.end():]
+
+
+def _strip_markdown(text: str) -> str:
+    return re.sub(r"[`*_]", "", text).strip()
+
+
+def skill_id(name: str) -> str:
+    base = re.sub(r"\.md$", "", name, flags=re.I).lower()
+    return re.sub(r"^-|-$", "", re.sub(r"[^a-z0-9]+", "-", base))
+
+
+def summarise_skill(entry: dict, text: str) -> dict:
+    """Title, description and section outline only; full text comes from /skill."""
+    meta, body = parse_front_matter(text.replace("\r\n", "\n"))
+    title = ""
+    sections: list[str] = []
+    fenced = False
+    for line in body.split("\n"):
+        if re.match(r"^\s*(```|~~~)", line):
+            fenced = not fenced
+        if fenced:
+            continue
+        h1 = re.match(r"^#\s+(.+)", line)
+        if h1 and not title:
+            title = _strip_markdown(h1.group(1))
+        h2 = re.match(r"^##\s+(.+)", line)
+        if h2 and len(sections) < 12:
+            sections.append(_strip_markdown(h2.group(1)))
+    fallback = re.sub(r"\.md$", "", entry["name"], flags=re.I)
+    return {
+        "id": skill_id(entry["name"]),
+        "title": title or meta.get("name") or fallback,
+        "skillName": meta.get("name") or fallback,
+        "description": meta.get("description", ""),
+        "sections": sections,
+        "size": entry["size"],
+        "uploadedAt": entry.get("uploadedAt"),
+    }
+
+
+def get_skills(token: str) -> list[dict]:
+    now = time.time()
+    if _skills_cache["items"] is not None and now - float(_skills_cache["at"]) < LISTING_TTL_S:
+        return _skills_cache["items"]  # type: ignore[return-value]
+
+    items = []
+    for entry in get_listing(token)["files"]:  # type: ignore[union-attr]
+        if entry["folder"] != SKILLS_FOLDER or not entry["name"].lower().endswith(".md"):
+            continue
+        conn, resp = open_file_stream(token, entry["path"])
+        try:
+            if resp.status != 200:
+                raise RuntimeError(f"Skill fetch failed (HTTP {resp.status})")
+            items.append(summarise_skill(entry, resp.read().decode("utf-8", "replace")))
+        finally:
+            conn.close()
+    items.sort(key=lambda item: item["title"].lower())
+    _skills_cache["at"] = now
+    _skills_cache["items"] = items
+    return items
+
+
+# --------------------------------------------------------------------------- #
 # Request handler
 # --------------------------------------------------------------------------- #
 class Handler(SimpleHTTPRequestHandler):
@@ -295,6 +377,43 @@ class Handler(SimpleHTTPRequestHandler):
             },
             500,
         )
+
+    def _serve_skill(self, parsed: urllib.parse.SplitResult) -> None:
+        query = urllib.parse.parse_qs(parsed.query)
+        sid = (query.get("id") or [""])[0]
+        if not re.fullmatch(r"[a-z0-9-]{1,100}", sid):
+            self._send_json({"error": "bad_request"}, 400)
+            return
+        try:
+            entry = next(
+                (e for e in get_listing(self.token)["files"]  # type: ignore[union-attr]
+                 if e["folder"] == SKILLS_FOLDER and e["name"].lower().endswith(".md") and skill_id(e["name"]) == sid),
+                None,
+            )
+            if entry is None:
+                self._send_json({"error": "not_found"}, 404)
+                return
+            conn, resp = open_file_stream(self.token, entry["path"])
+            try:
+                if resp.status != 200:
+                    raise RuntimeError(f"Skill fetch failed (HTTP {resp.status})")
+                body = resp.read()
+            finally:
+                conn.close()
+        except Exception as err:  # noqa: BLE001
+            self._send_json({"error": "upstream_error", "message": str(err)}, 502)
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/markdown; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        if query.get("download"):
+            safe = re.sub(r"[^\w. -]", "_", entry["name"])
+            self.send_header("Content-Disposition", f'attachment; filename="{safe}"')
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     # -- routing ----------------------------------------------------------- #
     def _resolve_clean_url(self) -> None:
@@ -339,6 +458,19 @@ class Handler(SimpleHTTPRequestHandler):
 
         if self.command not in ("GET", "HEAD"):
             self._send_json({"error": "method_not_allowed"}, 405)
+            return True
+
+        if route.endswith("/skills"):
+            try:
+                skills = get_skills(self.token)
+            except Exception as err:  # noqa: BLE001
+                self._send_json({"error": "upstream_error", "message": str(err)}, 502)
+            else:
+                self._send_json({"count": len(skills), "skills": skills})
+            return True
+
+        if route.endswith("/skill"):
+            self._serve_skill(parsed)
             return True
 
         if route.endswith("/file"):

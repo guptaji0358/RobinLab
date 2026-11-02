@@ -6,6 +6,8 @@
  *   GET  /api/collection/file?path=<enc>  -> streams one file's bytes (inline, view-only)
  *   POST /api/collection/share            -> mints a signed link valid for 30 minutes
  *   GET  /api/collection/share?token=<t>  -> resolves that link back to one image
+ *   GET  /api/collection/skills           -> title, description and outline of each Claude skill
+ *   GET  /api/collection/skill?id=…       -> full text of one skill (Copy / drag)
  *
  * The Hugging Face access token never reaches the browser. It is read from the
  * `HF_TOKEN` secret (Pages -> Settings -> Environment variables) and used only
@@ -48,6 +50,9 @@ const THUMB_CACHE_SECONDS = 31_536_000;
 // `tools/make_thumbs.py`. They are served on request but never listed in the
 // collection itself, so the grid and its folder counts stay about real files.
 const THUMB_PREFIX = "_thumbs/";
+
+// Bucket folder holding the Claude skill files (.md) listed on /skills.
+const SKILLS_FOLDER = "Claude Skills";
 
 // Tiny blurred placeholders + aspect ratios, written by `tools/make_thumbs.py`
 // as { "<path>": [width, height, "<base64 webp>"] }. Read once per listing refresh.
@@ -371,11 +376,6 @@ export async function streamBucketFile(env, request, path, { allow = (entry) => 
 }
 
 /**
- * Serve one file through Cloudflare's edge cache. A hit skips the bucket listing
- * and both Hugging Face round trips, which is most of the latency of a grid card.
- * Thumbnails are generated once per file, so they are cached for a year.
- */
-/**
  * Keep images inside the site. Browsers tell us how a request was made, so we
  * refuse other sites embedding our images (hotlinking) and people opening an
  * image URL as its own page to save it. Requests from the page itself — the
@@ -399,6 +399,11 @@ function isHotlink(request, url) {
   }
 }
 
+/**
+ * Serve one file through Cloudflare's edge cache. A hit skips the bucket listing
+ * and both Hugging Face round trips, which is most of the latency of a grid card.
+ * Thumbnails are generated once per file, so they are cached for a year.
+ */
 async function handleFile(env, request, url, ctx) {
   if (isHotlink(request, url)) {
     return json({ error: "forbidden", message: "Open images from the collection page." }, 403);
@@ -549,7 +554,123 @@ async function handleShare(env, request, url) {
   return json({ error: "method_not_allowed" }, 405, { Allow: "GET, HEAD, POST" });
 }
 
-export async function onRequest({ request, env, waitUntil }) {
+/* -------------------------------------------------------------------------- */
+/* /api/collection/skills                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Pull `key: value` pairs out of a SKILL.md front-matter block. */
+function parseFrontMatter(text) {
+  const match = text.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!match) return { meta: {}, body: text };
+  const meta = {};
+  for (const line of match[1].split("\n")) {
+    const kv = line.match(/^([\w-]+):\s*(.*)$/);
+    if (!kv) continue;
+    meta[kv[1]] = kv[2].trim().replace(/^(["'])([\s\S]*)\1$/, "$2");
+  }
+  return { meta, body: text.slice(match[0].length) };
+}
+
+const skillId = (name) =>
+  name.replace(/\.md$/i, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+const stripMarkdown = (text) => text.replace(/[`*_]/g, "").trim();
+
+/**
+ * Reduce one skill file to what the page shows: a title, the description, and
+ * its section outline. The full text is served separately by handleSkill.
+ */
+function summariseSkill(entry, text) {
+  const { meta, body } = parseFrontMatter(text.replace(/\r\n/g, "\n"));
+  let title = "";
+  const sections = [];
+  let fenced = false;
+  for (const line of body.split("\n")) {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    if (fenced) continue;
+    const h1 = line.match(/^#\s+(.+)/);
+    if (h1 && !title) title = stripMarkdown(h1[1]);
+    const h2 = line.match(/^##\s+(.+)/);
+    if (h2 && sections.length < 12) sections.push(stripMarkdown(h2[1]));
+  }
+  const fallback = entry.name.replace(/\.md$/i, "");
+  return {
+    id: skillId(entry.name),
+    title: title || meta.name || fallback,
+    skillName: meta.name || fallback,
+    description: meta.description || "",
+    sections,
+    size: entry.size,
+    uploadedAt: entry.uploadedAt || null,
+  };
+}
+
+let skillsCache = { at: 0, items: null };
+
+async function getSkills(token) {
+  const now = Date.now();
+  if (skillsCache.items && now - skillsCache.at < LISTING_TTL_MS) return skillsCache.items;
+
+  const { files } = await getListing(token);
+  const skillFiles = files.filter((file) => file.folder === SKILLS_FOLDER && /\.md$/i.test(file.name));
+  const items = await Promise.all(
+    skillFiles.map(async (file) => {
+      const res = await fetchBucketObject(token, file.path);
+      if (!res.ok) throw new Error(`Skill fetch failed (HTTP ${res.status})`);
+      return summariseSkill(file, await res.text());
+    }),
+  );
+  items.sort((a, b) => a.title.localeCompare(b.title));
+  skillsCache = { at: now, items };
+  return items;
+}
+
+async function handleSkills(env) {
+  const missing = requireToken(env);
+  if (missing) return missing;
+  try {
+    const skills = await getSkills(env.HF_TOKEN);
+    return json({ count: skills.length, skills }, 200, {
+      "Cache-Control": `public, max-age=0, s-maxage=${LISTING_EDGE_SECONDS}`,
+    });
+  } catch (err) {
+    return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
+  }
+}
+
+/**
+ * GET /api/collection/skill?id=<id>[&download=1] — the full text of one skill,
+ * fetched only when a visitor presses Copy or drags the card out.
+ */
+async function handleSkill(env, url) {
+  const missing = requireToken(env);
+  if (missing) return missing;
+  const id = url.searchParams.get("id") || "";
+  if (!/^[a-z0-9-]{1,100}$/.test(id)) return json({ error: "bad_request" }, 400);
+  try {
+    const { files } = await getListing(env.HF_TOKEN);
+    const file = files.find((f) => f.folder === SKILLS_FOLDER && /\.md$/i.test(f.name) && skillId(f.name) === id);
+    if (!file) return json({ error: "not_found" }, 404);
+    const res = await fetchBucketObject(env.HF_TOKEN, file.path);
+    if (!res.ok) throw new Error(`Skill fetch failed (HTTP ${res.status})`);
+    const headers = {
+      "Content-Type": "text/markdown; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": `public, max-age=0, s-maxage=${LISTING_EDGE_SECONDS}`,
+    };
+    if (url.searchParams.get("download")) {
+      headers["Content-Disposition"] = `attachment; filename="${file.name.replace(/[^\w. -]/g, "_")}"`;
+    }
+    return new Response(await res.text(), { status: 200, headers });
+  } catch (err) {
+    return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
+  }
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  // Keep `this` bound: calling the context's waitUntil detached throws "Illegal invocation".
+  const waitUntil = (promise) => context.waitUntil(promise);
   const url = new URL(request.url);
   const pathname = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
 
@@ -560,6 +681,8 @@ export async function onRequest({ request, env, waitUntil }) {
     return json({ error: "method_not_allowed" }, 405, { Allow: "GET, HEAD" });
   }
 
+  if (pathname.endsWith("/skills")) return handleSkills(env);
+  if (pathname.endsWith("/skill")) return handleSkill(env, url);
   if (pathname.endsWith("/file")) return handleFile(env, request, url, { waitUntil });
   return handleList(env, request, url, { waitUntil });
 }
