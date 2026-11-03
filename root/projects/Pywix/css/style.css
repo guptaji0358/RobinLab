@@ -415,11 +415,11 @@ footer a { color: var(--subtext); }
 
 /* SVG icons from the site-wide assets/icons/ folder, tinted via mask. */
 .ic{display:inline-block;width:1em;height:1em;vertical-align:-.125em;background:currentColor;-webkit-mask:center/contain no-repeat;mask:center/contain no-repeat}
-.ic-minimize{-webkit-mask-image:url(../../../assets/icons/minimize.svg);mask-image:url(../../../assets/icons/minimize.svg)}
-.ic-maximize{-webkit-mask-image:url(../../../assets/icons/maximize.svg);mask-image:url(../../../assets/icons/maximize.svg)}
-.ic-close{-webkit-mask-image:url(../../../assets/icons/close.svg);mask-image:url(../../../assets/icons/close.svg)}
-.ic-chevron-down{-webkit-mask-image:url(../../../assets/icons/chevron-down.svg);mask-image:url(../../../assets/icons/chevron-down.svg)}
-.ic-chevron-right{-webkit-mask-image:url(../../../assets/icons/chevron-right.svg);mask-image:url(../../../assets/icons/chevron-right.svg)}
-.ic-check{-webkit-mask-image:url(../../../assets/icons/check.svg);mask-image:url(../../../assets/icons/check.svg)}
-.ic-arrow-right{-webkit-mask-image:url(../../../assets/icons/arrow-right.svg);mask-image:url(../../../assets/icons/arrow-right.svg)}
+.ic-minimize{-webkit-mask-image:url(../../../assets/icons/navigation/minimize.svg);mask-image:url(../../../assets/icons/navigation/minimize.svg)}
+.ic-maximize{-webkit-mask-image:url(../../../assets/icons/navigation/maximize.svg);mask-image:url(../../../assets/icons/navigation/maximize.svg)}
+.ic-close{-webkit-mask-image:url(../../../assets/icons/actions/close.svg);mask-image:url(../../../assets/icons/actions/close.svg)}
+.ic-chevron-down{-webkit-mask-image:url(../../../assets/icons/navigation/chevron-down.svg);mask-image:url(../../../assets/icons/navigation/chevron-down.svg)}
+.ic-chevron-right{-webkit-mask-image:url(../../../assets/icons/navigation/chevron-right.svg);mask-image:url(../../../assets/icons/navigation/chevron-right.svg)}
+.ic-check{-webkit-mask-image:url(../../../assets/icons/status/check.svg);mask-image:url(../../../assets/icons/status/check.svg)}
+.ic-arrow-right{-webkit-mask-image:url(../../../assets/icons/navigation/arrow-right.svg);mask-image:url(../../../assets/icons/navigation/arrow-right.svg)}
 .installer-step .ic{margin-right:4px}

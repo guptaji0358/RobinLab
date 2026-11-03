@@ -226,7 +226,7 @@ em { font-style: normal; color: #fff; font-weight: 600; }
 .download-side h3 { font-size: 1.05rem; margin: 0 0 12px; color: #fff; }
 .download-side h3:not(:first-child) { margin-top: 26px; }
 .checklist li { position: relative; padding-left: 30px; color: var(--muted); margin-bottom: 10px; }
-.checklist li::before { content: ""; position: absolute; left: 0; top: 3px; width: 20px; height: 20px; background: url("../Assets/icons/check.svg") center / contain no-repeat; filter: brightness(1.25) saturate(1.2); }
+.checklist li::before { content: ""; position: absolute; left: 0; top: 3px; width: 20px; height: 20px; background: url("../Assets/icons/actions/check.svg") center / contain no-repeat; filter: brightness(1.25) saturate(1.2); }
 .steps-list { counter-reset: s; }
 .steps-list li { counter-increment: s; position: relative; padding-left: 38px; color: var(--muted); margin-bottom: 10px; }
 .steps-list li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; font: 700 .82rem var(--font); color: #fff; background: rgba(120, 150, 255, .28); border: 1px solid var(--border-strong); }

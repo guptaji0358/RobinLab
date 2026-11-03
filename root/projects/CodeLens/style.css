@@ -955,22 +955,22 @@
 
 /* Icons are separate files in Assets/icons/, tinted via mask. */
 .ic{display:inline-block;width:1em;height:1em;background:currentColor;-webkit-mask:center/contain no-repeat;mask:center/contain no-repeat}
-.ic-codelens-overview{-webkit-mask-image:url(Assets/icons/codelens-overview.svg);mask-image:url(Assets/icons/codelens-overview.svg)}
-.ic-custom-accent{-webkit-mask-image:url(Assets/icons/custom-accent.svg);mask-image:url(Assets/icons/custom-accent.svg)}
-.ic-custom-dialogs{-webkit-mask-image:url(Assets/icons/custom-dialogs.svg);mask-image:url(Assets/icons/custom-dialogs.svg)}
-.ic-download-tray{-webkit-mask-image:url(Assets/icons/download-tray.svg);mask-image:url(Assets/icons/download-tray.svg)}
-.ic-download-tray-2{-webkit-mask-image:url(Assets/icons/download-tray-2.svg);mask-image:url(Assets/icons/download-tray-2.svg)}
-.ic-folder{-webkit-mask-image:url(Assets/icons/folder.svg);mask-image:url(Assets/icons/folder.svg)}
-.ic-folder-file{-webkit-mask-image:url(Assets/icons/folder-file.svg);mask-image:url(Assets/icons/folder-file.svg)}
-.ic-folder-file-2{-webkit-mask-image:url(Assets/icons/folder-file-2.svg);mask-image:url(Assets/icons/folder-file-2.svg)}
-.ic-full-details{-webkit-mask-image:url(Assets/icons/full-details.svg);mask-image:url(Assets/icons/full-details.svg)}
-.ic-github{-webkit-mask-image:url(Assets/icons/github.svg);mask-image:url(Assets/icons/github.svg)}
-.ic-layout-grid{-webkit-mask-image:url(Assets/icons/layout-grid.svg);mask-image:url(Assets/icons/layout-grid.svg)}
-.ic-line-range{-webkit-mask-image:url(Assets/icons/line-range.svg);mask-image:url(Assets/icons/line-range.svg)}
-.ic-multi-line{-webkit-mask-image:url(Assets/icons/multi-line.svg);mask-image:url(Assets/icons/multi-line.svg)}
-.ic-one-line{-webkit-mask-image:url(Assets/icons/one-line.svg);mask-image:url(Assets/icons/one-line.svg)}
-.ic-preview-zoom{-webkit-mask-image:url(Assets/icons/preview-zoom.svg);mask-image:url(Assets/icons/preview-zoom.svg)}
-.ic-resizable-panes{-webkit-mask-image:url(Assets/icons/resizable-panes.svg);mask-image:url(Assets/icons/resizable-panes.svg)}
-.ic-terminal{-webkit-mask-image:url(Assets/icons/terminal.svg);mask-image:url(Assets/icons/terminal.svg)}
-.ic-theme-glass{-webkit-mask-image:url(Assets/icons/theme-glass.svg);mask-image:url(Assets/icons/theme-glass.svg)}
-.ic-window-image{-webkit-mask-image:url(Assets/icons/window-image.svg);mask-image:url(Assets/icons/window-image.svg)}
+.ic-codelens-overview{-webkit-mask-image:url(Assets/icons/features/codelens-overview.svg);mask-image:url(Assets/icons/features/codelens-overview.svg)}
+.ic-custom-accent{-webkit-mask-image:url(Assets/icons/features/custom-accent.svg);mask-image:url(Assets/icons/features/custom-accent.svg)}
+.ic-custom-dialogs{-webkit-mask-image:url(Assets/icons/features/custom-dialogs.svg);mask-image:url(Assets/icons/features/custom-dialogs.svg)}
+.ic-download-tray{-webkit-mask-image:url(Assets/icons/files/download-tray.svg);mask-image:url(Assets/icons/files/download-tray.svg)}
+.ic-download-tray-2{-webkit-mask-image:url(Assets/icons/files/download-tray-2.svg);mask-image:url(Assets/icons/files/download-tray-2.svg)}
+.ic-folder{-webkit-mask-image:url(Assets/icons/files/folder.svg);mask-image:url(Assets/icons/files/folder.svg)}
+.ic-folder-file{-webkit-mask-image:url(Assets/icons/files/folder-file.svg);mask-image:url(Assets/icons/files/folder-file.svg)}
+.ic-folder-file-2{-webkit-mask-image:url(Assets/icons/files/folder-file-2.svg);mask-image:url(Assets/icons/files/folder-file-2.svg)}
+.ic-full-details{-webkit-mask-image:url(Assets/icons/line-selection/full-details.svg);mask-image:url(Assets/icons/line-selection/full-details.svg)}
+.ic-github{-webkit-mask-image:url(Assets/icons/tools/github.svg);mask-image:url(Assets/icons/tools/github.svg)}
+.ic-layout-grid{-webkit-mask-image:url(Assets/icons/features/layout-grid.svg);mask-image:url(Assets/icons/features/layout-grid.svg)}
+.ic-line-range{-webkit-mask-image:url(Assets/icons/line-selection/line-range.svg);mask-image:url(Assets/icons/line-selection/line-range.svg)}
+.ic-multi-line{-webkit-mask-image:url(Assets/icons/line-selection/multi-line.svg);mask-image:url(Assets/icons/line-selection/multi-line.svg)}
+.ic-one-line{-webkit-mask-image:url(Assets/icons/line-selection/one-line.svg);mask-image:url(Assets/icons/line-selection/one-line.svg)}
+.ic-preview-zoom{-webkit-mask-image:url(Assets/icons/features/preview-zoom.svg);mask-image:url(Assets/icons/features/preview-zoom.svg)}
+.ic-resizable-panes{-webkit-mask-image:url(Assets/icons/features/resizable-panes.svg);mask-image:url(Assets/icons/features/resizable-panes.svg)}
+.ic-terminal{-webkit-mask-image:url(Assets/icons/tools/terminal.svg);mask-image:url(Assets/icons/tools/terminal.svg)}
+.ic-theme-glass{-webkit-mask-image:url(Assets/icons/features/theme-glass.svg);mask-image:url(Assets/icons/features/theme-glass.svg)}
+.ic-window-image{-webkit-mask-image:url(Assets/icons/features/window-image.svg);mask-image:url(Assets/icons/features/window-image.svg)}
