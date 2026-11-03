@@ -75,6 +75,17 @@ RGS™ / Built & maintained by Robin Gupta / Copyright © <year> Robin Gupta** �
 plus `<meta name="author|publisher|copyright">` in each `<head>`. Change all
 three together; `index.html` also carries the Organization JSON-LD block.
 
+### Lite mode
+
+`root/js/lite.js` (loaded in `<head>` on every page) sets `html.fx-lite` for
+machines that can't render the animated canvas / custom cursor properly. It
+turns on automatically for software or missing WebGL, reduced motion, data-saver,
+≤2 CPU cores or ≤2 GB RAM, or when a 1.8 s frame-rate probe sees under ~24 fps.
+A bottom-left **Lite mode / Full effects** button overrides it (saved in
+`localStorage["fx-mode"]`); `?lite=1` / `?lite=0` does the same from the URL.
+`css/fx.css` (bottom) restyles under `html.fx-lite`; `js/fx.js` stops the canvas,
+cursor, tilt and horizontal showcase. New pages must include `js/lite.js`.
+
 ### Site icons
 
 The tab icon is the studio emblem, committed to `root/assets/` — the site never

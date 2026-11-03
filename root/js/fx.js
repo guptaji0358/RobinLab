@@ -5,7 +5,9 @@
   'use strict';
 
   var d = document, root = d.documentElement;
-  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var lite = root.classList.contains('fx-lite');     // set by lite.js (weak / software-rendered machines)
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || lite;
+  function isLite() { return root.classList.contains('fx-lite'); }
   var fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   function $(s, c) { return (c || d).querySelector(s); }
@@ -63,6 +65,7 @@
   /* --------------------------------------------------- background canvas */
   function background() {
     var c = $('#fx-bg');
+    if (lite && c) { c.remove(); return; }
     if (!c || !c.getContext) return;
     var ctx = c.getContext('2d');
     var W, H, dpr, pts = [], bursts = [];
@@ -147,13 +150,14 @@
     }
     function loop(t) {
       var dt = Math.min(40, t - last) / 16.67; last = t;
+      if (isLite()) { c.remove(); return; }
       if (!d.hidden) draw(dt);
       if (!d.hidden) requestAnimationFrame(loop);
     }
 
     size();
     addEventListener('resize', size);
-    function start() { requestAnimationFrame(function (t) { last = t; loop(t); }); }
+    function start() { if (isLite()) return; requestAnimationFrame(function (t) { last = t; loop(t); }); }
     if (!reduce) {
       start();
       // stop burning battery in background tabs; resume on return
@@ -279,6 +283,7 @@
     // avatar follows the pointer a little
     if (fine && !reduce && av) {
       h.addEventListener('pointermove', function (e) {
+        if (isLite()) return;
         var r = h.getBoundingClientRect();
         av.style.setProperty('--ax', ((e.clientX - r.left) / r.width - .35) * 26 + 'px');
         av.style.setProperty('--ay', ((e.clientY - r.top) / r.height - .5) * 26 + 'px');
@@ -321,8 +326,22 @@
     d.documentElement.addEventListener('pointerenter', function () { root.classList.remove('cur-out'); });
   }
 
+  function stopCursor() {
+    if (dot) { dot.remove(); ring.remove(); dot = ring = null; }
+    root.classList.remove('fx-cursor', 'cur-out', 'cur-link', 'cur-down');
+    marquees.forEach(function (m) { m.el.style.transform = ''; });
+  }
+  d.addEventListener('fx-lite', function (e) {
+    if (!e.detail) return;
+    var c = $('#fx-bg'); if (c) c.remove();
+    stopCursor();
+    $$('.fx-tilt, .fx-mag').forEach(function (el) { el.style.translate = ''; });
+    if (hs) hs.check();
+  });
+
   function mainLoop() {
     function frame() {
+      if (isLite()) { stopCursor(); return; }
       // cursor
       if (dot) {
         cur.x = mouse.x; cur.y = mouse.y;
@@ -351,6 +370,7 @@
     if (!fine || reduce || el.classList.contains('fx-tilt')) return;
     el.classList.add('fx-tilt');
     el.addEventListener('pointermove', function (e) {
+      if (isLite()) return;
       var r = el.getBoundingClientRect();
       var px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
       el.style.setProperty('--ry', ((px - .5) * 9).toFixed(2) + 'deg');
@@ -371,6 +391,7 @@
     $$('.btn, .contact-link, .icon-link, .brand').forEach(function (el) {
       el.classList.add('fx-mag');
       el.addEventListener('pointermove', function (e) {
+        if (isLite()) return;
         var r = el.getBoundingClientRect();
         var x = (e.clientX - (r.left + r.width / 2)) * .28, y = (e.clientY - (r.top + r.height / 2)) * .38;
         el.style.translate = x.toFixed(1) + 'px ' + y.toFixed(1) + 'px';
@@ -528,12 +549,12 @@
       pin.remove();
       sec.classList.remove('fx-h'); sec.style.height = ''; grid.style.transform = '';
     }
-    function check() { mq.matches ? enable() : disable(); if (on) layout(); }
+    function check() { (mq.matches && !isLite()) ? enable() : disable(); if (on) layout(); }
     check();
     mq.addEventListener('change', check);
     addEventListener('resize', function () { if (on) layout(); });
     addEventListener('load', function () { if (on) layout(); });
-    hs = { update: update };
+    hs = { update: update, check: check };
   }
 
   /* ------------------------------------------------------- scroll-linked bits */
