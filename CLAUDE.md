@@ -98,7 +98,7 @@ The lightbox's **Share** button calls `POST /api/collection/share`, which mints 
 HMAC-signed link (`/collection?share=<token>`) for that one image. The expiry is
 part of the signed payload, so links die after **30 minutes** and `GET
 /api/collection/share?token=…` answers `410` afterwards. `SHARE_SECRET` is the
-signing key (falls back to `HF_TOKEN`). See `COLLECTION.md` → Share links.
+signing key (falls back to `HF_TOKEN`). See `docs/COLLECTION.md` → Share links.
 
 Decks also have a clean public route, `/decks/<name>.pptx`
 (`functions/decks/[[path]].js`), because Microsoft's viewer downloads the file
@@ -133,7 +133,7 @@ pages, but it has no `/api/collection/*` proxy. `.claude/launch.json` has both
 configurations (`robinlab-root`, `robinlab-collection`).
 
 The collection API needs `HF_TOKEN` in the environment or in a git-ignored
-`.dev.vars` file. See `COLLECTION.md`.
+`.dev.vars` file. See `docs/COLLECTION.md`.
 
 ## Deployment
 
@@ -178,5 +178,5 @@ is the source of truth, but a `git push` alone never reaches production.
 
 ## Docs
 
-- `COLLECTION.md` — bucket architecture, API contract, thumbnails, deploy
+- `docs/COLLECTION.md` — bucket architecture, API contract, thumbnails, deploy
   details, security notes.
