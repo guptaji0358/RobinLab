@@ -23,6 +23,13 @@
     if (!isFinite(s)) return '0:00';
     return Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
   }
+  function icon(name) {
+    var i = document.createElement('span');
+    i.className = 'ic ic-' + name;
+    i.setAttribute('aria-hidden', 'true');
+    return i;
+  }
+  function setIcon(btn, name) { btn.replaceChildren(icon(name)); }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -37,7 +44,7 @@
 
   function hideControls(c) {
     c.root.classList.remove('is-active', 'is-playing');
-    c.play.textContent = '▶';
+    setIcon(c.play, 'play');
     c.play.setAttribute('aria-label', 'Play');
     c.seek.value = 0;
     c.cur.textContent = '0:00';
@@ -77,13 +84,13 @@
   audio.addEventListener('play', function () {
     if (current < 0) return;
     cards[current].root.classList.add('is-playing');
-    cards[current].play.textContent = '❚❚';
+    setIcon(cards[current].play, 'pause');
     cards[current].play.setAttribute('aria-label', 'Pause');
   });
   audio.addEventListener('pause', function () {
     if (current < 0) return;
     cards[current].root.classList.remove('is-playing');
-    cards[current].play.textContent = '▶';
+    setIcon(cards[current].play, 'play');
     cards[current].play.setAttribute('aria-label', 'Play');
   });
   audio.addEventListener('loadedmetadata', function () {
@@ -111,14 +118,15 @@
   TRACKS.forEach(function (t, i) {
     var root = el('article', 'pr-card mu-card');
     var title = el('h2', 'mu-title', t.title);
-    var btn = el('button', 'mu-big', '▶ Play');
+    var btn = el('button', 'mu-big');
+    btn.append(icon('play'), 'Play');
     btn.type = 'button';
     btn.setAttribute('aria-label', 'Play ' + t.title);
 
     var controls = el('div', 'mu-controls');
-    var prev = el('button', 'mu-btn', '⏮'); prev.type = 'button'; prev.setAttribute('aria-label', 'Previous');
-    var play = el('button', 'mu-btn mu-btn-main', '▶'); play.type = 'button'; play.setAttribute('aria-label', 'Play');
-    var next = el('button', 'mu-btn', '⏭'); next.type = 'button'; next.setAttribute('aria-label', 'Next');
+    var prev = el('button', 'mu-btn'); prev.append(icon('prev')); prev.type = 'button'; prev.setAttribute('aria-label', 'Previous');
+    var play = el('button', 'mu-btn mu-btn-main'); play.append(icon('play')); play.type = 'button'; play.setAttribute('aria-label', 'Play');
+    var next = el('button', 'mu-btn'); next.append(icon('next')); next.type = 'button'; next.setAttribute('aria-label', 'Next');
     var cur = el('span', 'mu-time', '0:00');
     var seek = el('input', 'mu-seek');
     seek.type = 'range'; seek.min = 0; seek.max = 0; seek.step = 'any'; seek.value = 0;

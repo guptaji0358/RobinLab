@@ -172,7 +172,9 @@
     font-size: 1.05rem;
     letter-spacing: -0.01em;
   }
-  .mark svg { width: 26px; height: 26px; }
+  .mark svg ,
+  .mark .ic ,
+  .mark img { width: 26px; height: 26px; }
 
   /* ===================================================================
      HERO
@@ -212,7 +214,8 @@
   a.badge:hover { border-color: var(--accent); transform: translateY(-1px); }
   .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
   .badge.claude { color: var(--text); border-color: var(--border-strong); }
-  .badge.claude svg, .badge.claude img { width: 15px; height: 15px; flex: none; object-fit: contain; }
+  .badge.claude svg, .badge.claude img ,
+  .badge.claude .ic{ width: 15px; height: 15px; flex: none; object-fit: contain; }
 
   /* ---- shimmer-sweep: a moving highlight loops across "featured" badges,
      the same live-badge trick SaaS sites use instead of a plain static logo ---- */
@@ -241,11 +244,15 @@
     100% { background-position: -50% 0; }
   }
   .badge.claude svg, .badge.claude img,
-  .claude-badge svg, .claude-badge img {
+  .claude-badge svg, .claude-badge img ,
+  .badge.claude .ic,
+  .claude-badge .ic{
     transition: transform 0.35s ease;
   }
   .badge.claude:hover svg, .badge.claude:hover img,
-  .claude-badge:hover svg, .claude-badge:hover img {
+  .claude-badge:hover svg, .claude-badge:hover img ,
+  .badge.claude:hover .ic,
+  .claude-badge:hover .ic{
     transform: scale(1.15) rotate(-6deg);
   }
   @media (prefers-reduced-motion: reduce) {
@@ -601,7 +608,9 @@
     padding: clamp(22px, 3vw, 30px);
   }
   .engine-card h3 { font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
-  .engine-card h3 svg { width: 20px; height: 20px; color: var(--accent); flex: none; }
+  .engine-card h3 svg ,
+  .engine-card h3 .ic ,
+  .engine-card h3 img { width: 20px; height: 20px; color: var(--accent); flex: none; }
   .engine-card .run-chip { margin-top: 14px; }
   .engine-card ul { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
   .engine-card li { padding-left: 20px; position: relative; color: var(--text-dim); font-size: 0.95rem; }
@@ -631,7 +640,9 @@
     font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase;
     color: var(--accent); margin-bottom: 12px;
   }
-  .mode-card .tag svg { width: 16px; height: 16px; }
+  .mode-card .tag svg ,
+  .mode-card .tag .ic ,
+  .mode-card .tag img { width: 16px; height: 16px; }
   .mode-card h3 { font-size: 1.08rem; margin-bottom: 8px; }
   .mode-card p { margin: 0; color: var(--text-dim); font-size: 0.93rem; }
 
@@ -657,7 +668,9 @@
     color: var(--accent);
     margin-bottom: 12px;
   }
-  .feature .icn svg { width: 18px; height: 18px; }
+  .feature .icn svg ,
+  .feature .icn .ic ,
+  .feature .icn img { width: 18px; height: 18px; }
   .feature h4 { font-size: 0.98rem; margin-bottom: 6px; }
   .feature p { margin: 0; font-size: 0.88rem; color: var(--text-dim); }
 
@@ -715,7 +728,9 @@
     display: grid; place-items: center;
     border: 1px solid;
   }
-  .swatch svg { width: 18px; height: 18px; }
+  .swatch svg ,
+  .swatch .ic ,
+  .swatch img { width: 18px; height: 18px; }
 
   /* ---- layout / file tree ---- */
   .layout-grid {
@@ -767,7 +782,8 @@
     transition: border-color 0.15s ease, transform 0.15s ease;
   }
   a.claude-badge:hover { border-color: var(--accent); transform: translateY(-1px); }
-  .claude-badge svg, .claude-badge img { width: 16px; height: 16px; flex: none; object-fit: contain; }
+  .claude-badge svg, .claude-badge img ,
+  .claude-badge .ic{ width: 16px; height: 16px; flex: none; object-fit: contain; }
   .footer-links { display: flex; flex-wrap: wrap; gap: 10px; }
 
   /* focus visibility for anything focusable */
@@ -861,7 +877,9 @@
     color: var(--text);
     text-decoration: none;
   }
-  .topnav-mark svg { width: 18px; height: 18px; color: var(--accent); flex: none; }
+  .topnav-mark svg ,
+  .topnav-mark .ic ,
+  .topnav-mark img { width: 18px; height: 18px; color: var(--accent); flex: none; }
   .topnav-links { display: flex; align-items: center; gap: clamp(14px, 3vw, 26px); }
   .topnav-links a {
     color: var(--text-dim);
@@ -930,5 +948,29 @@
     transition: transform 0.2s ease, filter 0.2s ease;
   }
   .dl-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
-  .dl-btn svg { width: 16px; height: 16px; flex: none; }
+  .dl-btn svg ,
+  .dl-btn .ic ,
+  .dl-btn img { width: 16px; height: 16px; flex: none; }
   .dl-btn.secondary { background: var(--surface-strong); color: var(--text); border: 1px solid var(--border-strong); }
+
+/* Icons are separate files in Assets/icons/, tinted via mask. */
+.ic{display:inline-block;width:1em;height:1em;background:currentColor;-webkit-mask:center/contain no-repeat;mask:center/contain no-repeat}
+.ic-codelens-overview{-webkit-mask-image:url(Assets/icons/codelens-overview.svg);mask-image:url(Assets/icons/codelens-overview.svg)}
+.ic-custom-accent{-webkit-mask-image:url(Assets/icons/custom-accent.svg);mask-image:url(Assets/icons/custom-accent.svg)}
+.ic-custom-dialogs{-webkit-mask-image:url(Assets/icons/custom-dialogs.svg);mask-image:url(Assets/icons/custom-dialogs.svg)}
+.ic-download-tray{-webkit-mask-image:url(Assets/icons/download-tray.svg);mask-image:url(Assets/icons/download-tray.svg)}
+.ic-download-tray-2{-webkit-mask-image:url(Assets/icons/download-tray-2.svg);mask-image:url(Assets/icons/download-tray-2.svg)}
+.ic-folder{-webkit-mask-image:url(Assets/icons/folder.svg);mask-image:url(Assets/icons/folder.svg)}
+.ic-folder-file{-webkit-mask-image:url(Assets/icons/folder-file.svg);mask-image:url(Assets/icons/folder-file.svg)}
+.ic-folder-file-2{-webkit-mask-image:url(Assets/icons/folder-file-2.svg);mask-image:url(Assets/icons/folder-file-2.svg)}
+.ic-full-details{-webkit-mask-image:url(Assets/icons/full-details.svg);mask-image:url(Assets/icons/full-details.svg)}
+.ic-github{-webkit-mask-image:url(Assets/icons/github.svg);mask-image:url(Assets/icons/github.svg)}
+.ic-layout-grid{-webkit-mask-image:url(Assets/icons/layout-grid.svg);mask-image:url(Assets/icons/layout-grid.svg)}
+.ic-line-range{-webkit-mask-image:url(Assets/icons/line-range.svg);mask-image:url(Assets/icons/line-range.svg)}
+.ic-multi-line{-webkit-mask-image:url(Assets/icons/multi-line.svg);mask-image:url(Assets/icons/multi-line.svg)}
+.ic-one-line{-webkit-mask-image:url(Assets/icons/one-line.svg);mask-image:url(Assets/icons/one-line.svg)}
+.ic-preview-zoom{-webkit-mask-image:url(Assets/icons/preview-zoom.svg);mask-image:url(Assets/icons/preview-zoom.svg)}
+.ic-resizable-panes{-webkit-mask-image:url(Assets/icons/resizable-panes.svg);mask-image:url(Assets/icons/resizable-panes.svg)}
+.ic-terminal{-webkit-mask-image:url(Assets/icons/terminal.svg);mask-image:url(Assets/icons/terminal.svg)}
+.ic-theme-glass{-webkit-mask-image:url(Assets/icons/theme-glass.svg);mask-image:url(Assets/icons/theme-glass.svg)}
+.ic-window-image{-webkit-mask-image:url(Assets/icons/window-image.svg);mask-image:url(Assets/icons/window-image.svg)}

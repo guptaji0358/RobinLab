@@ -159,6 +159,15 @@ a { color: inherit; text-decoration: none; }
 
 /* Icons */
 
+.ic {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background: currentColor;
+  -webkit-mask: center / contain no-repeat;
+  mask: center / contain no-repeat;
+}
+
 .icon {
   width: 16px;
   height: 16px;
@@ -478,11 +487,11 @@ a { color: inherit; text-decoration: none; }
   color: var(--accent);
 }
 
-.about-icon svg { width: 18px; height: 18px; }
+.about-icon svg, .about-icon .ic { width: 18px; height: 18px; }
 
 .about-icon-sm { width: 28px; height: 28px; border-radius: 8px; }
 
-.about-icon-sm svg { width: 15px; height: 15px; }
+.about-icon-sm svg, .about-icon-sm .ic { width: 15px; height: 15px; }
 
 .about-block p {
   margin: 0 0 12px;
@@ -525,7 +534,7 @@ a { color: inherit; text-decoration: none; }
   color: var(--text-muted);
 }
 
-.about-stack svg {
+.about-stack svg, .about-stack .ic {
   width: 16px;
   height: 16px;
   margin-top: 2px;
@@ -2020,3 +2029,38 @@ a.deck-open:hover { border-color: #3a4048; color: var(--text); }
 .sk-asks strong { font-weight: 600; }
 .sk-asks span { color: var(--text-muted); }
 @media (max-width: 560px) { .sk-grid { grid-template-columns: 1fr; } }
+
+/* Icons are separate files in assets/icons/, tinted via mask. */
+.ic-arrow-right{-webkit-mask-image:url(../assets/icons/navigation/arrow-right.svg);mask-image:url(../assets/icons/navigation/arrow-right.svg)}
+.ic-bar-chart-thin{-webkit-mask-image:url(../assets/icons/features/bar-chart-thin.svg);mask-image:url(../assets/icons/features/bar-chart-thin.svg)}
+.ic-checklist{-webkit-mask-image:url(../assets/icons/status/checklist.svg);mask-image:url(../assets/icons/status/checklist.svg)}
+.ic-chevron-left{-webkit-mask-image:url(../assets/icons/navigation/chevron-left.svg);mask-image:url(../assets/icons/navigation/chevron-left.svg)}
+.ic-chevron-right{-webkit-mask-image:url(../assets/icons/navigation/chevron-right.svg);mask-image:url(../assets/icons/navigation/chevron-right.svg)}
+.ic-clock{-webkit-mask-image:url(../assets/icons/status/clock.svg);mask-image:url(../assets/icons/status/clock.svg)}
+.ic-close{-webkit-mask-image:url(../assets/icons/actions/close.svg);mask-image:url(../assets/icons/actions/close.svg)}
+.ic-code-thin{-webkit-mask-image:url(../assets/icons/dev/code-thin.svg);mask-image:url(../assets/icons/dev/code-thin.svg)}
+.ic-database-thin{-webkit-mask-image:url(../assets/icons/dev/database-thin.svg);mask-image:url(../assets/icons/dev/database-thin.svg)}
+.ic-download{-webkit-mask-image:url(../assets/icons/actions/download.svg);mask-image:url(../assets/icons/actions/download.svg)}
+.ic-download-tray{-webkit-mask-image:url(../assets/icons/actions/download-tray.svg);mask-image:url(../assets/icons/actions/download-tray.svg)}
+.ic-git-branch-thin{-webkit-mask-image:url(../assets/icons/dev/git-branch-thin.svg);mask-image:url(../assets/icons/dev/git-branch-thin.svg)}
+.ic-github{-webkit-mask-image:url(../assets/icons/brands/github.svg);mask-image:url(../assets/icons/brands/github.svg)}
+.ic-globe-thin{-webkit-mask-image:url(../assets/icons/features/globe-thin.svg);mask-image:url(../assets/icons/features/globe-thin.svg)}
+.ic-grid{-webkit-mask-image:url(../assets/icons/navigation/grid.svg);mask-image:url(../assets/icons/navigation/grid.svg)}
+.ic-heart-thin{-webkit-mask-image:url(../assets/icons/features/heart-thin.svg);mask-image:url(../assets/icons/features/heart-thin.svg)}
+.ic-image-thin{-webkit-mask-image:url(../assets/icons/media/image-thin.svg);mask-image:url(../assets/icons/media/image-thin.svg)}
+.ic-info{-webkit-mask-image:url(../assets/icons/status/info.svg);mask-image:url(../assets/icons/status/info.svg)}
+.ic-landscape{-webkit-mask-image:url(../assets/icons/media/landscape.svg);mask-image:url(../assets/icons/media/landscape.svg)}
+.ic-layers-thin{-webkit-mask-image:url(../assets/icons/dev/layers-thin.svg);mask-image:url(../assets/icons/dev/layers-thin.svg)}
+.ic-linkedin{-webkit-mask-image:url(../assets/icons/brands/linkedin.svg);mask-image:url(../assets/icons/brands/linkedin.svg)}
+.ic-lock{-webkit-mask-image:url(../assets/icons/status/lock.svg);mask-image:url(../assets/icons/status/lock.svg)}
+.ic-mic{-webkit-mask-image:url(../assets/icons/media/mic.svg);mask-image:url(../assets/icons/media/mic.svg)}
+.ic-monitor{-webkit-mask-image:url(../assets/icons/features/monitor.svg);mask-image:url(../assets/icons/features/monitor.svg)}
+.ic-monitor-thin{-webkit-mask-image:url(../assets/icons/features/monitor-thin.svg);mask-image:url(../assets/icons/features/monitor-thin.svg)}
+.ic-plus{-webkit-mask-image:url(../assets/icons/actions/plus.svg);mask-image:url(../assets/icons/actions/plus.svg)}
+.ic-rocket-thin{-webkit-mask-image:url(../assets/icons/features/rocket-thin.svg);mask-image:url(../assets/icons/features/rocket-thin.svg)}
+.ic-search{-webkit-mask-image:url(../assets/icons/actions/search.svg);mask-image:url(../assets/icons/actions/search.svg)}
+.ic-search-thin{-webkit-mask-image:url(../assets/icons/actions/search-thin.svg);mask-image:url(../assets/icons/actions/search-thin.svg)}
+.ic-share{-webkit-mask-image:url(../assets/icons/actions/share.svg);mask-image:url(../assets/icons/actions/share.svg)}
+.ic-sparkles-thin{-webkit-mask-image:url(../assets/icons/features/sparkles-thin.svg);mask-image:url(../assets/icons/features/sparkles-thin.svg)}
+.ic-terminal-thin{-webkit-mask-image:url(../assets/icons/dev/terminal-thin.svg);mask-image:url(../assets/icons/dev/terminal-thin.svg)}
+.ic-x{-webkit-mask-image:url(../assets/icons/actions/x.svg);mask-image:url(../assets/icons/actions/x.svg)}

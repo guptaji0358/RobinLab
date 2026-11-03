@@ -50,9 +50,9 @@
 
   /* ---------- live demo: view / add / edit / delete ---------- */
   (function(){
-    const ICON_VIEW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
-    const ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
-    const ICON_DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>';
+    const ICON_VIEW = '<span class="ic ic-view" aria-hidden="true"></span>';
+    const ICON_EDIT = '<span class="ic ic-edit" aria-hidden="true"></span>';
+    const ICON_DELETE = '<span class="ic ic-delete" aria-hidden="true"></span>';
 
     let contacts = [
       { id: 1, name: 'Naruto Uzumaki', phone: '+81 90-1234-5678', email: 'naruto@leaf.com' },
@@ -160,7 +160,7 @@
       if(!c) return;
       detailCard.innerHTML = `
         <button class="close" id="demoCloseBtn" type="button" aria-label="Close">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span class="ic ic-close" aria-hidden="true" style="width:16px;height:16px"></span>
         </button>
         <div class="initial">${initials(c.name)}</div>
         <h4>${escapeHtml(c.name)}</h4>

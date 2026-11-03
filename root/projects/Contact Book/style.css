@@ -72,7 +72,9 @@
     transition: background .3s ease, border-color .3s ease, transform .3s ease;
   }
   .theme-toggle:hover{ border-color:var(--tab); transform:translateY(-1px); }
-  .theme-toggle svg{ width:18px; height:18px; }
+  .theme-toggle svg,
+  .theme-toggle .ic,
+  .theme-toggle img{ width:18px; height:18px; }
   .theme-toggle .sun-ico{ display:none; }
   :root[data-theme="light"] .theme-toggle .moon-ico{ display:none; }
   :root[data-theme="light"] .theme-toggle .sun-ico{ display:block; }
@@ -129,7 +131,9 @@
     margin-bottom:30px;
     flex:none;
   }
-  .index-rail .mark svg{ width:18px; height:18px; }
+  .index-rail .mark svg,
+  .index-rail .mark .ic,
+  .index-rail .mark img{ width:18px; height:18px; }
   .rail-tabs{
     display:flex;
     flex-direction:column;
@@ -268,7 +272,9 @@
     background:var(--surface);
   }
   .btn-ghost:hover{ border-color:var(--accent); color:var(--accent-strong); }
-  .btn svg{ width:16px; height:16px; flex:none; }
+  .btn svg,
+  .btn .ic,
+  .btn img{ width:16px; height:16px; flex:none; }
 
   .cover-note{
     margin-top:18px;
@@ -332,7 +338,9 @@
     background:var(--win-btn-grey-bg); border:1px solid var(--win-btn-grey-border);
     display:flex; align-items:center; justify-content:center;
   }
-  .app-newbook svg{ width:13px; height:13px; }
+  .app-newbook svg,
+  .app-newbook .ic,
+  .app-newbook img{ width:13px; height:13px; }
   .app-table{ background:var(--win-table-bg); border-radius:4px; overflow:hidden; }
   .app-table .thead{
     display:grid; grid-template-columns:26px 1fr 1fr 1fr;
@@ -353,7 +361,9 @@
     width:34px; height:28px; border-radius:8px;
     display:flex; align-items:center; justify-content:center;
   }
-  .app-ibtn svg{ width:14px; height:14px; }
+  .app-ibtn svg,
+  .app-ibtn .ic,
+  .app-ibtn img{ width:14px; height:14px; }
   .app-ibtn.blue{ background:var(--win-btn-blue-bg); border:1px solid var(--win-btn-blue-border); }
   .app-ibtn.grey{ background:var(--win-btn-grey-bg); border:1px solid var(--win-btn-grey-border); }
   .app-ibtn.red{ background:var(--win-btn-red-bg); border:1px solid var(--win-btn-red-border); }
@@ -420,7 +430,9 @@
     display:flex; align-items:center; justify-content:center;
     margin-bottom:16px;
   }
-  .drawer .icon svg{ width:20px; height:20px; stroke:var(--accent-strong); }
+  .drawer .icon svg,
+  .drawer .icon .ic,
+  .drawer .icon img{ width:20px; height:20px; stroke:var(--accent-strong); }
   .drawer h3{ font-size:19px; margin-bottom:8px; }
   .drawer p{ margin:0; color:var(--text-dim); font-size:14.5px; }
 
@@ -471,7 +483,9 @@
   }
   .btn-icon:hover{ border-color:var(--accent); color:var(--accent-strong); background:var(--accent-soft); }
   .btn-icon.danger:hover{ border-color:#e0765a; color:#e0765a; background:rgba(224,118,90,0.12); }
-  .btn-icon svg{ width:15px; height:15px; }
+  .btn-icon svg,
+  .btn-icon .ic,
+  .btn-icon img{ width:15px; height:15px; }
 
   .demo-rows{ list-style:none; margin:0; padding:0; }
   .demo-row{
@@ -618,7 +632,44 @@
   .colophon a:hover{ color:var(--accent-strong); }
   .icon-link{ display:inline-flex; align-items:center; gap:5px; }
   .credit-icon{ width:14px; height:14px; flex:none; border-radius:3px; }
-  svg.credit-icon{ border-radius:0; }
+  svg.credit-icon,
+  .ic.credit-icon,
+  img.credit-icon{ border-radius:0; }
   footer .top-line{ display:flex; align-items:baseline; justify-content:space-between; gap:20px; flex-wrap:wrap; }
   footer .top-line h3{ font-size:22px; }
   footer .top-line span{ font-family:var(--mono); font-size:12px; color:var(--text-faint); }
+
+/* SVG icons from the site-wide assets/icons/ folder, tinted via mask. */
+.ic{display:inline-block;width:1em;height:1em;vertical-align:-.125em;background:currentColor;-webkit-mask:center/contain no-repeat;mask:center/contain no-repeat}
+.ic-minimize{-webkit-mask-image:url(../../assets/icons/minimize.svg);mask-image:url(../../assets/icons/minimize.svg)}
+.ic-maximize{-webkit-mask-image:url(../../assets/icons/maximize.svg);mask-image:url(../../assets/icons/maximize.svg)}
+.ic-close{-webkit-mask-image:url(../../assets/icons/close.svg);mask-image:url(../../assets/icons/close.svg)}
+.ic-chevron-down{-webkit-mask-image:url(../../assets/icons/chevron-down.svg);mask-image:url(../../assets/icons/chevron-down.svg)}
+.ic-chevron-right{-webkit-mask-image:url(../../assets/icons/chevron-right.svg);mask-image:url(../../assets/icons/chevron-right.svg)}
+.ic-check{-webkit-mask-image:url(../../assets/icons/check.svg);mask-image:url(../../assets/icons/check.svg)}
+.ic-arrow-right{-webkit-mask-image:url(../../assets/icons/arrow-right.svg);mask-image:url(../../assets/icons/arrow-right.svg)}
+.win-controls .ic{width:14px;height:14px;vertical-align:middle}
+
+/* Icons are separate files in assets/icons/, tinted via mask. */
+.ic{display:inline-block;width:1em;height:1em;background:currentColor;-webkit-mask:center/contain no-repeat;mask:center/contain no-repeat}
+.ic-close{-webkit-mask-image:url(assets/icons/close.svg);mask-image:url(assets/icons/close.svg)}
+.ic-delete{-webkit-mask-image:url(assets/icons/delete.svg);mask-image:url(assets/icons/delete.svg)}
+.ic-desktop{-webkit-mask-image:url(assets/icons/desktop.svg);mask-image:url(assets/icons/desktop.svg)}
+.ic-download{-webkit-mask-image:url(assets/icons/download.svg);mask-image:url(assets/icons/download.svg)}
+.ic-edit{-webkit-mask-image:url(assets/icons/edit.svg);mask-image:url(assets/icons/edit.svg)}
+.ic-github{-webkit-mask-image:url(assets/icons/github.svg);mask-image:url(assets/icons/github.svg)}
+.ic-github-2{-webkit-mask-image:url(assets/icons/github-2.svg);mask-image:url(assets/icons/github-2.svg)}
+.ic-live-search{-webkit-mask-image:url(assets/icons/live-search.svg);mask-image:url(assets/icons/live-search.svg)}
+.ic-local-only{-webkit-mask-image:url(assets/icons/local-only.svg);mask-image:url(assets/icons/local-only.svg)}
+.ic-moon{-webkit-mask-image:url(assets/icons/moon.svg);mask-image:url(assets/icons/moon.svg)}
+.ic-moon-small{-webkit-mask-image:url(assets/icons/moon-small.svg);mask-image:url(assets/icons/moon-small.svg)}
+.ic-multiple-books{-webkit-mask-image:url(assets/icons/multiple-books.svg);mask-image:url(assets/icons/multiple-books.svg)}
+.ic-plus-white-2{-webkit-mask-image:url(assets/icons/plus-white-2.svg);mask-image:url(assets/icons/plus-white-2.svg)}
+.ic-real-calls{-webkit-mask-image:url(assets/icons/real-calls.svg);mask-image:url(assets/icons/real-calls.svg)}
+.ic-sun{-webkit-mask-image:url(assets/icons/sun.svg);mask-image:url(assets/icons/sun.svg)}
+.ic-vcf-in{-webkit-mask-image:url(assets/icons/vcf-in.svg);mask-image:url(assets/icons/vcf-in.svg)}
+.ic-view{-webkit-mask-image:url(assets/icons/view.svg);mask-image:url(assets/icons/view.svg)}
+.ic-minimize{-webkit-mask-image:url(assets/icons/minimize.svg);mask-image:url(assets/icons/minimize.svg)}
+.ic-maximize{-webkit-mask-image:url(assets/icons/maximize.svg);mask-image:url(assets/icons/maximize.svg)}
+.ic-chevron-down{-webkit-mask-image:url(assets/icons/chevron-down.svg);mask-image:url(assets/icons/chevron-down.svg)}
+.win-controls .ic{width:14px;height:14px;vertical-align:middle}

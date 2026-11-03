@@ -39,3 +39,16 @@
   .mu-card.is-active .mu-controls { flex-wrap: wrap; }
   .mu-seek { order: 5; flex-basis: 100%; }
 }
+
+/* SVG icons live in assets/icons/; the mask lets them take the text colour. */
+.ic {
+  display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em;
+  background: currentColor;
+  -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat;
+}
+.ic-play { -webkit-mask-image: url(../assets/icons/media/play.svg); mask-image: url(../assets/icons/media/play.svg); }
+.ic-pause { -webkit-mask-image: url(../assets/icons/media/pause.svg); mask-image: url(../assets/icons/media/pause.svg); }
+.ic-prev { -webkit-mask-image: url(../assets/icons/media/prev.svg); mask-image: url(../assets/icons/media/prev.svg); }
+.ic-next { -webkit-mask-image: url(../assets/icons/media/next.svg); mask-image: url(../assets/icons/media/next.svg); }
+.mu-btn .ic { width: 16px; height: 16px; vertical-align: middle; }
+.mu-big .ic { margin-right: 6px; }

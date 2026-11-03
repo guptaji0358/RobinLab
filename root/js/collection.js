@@ -46,8 +46,7 @@
     lbInfo: document.getElementById("lb-info"),
     lbDetails: document.getElementById("lb-details"),
     lbDName: document.getElementById("lb-d-name"),
-    lbDFolder: document.getElementById("lb-d-folder"),
-    lbDPath: document.getElementById("lb-d-path"),
+    lbDKind: document.getElementById("lb-d-kind"),
     lbDSize: document.getElementById("lb-d-size"),
     toast: document.getElementById("toast"),
     tabs: document.querySelectorAll(".col-tab"),
@@ -355,6 +354,7 @@
       nextAt: performance.now() + SLIDE_MS * (0.15 + Math.random() * 0.7),
       onscreen: !screenObserver,
       paused: false,
+      restLoaded: false,
     };
     slideshows.add(show);
     if (screenObserver) screenObserver.observe(cover);
@@ -387,6 +387,19 @@
     }
   }
 
+  // Only the first image of a pack card loads up front. The other slides start
+  // downloading once that cover has painted and the card is actually on screen,
+  // so a page of packs costs one preview per card instead of five. With Data
+  // Saver on, the extras never load and the card stays a still cover.
+  const saveData = !!(navigator.connection && navigator.connection.saveData);
+  function loadRestOfSlides(show) {
+    const first = show.slides[0];
+    if (!first || !first.complete) return;
+    show.restLoaded = true;
+    if (saveData) return;
+    for (const img of show.slides) if (img.dataset.src && !img.src) setThumbSrc(img, img.dataset.src);
+  }
+
   if (!reduceMotion) {
     window.setInterval(() => {
       if (document.hidden) return;
@@ -395,6 +408,8 @@
         if (!show.cover.isConnected) {
           slideshows.delete(show);
           if (screenObserver) screenObserver.unobserve(show.cover);
+        } else if (show.onscreen && !show.restLoaded) {
+          loadRestOfSlides(show);
         } else if (show.onscreen && !show.paused && now >= show.nextAt) {
           advance(show);
           show.nextAt = now + SLIDE_MS;
@@ -414,18 +429,20 @@
     const cover = document.createElement("span");
     cover.className = "col-packcover";
     const shown = pickSlides(files);
-    for (const file of shown) {
+    shown.forEach((file, i) => {
       const img = document.createElement("img");
       img.className = "col-slide";
       img.alt = "";
       img.decoding = "async";
       img.draggable = false;
       cover.appendChild(img);
-      // Same strategy as the grid: the first covers load at once, the rest start
-      // 1500px before they scroll in (native lazy-loading waits much longer).
       const src = file.thumbUrl || file.url;
-      if (coverSeq++ < EAGER_COVERS) {
-        img.fetchPriority = "high";
+      // Slides after the first wait for `loadRestOfSlides`.
+      if (i > 0) {
+        img.dataset.src = src;
+      } else if (coverSeq++ < EAGER_COVERS) {
+        // The first covers load at once, the rest start 1500px before they
+        // scroll in (native lazy-loading waits much longer).
         setThumbSrc(img, src, "high");
       } else if (imageObserver) {
         img.dataset.src = src;
@@ -433,7 +450,7 @@
       } else {
         setThumbSrc(img, src);
       }
-    }
+    });
 
     registerSlideshow(cover, shown.length);
 
@@ -601,7 +618,7 @@
     const overlay = document.createElement("span");
     overlay.className = "col-card-overlay";
     overlay.innerHTML =
-      '<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg> Preview';
+      '<span class="ic ic-search icon icon-sm" aria-hidden="true"></span> Preview';
     media.appendChild(overlay);
 
     const foot = document.createElement("span");
@@ -753,6 +770,7 @@
       el.lbImg.classList.remove("is-preview");
       const { naturalWidth: w, naturalHeight: h } = full;
       if (w && h) lbDims = ` · ${w}×${h}`;
+      if (el.lbDKind) el.lbDKind.textContent = w && h ? imageKind(w, h) : "Unknown";
       paintMeta(file);
     };
     // The grid thumbnail is already cached, so the viewer opens instantly and
@@ -782,11 +800,24 @@
     }
   }
 
+  /** Classify by the long edge (so portrait and landscape agree), e.g. "4K UHD · Landscape". */
+  function imageKind(w, h) {
+    const long = Math.max(w, h);
+    const tiers = [
+      [7680, "8K"], [5120, "5K"], [3840, "4K UHD"], [2560, "2K QHD"],
+      [1920, "Full HD"], [1280, "HD"], [640, "SD"],
+    ];
+    const tier = tiers.find(([min]) => long >= min);
+    const quality = tier ? tier[1] : "Low-res";
+    const ratio = w / h;
+    const shape = Math.abs(ratio - 1) < 0.05 ? "Square" : ratio > 1 ? "Landscape" : "Portrait";
+    return `${quality} · ${shape}`;
+  }
+
   function paintDetails(file) {
     if (!el.lbDetails) return;
     el.lbDName.textContent = humanName(file);
-    el.lbDFolder.textContent = folderLabel(file);
-    el.lbDPath.textContent = file.path || file.name;
+    el.lbDKind.textContent = "Detecting…";
     el.lbDSize.textContent = `${formatBytes(file.size)} (${Number(file.size || 0).toLocaleString()} bytes)`;
   }
 
