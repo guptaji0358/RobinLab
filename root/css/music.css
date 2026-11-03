@@ -17,7 +17,8 @@
 .mu-card.is-active .mu-big { display: none; }
 .mu-card.is-active .mu-controls { display: flex; align-items: center; gap: 10px; }
 .mu-card.is-active .mu-embed { display: block; }
-.mu-embed iframe { width: 100%; height: 300px; border: 0; border-radius: 10px; }
+.mu-embed { padding: 8px; border: 1px solid var(--border); border-radius: 14px; background: #0b0d10; }
+.mu-embed iframe { display: block; width: 100%; height: 300px; border: 0; border-radius: 10px; background: transparent; color-scheme: dark; }
 /* Embed fallback brings its own controls; hide ours. */
 .mu-card.is-active .mu-embed:not(:empty) + .mu-controls { display: none; }
 
