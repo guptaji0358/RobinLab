@@ -1,16 +1,7 @@
 @echo off
 rem Deploy RobinLab to Cloudflare Pages (Direct Upload).
-rem 1) refresh the projects/ mirror  2) upload root/ + functions/
+rem Uploads root/ + functions/
 cd /d "%~dp0"
-
-echo.
-echo === Syncing projects mirror ===
-python tools\sync_projects.py
-if errorlevel 1 (
-  echo Sync failed - deploy cancelled.
-  pause
-  exit /b 1
-)
 
 echo.
 echo === Deploying to Cloudflare Pages ===

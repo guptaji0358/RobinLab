@@ -2,7 +2,7 @@
 
 Static site and project portfolio. Each project is a self-contained static site
 with its own `assets/`, `css/` and `js/`. There is no framework or bundler and no
-package manager — the only build step is the project mirror described below.
+package manager and no build step.
 
 ## Layout
 
@@ -12,15 +12,13 @@ root/               main site — the ONLY directory Cloudflare publishes
   collection.html   artwork vault — one section ("pack") per bucket folder
   presentations.html  .pptx decks, embedded via Microsoft Office Web Viewer
   css/ js/ assets/  site styles, scripts, and the icons used on the hub
-  projects/         GENERATED mirror of ../projects — git-ignored, never edit
-projects/           source of truth for every project
-  CodeLens/
-  Contact Book/     (space in the folder name → link as Contact%20Book)
-  Motiva/
-  Pywix/
+  projects/         every project, one folder each — the single copy
+    CodeLens/
+    Contact Book/   (space in the folder name → link as Contact%20Book)
+    Motiva/
+    Pywix/
 functions/          Cloudflare Pages Function: /api/collection/* proxy
 tools/
-  sync_projects.py  mirrors projects/ → root/projects/
   make_thumbs.py    bucket thumbnail generator
   make_icons.py     favicon / manifest icon set from the studio logo
 dev_server.py       local server for root/ + the collection API
@@ -29,19 +27,18 @@ wrangler.toml       Cloudflare Pages config (pages_build_output_dir = "root")
 
 ## The one rule
 
-**Projects live in `projects/`. Cloudflare only publishes `root/`.**
+**Projects live in `root/projects/`. There is no second copy.**
 
-`projects/` sits outside the published directory, so `tools/sync_projects.py`
-copies it into `root/projects/` before every deploy (Cloudflare build command)
-and before every local preview (`dev_server.py` runs it automatically).
+Cloudflare only publishes `root/`, so projects sit inside it and are deployed and
+served locally as they are. Do not recreate a top-level `projects/` folder or a
+sync/mirror step.
 
-- Edit projects in `projects/<name>/`.
-- Never edit `root/projects/` — it is generated and git-ignored.
+- Edit projects in `root/projects/<name>/`.
 - `root/index.html` links to `projects/<name>/index.html` (relative to the site root).
 
 ## Adding a new project
 
-1. Create `projects/<Name>/` with an `index.html` and its own assets. Use
+1. Create `root/projects/<Name>/` with an `index.html` and its own assets. Use
    relative paths inside the project — assume it is served from
    `/projects/<Name>/`.
 2. Add a card to `root/index.html` in the `.project-grid` section:
@@ -53,11 +50,9 @@ and before every local preview (`dev_server.py` runs it automatically).
 3. Optionally drop a hub icon in `root/assets/` (the existing ones are
    `pywix-icon.ico`, `codelens-icon.ico`, `contactbook-icon.png`; Motiva pulls
    its favicon straight from `projects/Motiva/Assets/logo/`).
-4. Re-run `python tools/sync_projects.py` (or just start `dev_server.py`).
-5. Commit — never commit `root/projects/`.
+4. Commit.
 
-No other file needs to change: the mirror and deploy pick the folder up
-automatically.
+No other file needs to change: the deploy picks the folder up automatically.
 
 ## Pages
 
@@ -74,17 +69,6 @@ The footer identity is the same on all three pages — **Robin Gupta Studios /
 RGS™ / Built & maintained by Robin Gupta / Copyright © <year> Robin Gupta** —
 plus `<meta name="author|publisher|copyright">` in each `<head>`. Change all
 three together; `index.html` also carries the Organization JSON-LD block.
-
-### Lite mode
-
-`root/js/lite.js` (loaded in `<head>` on every page) sets `html.fx-lite` for
-machines that can't render the animated canvas / custom cursor properly. It
-turns on automatically for software or missing WebGL, reduced motion, data-saver,
-≤2 CPU cores or ≤2 GB RAM, or when a 1.8 s frame-rate probe sees under ~24 fps.
-A bottom-left **Lite mode / Full effects** button overrides it (saved in
-`localStorage["fx-mode"]`); `?lite=1` / `?lite=0` does the same from the URL.
-`css/fx.css` (bottom) restyles under `html.fx-lite`; `js/fx.js` stops the canvas,
-cursor, tilt and horizontal showcase. New pages must include `js/lite.js`.
 
 ### Site icons
 
@@ -142,12 +126,10 @@ itself and needs a public URL ending in `.pptx`. That route serves files from
 ```powershell
 python dev_server.py            # http://127.0.0.1:5500  (site + collection API)
 python dev_server.py --port 8080
-python dev_server.py --no-sync  # don't refresh the projects/ mirror
 ```
 
 A plain `python -m http.server 5500 --directory root` also works for the static
-pages, but it has no `/api/collection/*` proxy and does not refresh the mirror,
-so run `python tools/sync_projects.py` first. `.claude/launch.json` has both
+pages, but it has no `/api/collection/*` proxy. `.claude/launch.json` has both
 configurations (`robinlab-root`, `robinlab-collection`).
 
 The collection API needs `HF_TOKEN` in the environment or in a git-ignored
@@ -157,27 +139,24 @@ The collection API needs `HF_TOKEN` in the environment or in a git-ignored
 
 Cloudflare Pages, project `robinlab` — **Direct Upload, not Git-connected**
 (`wrangler pages project list` shows `Git Provider: No`). Pushing to GitHub does
-**not** deploy anything; a deploy is always two local commands.
+**not** deploy anything; a deploy is always a local command.
 
 | Setting | Value |
 | --- | --- |
 | Project type | Direct Upload (no Git integration, no Cloudflare build step) |
 | Publish directory | `root` (`pages_build_output_dir` in `wrangler.toml`) |
-| Build step | run `python tools/sync_projects.py` locally **before** deploying |
+| Build step | none |
 | Production URL | https://robinlab.pages.dev |
 | Secret | `HF_TOKEN` (Pages → Settings → Environment variables) |
 | Optional secret | `SHARE_SECRET` for 30-minute share links (falls back to `HF_TOKEN`) |
 
 ```powershell
-python tools/sync_projects.py
 npx wrangler pages deploy root --project-name=robinlab --branch=master
 ```
 
 `npx` is blocked by PowerShell's execution policy on this machine; use
 `cmd /c "npx wrangler pages deploy ..."` if you hit `npx.ps1 cannot be loaded`.
 
-The mirror step is mandatory: Cloudflare has no build command to run it, so
-`root/projects/` would otherwise be stale or empty and project links would 404.
 Wrangler uploads `functions/` from the repo root automatically, so the collection
 proxy goes out with the same deploy.
 
@@ -193,8 +172,8 @@ is the source of truth, but a `git push` alone never reaches production.
 
 > **Converting to Git-connected.** Direct Upload projects cannot be converted in
 > place. Create a new Git-connected project (delete the old one first if you want
-> to keep the `robinlab` name and `robinlab.pages.dev` URL), set the build command
-> to `python3 tools/sync_projects.py` and the output directory to `root`, then
+> to keep the `robinlab` name and `robinlab.pages.dev` URL), leave the build
+> command empty, set the output directory to `root`, then
 > re-add `HF_TOKEN` (and `SHARE_SECRET`). After that, pushes deploy themselves.
 
 ## Docs

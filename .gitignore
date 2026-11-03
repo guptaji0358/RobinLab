@@ -15,7 +15,3 @@ Thumbs.db
 # Cloudflare / Node
 .wrangler/
 node_modules/
-
-# Generated mirror of projects/ (see tools/sync_projects.py).
-# Edit projects/<name>/ — never root/projects/.
-root/projects/

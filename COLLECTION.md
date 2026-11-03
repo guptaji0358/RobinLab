@@ -181,11 +181,9 @@ Originals are **never** modified or deleted. `--prune` only ever removes paths i
 ## Running locally
 
 A plain `python -m http.server 5500 --directory root` serves the static pages but has no
-`/api/collection/*` proxy and does not refresh the project mirror in `root/projects/` —
-run `python tools/sync_projects.py` first if you use it.
+`/api/collection/*` proxy.
 
-Use the bundled dev server instead. It serves `root/`, mirrors `projects/` into
-`root/projects/`, **and** runs the bucket proxy:
+Use the bundled dev server instead. It serves `root/` **and** runs the bucket proxy:
 
 ```powershell
 # 1. Create a token at https://huggingface.co/settings/tokens (a Read token is enough)
@@ -200,11 +198,11 @@ python dev_server.py
 
 Then open <http://127.0.0.1:5500/collection>.
 
-Options: `python dev_server.py --port 8080 --host 127.0.0.1 --dir root --no-sync`.
+Options: `python dev_server.py --port 8080 --host 127.0.0.1 --dir root`.
 
 `.claude/launch.json` has two configurations: **`robinlab-root`** (port `5500`) and
-**`robinlab-collection`** (port `5501`) — both run this server, so the project mirror and
-the API are always available.
+**`robinlab-collection`** (port `5501`) — both run this server, so the API is always
+available.
 
 > This is a **development convenience only** — production runs on Cloudflare Pages.
 
@@ -220,16 +218,14 @@ the API are always available.
 | Project | `robinlab` |
 | Production URL | <https://robinlab.pages.dev> |
 | Source | **Direct Upload** — a `git push` does *not* deploy (`Git Provider: No`) |
-| Build step | none on Cloudflare; run `python tools/sync_projects.py` locally first |
+| Build step | none |
 | Publish directory | `root` |
 | Config | `wrangler.toml` (`pages_build_output_dir = "root"`) |
 | Secret | `HF_TOKEN` (encrypted, Pages → Settings → Environment variables) |
 | Secret (optional) | `SHARE_SECRET` — signs 30-minute share links; falls back to `HF_TOKEN` |
 
-The mirror step is required. Projects live in `projects/`, outside the published
-directory, so `tools/sync_projects.py` copies them into `root/projects/`. Cloudflare
-never runs it for a Direct Upload project, so run it locally before every deploy —
-otherwise every `/projects/<name>/` link 404s or points at stale files.
+Projects live in `root/projects/`, inside the published directory, so there is no
+mirror step.
 
 > **A `git push` is not a deploy here.** Check
 > `wrangler pages deployment list --project-name=robinlab` against
@@ -238,13 +234,12 @@ otherwise every `/projects/<name>/` link 404s or points at stale files.
 A **Direct Upload** project — the kind created by `wrangler pages deploy` — has no
 build step and no build command field, and cannot be converted in place; create a
 new Git-connected project from <https://github.com/guptaji0358/RobinLab> instead if
-you want pushes to deploy automatically (build command
-`python3 tools/sync_projects.py`, output directory `root`, then re-add the secrets).
+you want pushes to deploy automatically (no build command, output directory `root`,
+then re-add the secrets).
 
 Deploy with:
 
 ```powershell
-python tools/sync_projects.py
 npx wrangler pages deploy root --project-name=robinlab --branch=master
 ```
 
