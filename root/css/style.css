@@ -2064,3 +2064,14 @@ a.deck-open:hover { border-color: #3a4048; color: var(--text); }
 .ic-sparkles-thin{-webkit-mask-image:url(../assets/icons/features/sparkles-thin.svg);mask-image:url(../assets/icons/features/sparkles-thin.svg)}
 .ic-terminal-thin{-webkit-mask-image:url(../assets/icons/dev/terminal-thin.svg);mask-image:url(../assets/icons/dev/terminal-thin.svg)}
 .ic-x{-webkit-mask-image:url(../assets/icons/actions/x.svg);mask-image:url(../assets/icons/actions/x.svg)}
+.ic-award{-webkit-mask-image:url(../assets/icons/navigation/award.svg);mask-image:url(../assets/icons/navigation/award.svg)}
+.ic-mail{-webkit-mask-image:url(../assets/icons/navigation/mail.svg);mask-image:url(../assets/icons/navigation/mail.svg)}
+.ic-music{-webkit-mask-image:url(../assets/icons/navigation/music.svg);mask-image:url(../assets/icons/navigation/music.svg)}
+.ic-presentation{-webkit-mask-image:url(../assets/icons/navigation/presentation.svg);mask-image:url(../assets/icons/navigation/presentation.svg)}
+.ic-user{-webkit-mask-image:url(../assets/icons/navigation/user.svg);mask-image:url(../assets/icons/navigation/user.svg)}
+
+/* Nav links: icon + label */
+.site-nav > a.nav-link { display: inline-flex; align-items: center; gap: 6px; }
+.site-nav .nav-ic { width: 15px; height: 15px; opacity: .8; }
+.site-nav > a.nav-link:hover .nav-ic, .site-nav > a.nav-link[aria-current="page"] .nav-ic { opacity: 1; color: var(--accent); }
+.site-nav > a.nav-link { white-space: nowrap; }
