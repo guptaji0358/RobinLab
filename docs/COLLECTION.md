@@ -300,3 +300,26 @@ reasonable shape:
 > Note: any "view-only" measure in the browser is a deterrent, not real protection —
 > a determined user can always re-capture what is rendered on their screen. Real
 > gating has to happen server-side.
+
+## Downloads (watermarked)
+
+The lightbox **Download** button calls `GET /api/collection/download?path=…`. The
+file it returns is never the original: it is stamped with a faint tiled
+"RGS™ · Robin Gupta" plus a corner badge (logo + © line) by a small Python
+service in `watermark_service/` (FastAPI + Pillow).
+
+- **Why a separate service:** Cloudflare Pages Functions run JavaScript only, so
+  Pillow cannot run there. The service is deployed as a free Hugging Face Space
+  (Docker SDK). The free tier sleeps when idle, so the first download after a
+  quiet spell can take ~30 s; the button shows a "Preparing…" toast meanwhile.
+- **Read-only:** the service only `GET`s from the bucket with a read-only token.
+  It has no upload/delete/edit code and stores nothing.
+- **Quality:** same pixel size; PNG stays lossless PNG, JPEG is re-saved at
+  quality 95 without chroma subsampling; ICC profile and EXIF are kept.
+- **Config:** Space secrets `HF_TOKEN` (read-only) and `WATERMARK_KEY`; Pages
+  secrets `WATERMARK_URL` (the Space URL, e.g. `https://<user>-<space>.hf.space`)
+  and `WATERMARK_KEY` (same value). Locally, put `WATERMARK_URL` and
+  `WATERMARK_KEY` in `.dev.vars` for `dev_server.py`. Without them the route
+  answers `503 not_configured`.
+- **Limits:** the watermark only covers downloads. The lightbox still previews
+  the original through `/api/collection/file`.

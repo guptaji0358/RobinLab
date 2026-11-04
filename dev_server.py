@@ -8,6 +8,7 @@ as the Cloudflare Pages Function in `functions/api/collection/[[path]].js`:
     GET /api/collection/file?path=<enc>  -> streams one file's bytes (inline preview)
     POST /api/collection/share           -> mints a signed link valid for 30 minutes
     GET /api/collection/share?token=<t>  -> resolves that link back to one image
+    GET /api/collection/download?path=.. -> watermarked image (relays watermark_service/)
     GET /api/collection/skills           -> title, description and outline of each Claude skill
     GET /api/collection/skill?id=...     -> full text of one skill (Copy / drag)
     GET /decks/<name>.pptx               -> public deck URL for the Office Web Viewer
@@ -43,7 +44,9 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
+import urllib.request
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
@@ -353,6 +356,8 @@ def get_skills(token: str) -> list[dict]:
 class Handler(SimpleHTTPRequestHandler):
     token: str | None = None
     share_secret: str | None = None
+    watermark_url: str | None = None  # the Python watermark service (watermark_service/)
+    watermark_key: str | None = None
 
     def log_message(self, fmt, *args):  # noqa: A003 - stdlib signature
         sys.stderr.write("  %s\n" % (fmt % args))
@@ -376,6 +381,53 @@ class Handler(SimpleHTTPRequestHandler):
             },
             500,
         )
+
+    def _serve_download(self, parsed: urllib.parse.SplitResult) -> None:
+        """Mirror of the Pages Function's /download: relay the watermark service."""
+        if self.headers.get("Sec-Fetch-Site") == "cross-site":
+            self._send_json({"error": "forbidden", "message": "Download from the collection page."}, 403)
+            return
+        if not self.watermark_url or not self.watermark_key:
+            self._send_json(
+                {"error": "not_configured", "message": "Set WATERMARK_URL and WATERMARK_KEY in .dev.vars."}, 503
+            )
+            return
+        path = (urllib.parse.parse_qs(parsed.query).get("path") or [""])[0]
+        if not path:
+            self._send_json({"error": "missing_path", "message": "A file path is required."}, 400)
+            return
+        try:
+            entry = next((f for f in get_listing(self.token or "")["files"] if f["path"] == path), None)
+        except Exception as err:  # noqa: BLE001
+            self._send_json({"error": "upstream_error", "message": str(err)}, 502)
+            return
+        if entry is None:
+            self._send_json({"error": "not_found", "message": "No such file in this bucket."}, 404)
+            return
+        if not entry["contentType"].startswith("image/"):
+            self._send_json({"error": "unsupported_type", "message": "Only images can be downloaded."}, 415)
+            return
+
+        target = f"{self.watermark_url.rstrip('/')}/download?path={urllib.parse.quote(path, safe='')}"
+        request = urllib.request.Request(target, headers={"X-Watermark-Key": self.watermark_key})
+        try:
+            with urllib.request.urlopen(request, timeout=120) as upstream:
+                body = upstream.read()
+                self.send_response(200)
+                self.send_header("Content-Type", upstream.headers.get("Content-Type", entry["contentType"]))
+                self.send_header("Content-Disposition", upstream.headers.get("Content-Disposition", "attachment"))
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "private, no-store")
+                self.end_headers()
+                self.wfile.write(body)
+        except urllib.error.HTTPError as err:
+            try:
+                detail = json.loads(err.read()).get("error")
+            except Exception:  # noqa: BLE001
+                detail = None
+            self._send_json({"error": "upstream_error", "message": detail or f"Watermark service failed (HTTP {err.code})."}, 502)
+        except Exception:  # noqa: BLE001
+            self._send_json({"error": "upstream_error", "message": "The watermark service could not be reached."}, 502)
 
     def _serve_skill(self, parsed: urllib.parse.SplitResult) -> None:
         query = urllib.parse.parse_qs(parsed.query)
@@ -457,6 +509,10 @@ class Handler(SimpleHTTPRequestHandler):
 
         if self.command not in ("GET", "HEAD"):
             self._send_json({"error": "method_not_allowed"}, 405)
+            return True
+
+        if route.endswith("/download"):
+            self._serve_download(parsed)
             return True
 
         if route.endswith("/skills"):
@@ -744,6 +800,8 @@ def main() -> int:
     # Prefer a dedicated secret so links survive a token rotation; the HF token
     # is a safe local fallback (both stay server-side).
     Handler.share_secret = load_var(project_root, "SHARE_SECRET") or Handler.token
+    Handler.watermark_url = load_var(project_root, "WATERMARK_URL")
+    Handler.watermark_key = load_var(project_root, "WATERMARK_KEY")
 
     # Pass `directory` explicitly: SimpleHTTPRequestHandler resets it to the CWD
     # when the argument is omitted, which would ignore --dir.

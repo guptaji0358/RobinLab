@@ -4,6 +4,7 @@
  * Endpoints (this single catch-all file serves all of them):
  *   GET  /api/collection/files            -> JSON manifest of the private bucket
  *   GET  /api/collection/file?path=<enc>  -> streams one file's bytes (inline, view-only)
+ *   GET  /api/collection/download?path=<enc> -> the image with the RGS watermark (Python service)
  *   POST /api/collection/share            -> mints a signed link valid for 30 minutes
  *   GET  /api/collection/share?token=<t>  -> resolves that link back to one image
  *   GET  /api/collection/skills           -> title, description and outline of each Claude skill
@@ -555,6 +556,69 @@ async function handleShare(env, request, url) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* /api/collection/download                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * GET /api/collection/download?path=<enc> — the image with the RGS watermark.
+ *
+ * Pillow cannot run in a Pages Function, so the stamping happens in the Python
+ * service in `watermark_service/` (a Hugging Face Space). That service reads the
+ * bucket read-only; this route only checks the path against the live listing and
+ * relays the result. `WATERMARK_URL` and `WATERMARK_KEY` are Pages secrets.
+ */
+async function handleDownload(env, request, url) {
+  const missing = requireToken(env);
+  if (missing) return missing;
+
+  if (request.headers.get("Sec-Fetch-Site") === "cross-site") {
+    return json({ error: "forbidden", message: "Download from the collection page." }, 403);
+  }
+  if (!env.WATERMARK_URL || !env.WATERMARK_KEY) {
+    return json({ error: "not_configured", message: "Downloads are not set up on this deployment yet." }, 503);
+  }
+
+  const path = url.searchParams.get("path") || "";
+  if (!path) return json({ error: "missing_path", message: "A file path is required." }, 400);
+
+  let entry;
+  try {
+    const { files } = await getListing(env.HF_TOKEN);
+    entry = files.find((file) => file.path === path);
+  } catch (err) {
+    return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
+  }
+  if (!entry) return json({ error: "not_found", message: "No such file in this bucket." }, 404);
+  if (!entry.previewable) return json({ error: "unsupported_type", message: "Only images can be downloaded." }, 415);
+
+  let upstream;
+  try {
+    upstream = await fetch(`${env.WATERMARK_URL.replace(/\/+$/, "")}/download?path=${encodeURIComponent(path)}`, {
+      headers: { "X-Watermark-Key": env.WATERMARK_KEY },
+    });
+  } catch (err) {
+    return json({ error: "upstream_error", message: "The watermark service could not be reached." }, 502);
+  }
+  if (!upstream.ok) {
+    const detail = await upstream.json().catch(() => ({}));
+    return json(
+      { error: "upstream_error", message: detail.error || `Watermark service failed (HTTP ${upstream.status}).` },
+      502,
+    );
+  }
+
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      "Content-Type": upstream.headers.get("Content-Type") || entry.contentType,
+      "Content-Disposition": upstream.headers.get("Content-Disposition") || "attachment",
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+/* -------------------------------------------------------------------------- */
 /* /api/collection/skills                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -681,6 +745,10 @@ export async function onRequest(context) {
     return json({ error: "method_not_allowed" }, 405, { Allow: "GET, HEAD" });
   }
 
+  if (pathname.endsWith("/download")) {
+    if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405, { Allow: "GET" });
+    return handleDownload(env, request, url);
+  }
   if (pathname.endsWith("/skills")) return handleSkills(env);
   if (pathname.endsWith("/skill")) return handleSkill(env, url);
   if (pathname.endsWith("/file")) return handleFile(env, request, url, { waitUntil });

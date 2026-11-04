@@ -100,6 +100,12 @@ part of the signed payload, so links die after **30 minutes** and `GET
 /api/collection/share?token=…` answers `410` afterwards. `SHARE_SECRET` is the
 signing key (falls back to `HF_TOKEN`). See `docs/COLLECTION.md` → Share links.
 
+The lightbox's **Download** button calls `GET /api/collection/download?path=…`, which
+relays `watermark_service/` (FastAPI + Pillow, deployed as a Hugging Face Space,
+read-only on the bucket) and returns the image stamped with the RGS watermark.
+Needs `WATERMARK_URL` + `WATERMARK_KEY` (Pages secrets / `.dev.vars`). See
+`docs/COLLECTION.md` → Downloads.
+
 Decks also have a clean public route, `/decks/<name>.pptx`
 (`functions/decks/[[path]].js`), because Microsoft's viewer downloads the file
 itself and needs a public URL ending in `.pptx`. That route serves files from

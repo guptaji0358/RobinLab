@@ -17,13 +17,16 @@
  * The token is HMAC-signed and carries its own expiry, so a link stops working
  * after 30 minutes; the server refuses expired tokens with `410`.
  *
- * Downloads are intentionally disabled — the UI is view-only for now.
+ * Download asks `/api/collection/download` for a copy stamped with the RGS
+ * watermark by the Python service in `watermark_service/`; the original file is
+ * never handed out.
  */
 (() => {
   "use strict";
 
   const LIST_ENDPOINT = "/api/collection/files";
   const SHARE_ENDPOINT = "/api/collection/share";
+  const DOWNLOAD_ENDPOINT = "/api/collection/download";
 
   const el = {
     search: document.getElementById("col-search"),
@@ -43,6 +46,7 @@
     lbPrev: document.getElementById("lb-prev"),
     lbNext: document.getElementById("lb-next"),
     lbShare: document.getElementById("lb-share"),
+    lbDownload: document.getElementById("lb-download"),
     lbInfo: document.getElementById("lb-info"),
     lbDetails: document.getElementById("lb-details"),
     lbDName: document.getElementById("lb-d-name"),
@@ -873,6 +877,43 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* Download (watermarked by the Python service, see watermark_service/) */
+  /* ------------------------------------------------------------------ */
+
+  /** Fetch the watermarked copy, then hand it to the browser as a file save. */
+  async function downloadCurrent() {
+    const file = visible[lbPos];
+    if (!file || !el.lbDownload || el.lbDownload.disabled) return;
+
+    el.lbDownload.disabled = true;
+    // The free Space can be asleep; the first request may take a little while.
+    toast("Preparing your download…", "ok", 8000);
+    try {
+      const response = await fetch(`${DOWNLOAD_ENDPOINT}?path=${encodeURIComponent(file.path)}`);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || payload.error || `The server responded with HTTP ${response.status}.`);
+      }
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      // The server names the file `<name>-RGS.<ext>`; mirror that if the header is unreadable.
+      const dot = file.name.lastIndexOf(".");
+      link.download = dot > 0 ? `${file.name.slice(0, dot)}-RGS${file.name.slice(dot)}` : `${file.name}-RGS`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+      toast("Download started.");
+    } catch (err) {
+      toast(`Could not download: ${err?.message || err}`, "warn", 6000);
+      console.error(err);
+    } finally {
+      el.lbDownload.disabled = false;
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
   /* Events                                                              */
   /* ------------------------------------------------------------------ */
 
@@ -913,6 +954,7 @@
   el.lbPrev.addEventListener("click", () => step(-1));
   el.lbNext.addEventListener("click", () => step(1));
   if (el.lbShare) el.lbShare.addEventListener("click", shareCurrent);
+  if (el.lbDownload) el.lbDownload.addEventListener("click", downloadCurrent);
   if (el.lbInfo) el.lbInfo.addEventListener("click", toggleDetails);
   el.lightbox.addEventListener("click", (event) => {
     if (event.target.hasAttribute("data-close")) closeLightbox();
