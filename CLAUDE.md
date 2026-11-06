@@ -4,6 +4,9 @@ Static site and project portfolio. Each project is a self-contained static site
 with its own `assets/`, `css/` and `js/`. There is no framework or bundler and no
 package manager and no build step.
 
+**Agents: read `AgentMemory/INDEX.md` first** — file/function maps and token-saving
+rules. Don't scan the tree or open big files whole.
+
 ## Layout
 
 ```
