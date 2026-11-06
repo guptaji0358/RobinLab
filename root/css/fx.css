@@ -475,3 +475,34 @@ body { overflow-x: clip; -webkit-tap-highlight-color: transparent; }
   flex-shrink: 0; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--border);
   font-family: var(--fx-mono); font-size: 9.5px; letter-spacing: 0.08em; color: var(--aurora-3);
 }
+
+/* ---------- code-rain backdrop: dim it so text stays readable ---------- */
+#fx-bg { opacity: 0.55; }
+.fx-orbs { display: none; }
+body::before { display: none; }
+
+/* ---------- animated, non-white text ---------- */
+@keyframes fx-hue { to { background-position: 300% 0; } }
+.pf-name, h1, h2, .project-title, .col-pack-title, .brand-name {
+  background-image: linear-gradient(90deg, #5ef2ff, #8f7bff, #ff6ad5, #ffd36a, #5effa8, #5ef2ff);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: fx-hue 8s linear infinite;
+}
+/* body copy: soft mint-cyan with a slow shimmer instead of flat white */
+:root { --text: #bff8ff; --text-muted: #86c9d6; }
+p, li, .about-intro { text-shadow: 0 0 10px rgba(94, 242, 255, 0.18); }
+@media (prefers-reduced-motion: reduce) {
+  .pf-name, h1, h2, .project-title, .col-pack-title, .brand-name { animation: none; }
+}
+
+/* ---------- collection: scene switcher button ---------- */
+.fx-scene-btn {
+  position: fixed; right: 14px; bottom: 14px; z-index: 50; cursor: pointer;
+  padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: rgba(8, 12, 24, .72); color: var(--text); backdrop-filter: blur(8px);
+  font: 12px var(--fx-mono, monospace); letter-spacing: .04em;
+}
+.fx-scene-btn:hover { border-color: var(--aurora-3, #5ef2ff); }
+body.col-page { background: radial-gradient(120% 90% at 50% 0%, #0d1530 0%, #04060f 70%) fixed; }
