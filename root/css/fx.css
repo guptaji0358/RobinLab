@@ -453,3 +453,25 @@ body { overflow-x: clip; -webkit-tap-highlight-color: transparent; }
 @media (hover: none) {
   .pr-card::after, .col-packcard::after { display: none; }
 }
+
+/* ---------- display names: Title Case + aurora gradient ---------- */
+.col-pack-title, .pr-card-title, .sk-name, .col-card-name {
+  letter-spacing: 0.01em;
+}
+.col-pack-title, .pr-card-title {
+  background: var(--aurora);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  font-weight: 700;
+}
+.col-pack-title::before { -webkit-text-fill-color: var(--aurora-3); }
+.sk-name {
+  font-family: var(--fx-display); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.04em;
+  background: linear-gradient(90deg, rgba(120,140,255,.14), rgba(80,220,200,.14));
+}
+.col-card-name { font-family: var(--fx-display); font-weight: 600; }
+.col-card-ext {
+  flex-shrink: 0; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--border);
+  font-family: var(--fx-mono); font-size: 9.5px; letter-spacing: 0.08em; color: var(--aurora-3);
+}

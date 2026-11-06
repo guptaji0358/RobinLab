@@ -140,8 +140,8 @@
   }
 
   function humanName(file) {
-    // The real file name, extension included — never the folder path.
-    return file.name;
+    // Display label only (Title Case, no extension); the real name stays in file.name.
+    return RGSNames.pretty(file.name);
   }
 
   function folderLabel(file) {
@@ -153,7 +153,7 @@
     if (!folder) return "General";
     return folder
       .split("/")
-      .map((part) => part.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase()))
+      .map((part) => RGSNames.pretty(part))
       .join(" / ");
   }
 
@@ -636,7 +636,15 @@
     size.className = "col-card-size";
     size.textContent = formatBytes(file.size);
 
-    foot.append(name, size);
+    const extText = RGSNames.ext(file.name);
+    if (extText) {
+      const chip = document.createElement("span");
+      chip.className = "col-card-ext";
+      chip.textContent = extText;
+      foot.append(name, chip, size);
+    } else {
+      foot.append(name, size);
+    }
     card.append(media, foot);
     return card;
   }
@@ -820,7 +828,7 @@
 
   function paintDetails(file) {
     if (!el.lbDetails) return;
-    el.lbDName.textContent = humanName(file);
+    el.lbDName.textContent = file.name;
     el.lbDKind.textContent = "Detecting…";
     el.lbDSize.textContent = `${formatBytes(file.size)} (${Number(file.size || 0).toLocaleString()} bytes)`;
   }

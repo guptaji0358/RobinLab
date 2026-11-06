@@ -51,7 +51,7 @@
 
     const name = document.createElement("span");
     name.className = "sk-name";
-    name.textContent = skill.skillName;
+    name.textContent = RGSNames.pretty(skill.skillName);
 
     const title = document.createElement("h3");
     title.className = "sk-title";

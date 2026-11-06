@@ -58,7 +58,7 @@
   }
 
   function deckTitle(file) {
-    return file.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+    return RGSNames.pretty(file.name);
   }
 
   function uploadedLabel(file) {
