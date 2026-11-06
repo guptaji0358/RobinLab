@@ -115,6 +115,14 @@ itself and needs a public URL ending in `.pptx`. That route serves files from
 `presentations/` only; the Hugging Face token stays server-side either way.
 
 - `/skills` reads `GET /api/collection/skills`, which returns only each skill's title, description and `##` outline. The full text is served one skill at a time by `GET /api/collection/skill?id=…` (public, fetched only on **Copy skill** or when a card is dragged out as a `.md` file; `&download=1` adds `Content-Disposition`). Drag sets only a `DownloadURL` payload (Chrome/Edge) so it can't paste into text fields. New `.md` files in `Claude Skills/` appear automatically.
+- Collection backdrop (`body.col-page`, `sceneBackground` in `js/fx.js`) is **random**: it
+  fetches `GET /api/collection/backdrop[?prev=scene]` (scene, hue, speed, density, and for
+  the `wallpaper` scene one random image path from the bucket's `wallpapers/` folder, shown
+  full-screen via `/api/collection/file`). Read-only on the bucket — never upload to it.
+  Logic exists twice — `pick_backdrop` in `dev_server.py` and `handleBackdrop` in the
+  Function; keep both and `fx.js` in sync. Other pages keep the code-rain canvas.
+  **Agents: when a request is ambiguous (design choice, scope, data source), ask the user
+  with AskUserQuestion before building.**
 - Collection shows images only — presentations never appear there.
 - Each bucket folder becomes one pack section, images keep their real aspect
   ratio (nothing is cropped).

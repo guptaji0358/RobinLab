@@ -61,21 +61,34 @@
   }
 
   /* --------------------------------------------------- background canvas */
-  /* Collection page: rotating scenes (sakura -> starfield -> aurora), crossfaded. */
+  /* Collection page: random scenes, crossfaded. The scene (type, hue, speed, density,
+     sprite images) comes from GET /api/collection/backdrop (Python in dev_server.py,
+     mirrored in the Pages Function); if the API is unreachable a local random is used. */
   function sceneBackground(c) {
-    var ctx = c.getContext('2d'), W, H, dpr, last = 0, cur = 0, sw = 0;
-    var names = ['Sakura', 'Starfield', 'Aurora'], items = [];
+    var ctx = c.getContext('2d'), W, H, dpr, last = 0, cur = 'sakura', sw = 0;
+    var cfg = { scene: 'sakura', hue: 330, speed: 1, density: 1, wallpaper: '' }, items = [];
+    var wall = null, LOCAL = ['sakura', 'starfield', 'aurora', 'fireflies'];
+    function fetchCfg() {
+      var ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function () { ctl && ctl.abort(); }, 4000);
+      return fetch('/api/collection/backdrop?prev=' + cur, ctl ? { signal: ctl.signal } : {})
+        .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+        .catch(function () {
+          var o = LOCAL.filter(function (s) { return s !== cur; });
+          return { scene: o[Math.random() * o.length | 0], hue: Math.random() * 360 | 0, speed: .7 + Math.random() * .8, density: .6 + Math.random() * .8, wallpaper: '' };
+        })
+        .then(function (v) { clearTimeout(tm); return v; });
+    }
     function size() {
       dpr = fine ? Math.min(devicePixelRatio || 1, 2) : 1;
       W = innerWidth; H = innerHeight;
       c.width = W * dpr; c.height = H * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       items = [];
-      var n = W < 700 ? 40 : 80, i;
+      var n = Math.round((W < 700 ? 40 : 80) * cfg.density), i;
       for (i = 0; i < n; i++) items.push({ x: Math.random() * W, y: Math.random() * H, z: Math.random(), a: Math.random() * 6.28, r: Math.random() });
     }
-    var scenes = [
-      function (dt, t) { // sakura petals
+    var scenes = {
+      sakura: function (dt, t) { // sakura petals
         ctx.clearRect(0, 0, W, H);
         for (var i = 0; i < items.length; i++) {
           var p = items[i], sz = 5 + p.z * 9;
@@ -88,7 +101,7 @@
           ctx.beginPath(); ctx.ellipse(0, 0, sz, sz * .55, 0, 0, 6.283); ctx.fill(); ctx.restore();
         }
       },
-      function (dt, t) { // starfield warp drift
+      starfield: function (dt, t) { // starfield warp drift
         ctx.clearRect(0, 0, W, H);
         var cx = W / 2, cy = H / 2;
         for (var i = 0; i < items.length; i++) {
@@ -97,43 +110,88 @@
           if (p.z > 1) { p.z = .02; p.a = Math.random() * 6.28; p.r = Math.random(); }
           var rad = p.z * p.z * Math.hypot(W, H) * .6, x = cx + Math.cos(p.a) * rad, y = cy + Math.sin(p.a) * rad;
           var rad2 = Math.max(0, p.z - .04) * Math.max(0, p.z - .04) * Math.hypot(W, H) * .6;
-          ctx.strokeStyle = 'hsla(' + (200 + p.r * 80 | 0) + ',90%,80%,' + Math.min(1, p.z * 1.4) + ')';
+          ctx.strokeStyle = 'hsla(' + (cfg.hue + p.r * 80 | 0) + ',90%,80%,' + Math.min(1, p.z * 1.4) + ')';
           ctx.lineWidth = .6 + p.z * 1.8;
           ctx.beginPath(); ctx.moveTo(cx + Math.cos(p.a) * rad2, cy + Math.sin(p.a) * rad2); ctx.lineTo(x, y); ctx.stroke();
         }
       },
-      function (dt, t) { // aurora ribbons
+      aurora: function (dt, t) { // aurora ribbons
         ctx.clearRect(0, 0, W, H);
         ctx.globalCompositeOperation = 'lighter';
         for (var b = 0; b < 4; b++) {
-          var g = ctx.createLinearGradient(0, H * .15, 0, H * .75), hue = (t / 60 + b * 70) % 360 | 0;
+          var g = ctx.createLinearGradient(0, H * .15, 0, H * .75), hue = (cfg.hue + t / 60 + b * 70) % 360 | 0;
           g.addColorStop(0, 'hsla(' + hue + ',90%,60%,0)'); g.addColorStop(.5, 'hsla(' + hue + ',90%,60%,.16)'); g.addColorStop(1, 'hsla(' + hue + ',90%,60%,0)');
           ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, H);
           for (var x = 0; x <= W; x += 24) ctx.lineTo(x, H * (.38 + b * .07) + Math.sin(x / 190 + t / 1700 + b * 1.7) * 70 + Math.sin(x / 90 - t / 2300 + b) * 28);
           ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
         }
         ctx.globalCompositeOperation = 'source-over';
+      },
+      fireflies: function (dt, t) { // glowing drifting dots
+        ctx.clearRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'lighter';
+        for (var i = 0; i < items.length; i++) {
+          var p = items[i];
+          p.a += .01 * dt; p.x += Math.cos(p.a + p.r * 6) * .5 * dt; p.y += Math.sin(p.a * 1.3 + p.r * 6) * .4 * dt - .1 * dt;
+          if (p.x < -20) p.x = W + 20; else if (p.x > W + 20) p.x = -20;
+          if (p.y < -20) p.y = H + 20; else if (p.y > H + 20) p.y = -20;
+          var glow = .35 + .65 * Math.abs(Math.sin(t / 700 + p.r * 9)), rad = 4 + p.z * 10;
+          var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad * 2.2), h = (cfg.hue + p.r * 40) | 0;
+          g.addColorStop(0, 'hsla(' + h + ',95%,75%,' + glow * .9 + ')'); g.addColorStop(1, 'hsla(' + h + ',95%,60%,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, rad * 2.2, 0, 6.283); ctx.fill();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+      },
+      wallpaper: function (dt, t) { // one full-screen wallpaper: dimmed, soft, slow zoom + pan
+        ctx.clearRect(0, 0, W, H);
+        if (!wall) return;
+        var z = 1.08 + .05 * Math.sin(t / 9000), ox = Math.sin(t / 13000) * W * .02, oy = Math.cos(t / 11000) * H * .02;
+        var w = W * z, h = H * z;
+        ctx.globalAlpha = .55; ctx.drawImage(wall, (W - w) / 2 + ox, (H - h) / 2 + oy, w, h); ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(8,10,16,.35)'; ctx.fillRect(0, 0, W, H);
       }
-    ];
+    };
+    var NAMES = { sakura: 'Sakura', starfield: 'Starfield', aurora: 'Aurora', fireflies: 'Fireflies', wallpaper: 'Wallpaper' };
     c.style.transition = 'opacity .9s ease'; c.style.opacity = '.85';
     var btn = d.createElement('button');
     btn.type = 'button'; btn.className = 'fx-scene-btn';
-    function label() { btn.textContent = '✨ ' + names[cur] + ' →'; btn.title = 'Change background scene'; }
+    function label() { btn.textContent = '✨ ' + NAMES[cur] + ' →'; btn.title = 'Change background scene'; }
+    function apply(v) {
+      cfg = v; cur = scenes[v.scene] ? v.scene : 'sakura';
+      wall = null;
+      if (v.wallpaper) { // pre-render once, cover-fit and softened, so each frame is a cheap drawImage
+        var im = new Image(); im.onload = function () {
+          var o = d.createElement('canvas'), k = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+          o.width = Math.ceil(im.naturalWidth * k); o.height = Math.ceil(im.naturalHeight * k);
+          var oc = o.getContext('2d'); if ('filter' in oc) oc.filter = 'blur(3px)';
+          oc.drawImage(im, 0, 0, o.width, o.height);
+          // crop to viewport aspect so zoom/pan math in the scene stays simple
+          var f = d.createElement('canvas'); f.width = W; f.height = H;
+          f.getContext('2d').drawImage(o, (o.width - W) / 2, (o.height - H) / 2, W, H, 0, 0, W, H);
+          if (cfg === v) wall = f;
+        };
+        im.src = '/api/collection/file?path=' + encodeURIComponent(v.wallpaper);
+      }
+      label(); size();
+    }
     function next() {
       if (sw) return; sw = 1; c.style.opacity = '0';
-      setTimeout(function () { cur = (cur + 1) % scenes.length; label(); size(); c.style.opacity = '.85'; sw = 0; }, 900);
+      Promise.all([fetchCfg(), new Promise(function (r) { setTimeout(r, 900); })]).then(function (res) {
+        apply(res[0]); c.style.opacity = '.85'; sw = 0;
+      });
     }
     btn.addEventListener('click', function () { next(); clearInterval(timer); timer = setInterval(next, 20000); });
     label(); d.body.appendChild(btn);
     size(); addEventListener('resize', size);
     var timer = reduce ? 0 : setInterval(next, 20000);
     function loop(t) {
-      var dt = Math.min(40, t - last) / 16.67; last = t;
+      var dt = Math.min(40, t - last) / 16.67 * cfg.speed; last = t;
       if (!d.hidden) { scenes[cur](dt, t); requestAnimationFrame(loop); }
     }
     function start() { requestAnimationFrame(function (t) { last = t; loop(t); }); }
-    if (reduce) { scenes[0](1, 0); return; }
+    if (reduce) { scenes.sakura(1, 0); return; }
     start();
+    fetchCfg().then(apply); // random scene from the very first paint
     d.addEventListener('visibilitychange', function () { if (!d.hidden) start(); });
   }
 

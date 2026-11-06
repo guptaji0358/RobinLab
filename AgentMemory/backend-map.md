@@ -17,6 +17,7 @@ Change one → check the other. Both talk to the Hugging Face bucket
 | `GET /api/collection/file?path=` | `handleFile` 408 → `streamBucketFile` 325 | `_serve_file` 704, `open_file_stream` 257 |
 | `POST/GET …/share`             | `handleShare` 537, `createShare` 454, `resolveShare` 488 | `_serve_share` 539, `_create_share` 558, `_resolve_share` 603 |
 | `GET …/download?path=`         | `handleDownload` 570      | `_serve_download` 385            |
+| `GET …/backdrop[?prev=]`       | `handleBackdrop` (above `onRequest`) | `pick_backdrop` (above `open_file_stream`) |
 | `GET …/skills`                 | `handleSkills` 692, `getSkills` 674 | `get_skills` 331, `summarise_skill` 302 |
 | `GET …/skill?id=`              | `handleSkill` 709         | `_serve_skill` 432               |
 | `GET /decks/<name>.pptx`       | `functions/decks/[[path]].js` (51 lines) | `_serve_file(..., decks_only=True)` |

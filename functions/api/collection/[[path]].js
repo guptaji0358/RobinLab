@@ -731,6 +731,31 @@ async function handleSkill(env, url) {
   }
 }
 
+/** GET /api/collection/backdrop[?prev=scene] — random scene config (mirror: pick_backdrop in dev_server.py). */
+const BACKDROP_SCENES = ["sakura", "starfield", "aurora", "fireflies", "wallpaper"];
+const WALLPAPER_FOLDER = "wallpapers";
+const rnd = (a, b) => Math.round((a + Math.random() * (b - a)) * 100) / 100;
+
+async function handleBackdrop(env, url) {
+  let walls = [];
+  try {
+    const { files } = await getListing(env.HF_TOKEN);
+    walls = files
+      .filter((f) => f.contentType.startsWith("image/") && (f.folder === WALLPAPER_FOLDER || f.folder.startsWith(WALLPAPER_FOLDER + "/")))
+      .map((f) => f.path);
+  } catch { /* bucket unreachable: still serve animated scenes */ }
+  const prev = url.searchParams.get("prev") || "";
+  let pool = BACKDROP_SCENES.filter((s) => s !== prev && (s !== "wallpaper" || walls.length));
+  if (!pool.length) pool = BACKDROP_SCENES.slice(0, 3);
+  const scene = pool[Math.floor(Math.random() * pool.length)];
+  const wallpaper = scene === "wallpaper" ? walls[Math.floor(Math.random() * walls.length)] : "";
+  return json(
+    { scene, hue: Math.floor(Math.random() * 360), speed: rnd(0.7, 1.5), density: rnd(0.6, 1.4), wallpaper },
+    200,
+    { "Cache-Control": "no-store" },
+  );
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   // Keep `this` bound: calling the context's waitUntil detached throws "Illegal invocation".
@@ -749,6 +774,7 @@ export async function onRequest(context) {
     if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405, { Allow: "GET" });
     return handleDownload(env, request, url);
   }
+  if (pathname.endsWith("/backdrop")) return handleBackdrop(env, url);
   if (pathname.endsWith("/skills")) return handleSkills(env);
   if (pathname.endsWith("/skill")) return handleSkill(env, url);
   if (pathname.endsWith("/file")) return handleFile(env, request, url, { waitUntil });
