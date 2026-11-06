@@ -1098,6 +1098,61 @@ a { color: inherit; text-decoration: none; }
   color: var(--text-muted);
 }
 
+/* Anime title (h1) → character (h2) groups */
+
+.col-title { margin: 0; }
+.col-title-head, .col-char-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.col-title-head::-webkit-details-marker, .col-char-head::-webkit-details-marker { display: none; }
+.col-title-head::before, .col-char-head::before {
+  content: "▾";
+  color: var(--text-muted);
+  font-size: 14px;
+  transition: transform 0.15s;
+}
+.col-title:not([open]) > .col-title-head::before,
+.col-char:not([open]) > .col-char-head::before { transform: rotate(-90deg); }
+.col-title-head {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.col-title-head h1 { margin: 0; font-size: clamp(24px, 4vw, 34px); letter-spacing: -0.02em; }
+.col-char { margin: 0 0 34px; }
+.col-char-head { margin: 0 0 14px; }
+.col-char-head h2 { margin: 0; font-size: 19px; }
+.col-group-count { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+
+.col-jump {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 0;
+  margin-bottom: -24px;
+  background: var(--bg, #0b0d10);
+}
+.col-jump-link {
+  flex: none;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.col-jump-link span { margin-left: 4px; font-family: var(--font-mono); font-size: 11px; opacity: 0.65; }
+.col-jump-link:hover { border-color: currentColor; }
+
 /* Grid */
 
 .col-grid {

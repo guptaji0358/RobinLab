@@ -649,34 +649,109 @@
     return card;
   }
 
-  function buildPack(folder, files) {
-    const section = document.createElement("section");
-    section.className = "col-pack";
+  /* Title → character grouping ------------------------------------------ */
 
-    const head = document.createElement("div");
-    head.className = "col-pack-head";
+  const UNSORTED = "Unsorted";
+  const collapsed = new Set(); // group keys the visitor folded; survives re-renders
+  const countText = (n) => `${n} ${n === 1 ? "image" : "images"}`;
+  const byLabel = (a, b) => {
+    if (a === UNSORTED) return 1;
+    if (b === UNSORTED) return -1;
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+  };
 
-    const title = document.createElement("h3");
-    title.className = "col-pack-title";
-    title.textContent = packTitle(folder);
+  /** Folder layout is <Anime title>/<Character>/image; anything shallower goes to "Unsorted". */
+  function titleAndCharacter(file) {
+    const parts = relToBase(file.folder || "").split("/").filter(Boolean);
+    if (!parts.length) return [UNSORTED, UNSORTED];
+    const title = RGSNames.pretty(parts[0]);
+    const character = parts.length > 1 ? parts.slice(1).map((p) => RGSNames.pretty(p)).join(" / ") : UNSORTED;
+    return [title, character];
+  }
 
+  function groupHead(tag, className, label, count) {
+    const summary = document.createElement("summary");
+    summary.className = className;
+    const heading = document.createElement(tag);
+    heading.textContent = label;
     const meta = document.createElement("span");
-    meta.className = "col-pack-meta";
-    const bytes = files.reduce((sum, file) => sum + file.size, 0);
-    meta.textContent = `${files.length} ${files.length === 1 ? "image" : "images"} · ${formatBytes(bytes)}`;
+    meta.className = "col-group-count";
+    meta.textContent = countText(count);
+    summary.append(heading, meta);
+    return summary;
+  }
 
-    head.append(title, meta);
+  function makeDetails(className, key) {
+    const details = document.createElement("details");
+    details.className = className;
+    details.open = !collapsed.has(key);
+    details.addEventListener("toggle", () => {
+      if (details.open) collapsed.delete(key);
+      else collapsed.add(key);
+    });
+    return details;
+  }
 
-    const grid = document.createElement("div");
-    grid.className = "col-grid";
-
+  /** H1 anime title → H2 character → image grid. Cards are pushed to `visible` in page order. */
+  function buildGroups(files) {
+    const tree = new Map(); // title -> Map(character -> files)
     for (const file of files) {
-      grid.appendChild(buildCard(file, visible.length));
-      visible.push(file);
+      const [title, character] = titleAndCharacter(file);
+      if (!tree.has(title)) tree.set(title, new Map());
+      const chars = tree.get(title);
+      if (!chars.has(character)) chars.set(character, []);
+      chars.get(character).push(file);
     }
 
-    section.append(head, grid);
-    return section;
+    const frag = document.createDocumentFragment();
+    const jump = document.createElement("nav");
+    jump.className = "col-jump";
+    jump.setAttribute("aria-label", "Jump to anime");
+
+    let seq = 0;
+    for (const title of [...tree.keys()].sort(byLabel)) {
+      const chars = tree.get(title);
+      const total = [...chars.values()].reduce((n, list) => n + list.length, 0);
+      const id = `col-title-${seq++}`;
+
+      const section = makeDetails("col-title", `t:${title}`);
+      section.id = id;
+      section.appendChild(groupHead("h1", "col-title-head", title, total));
+
+      for (const character of [...chars.keys()].sort(byLabel)) {
+        const list = chars.get(character);
+        const sub = makeDetails("col-char", `c:${title}/${character}`);
+        sub.appendChild(groupHead("h2", "col-char-head", character, list.length));
+
+        const grid = document.createElement("div");
+        grid.className = "col-grid";
+        for (const file of list) {
+          grid.appendChild(buildCard(file, visible.length));
+          visible.push(file);
+        }
+        sub.appendChild(grid);
+        section.appendChild(sub);
+      }
+
+      const link = document.createElement("a");
+      link.className = "col-jump-link";
+      link.href = `#${id}`;
+      link.textContent = `${title} `;
+      const n = document.createElement("span");
+      n.textContent = String(total);
+      link.appendChild(n);
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        section.open = true;
+        section.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      });
+      jump.appendChild(link);
+
+      frag.appendChild(section);
+    }
+
+    if (tree.size > 1) frag.prepend(jump);
+    return frag;
   }
 
   function render() {
@@ -687,13 +762,9 @@
     const sorter = sorters[sort] || sorters.name;
     const folders = sortedPackKeys().filter((key) => !activeExact || key === activeFolder);
 
-    const frag = document.createDocumentFragment();
-
-    for (const folder of folders) {
-      const files = packs.get(folder).filter(matchesQuery).sort(sorter);
-      if (!files.length) continue;
-      frag.appendChild(buildPack(folder, files));
-    }
+    const matched = [];
+    for (const folder of folders) matched.push(...packs.get(folder).filter(matchesQuery).sort(sorter));
+    const frag = matched.length ? buildGroups(matched) : document.createDocumentFragment();
 
     if (!visible.length) {
       showState(
@@ -1042,7 +1113,7 @@
     // The collection opens on the Packs tab; certificates have no tab bar.
     if (el.packList && !tabChosen) {
       tabChosen = true;
-      setTab(new URLSearchParams(window.location.search).has("share") ? "images" : "packs");
+      setTab("images");
     } else if (el.packList && !el.packList.hidden) {
       renderPackList();
     } else {

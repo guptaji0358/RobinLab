@@ -28,7 +28,7 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 - `collection.js` (1188) — the big one:
   - names/labels 142–172 · toast/copy 202–214 · search & chips 251–320
   - pack covers/slideshows 323–425 · pack tree & list 477–557 · tabs/stats 558–581
-  - `buildCard` 582 · `buildPack` 652 · `render` 682
+  - `buildCard` 582 · title→character grouping (`titleAndCharacter`, `buildGroups`: h1 anime / h2 character, collapsible, jump bar) ~652 · `render` ~770 · "All images" is the default tab
   - lightbox 748–853 (`openLightbox`, `paintLightbox`, `step`)
   - **share** `shareCurrent` 854 · **download** `downloadCurrent` 892
   - data: `buildPacks` 996 · `ingest` 1031 · cached manifest 1064–1081 · `load` 1082 · `openShared` 1131 · `boot` 1181
