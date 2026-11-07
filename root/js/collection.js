@@ -46,6 +46,7 @@
     lbPrev: document.getElementById("lb-prev"),
     lbNext: document.getElementById("lb-next"),
     lbShare: document.getElementById("lb-share"),
+    lbWatch: document.getElementById("lb-watch"),
     lbDownload: document.getElementById("lb-download"),
     lbInfo: document.getElementById("lb-info"),
     lbDetails: document.getElementById("lb-details"),
@@ -669,6 +670,43 @@
     return [title, character];
   }
 
+  /* Watch links: exact Crunchyroll URLs come from data/anime-watch.json
+     ({ "Anime Title": "https://www.crunchyroll.com/series/…" }); any title not
+     listed falls back to a Crunchyroll search. */
+  const watchMap = new Map();
+  const normTitle = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  fetch("data/anime-watch.json")
+    .then((r) => (r.ok ? r.json() : {}))
+    .then((obj) => {
+      for (const [k, v] of Object.entries(obj || {})) {
+        if (typeof v === "string" && /^https:\/\//i.test(v)) watchMap.set(normTitle(k), v);
+      }
+      if (typeof render === "function" && el.lightbox.hidden) render();
+    })
+    .catch(() => {});
+
+  function watchUrl(title) {
+    if (!title || title === UNSORTED) return "";
+    return (
+      watchMap.get(normTitle(title)) ||
+      `https://www.crunchyroll.com/search?q=${encodeURIComponent(title)}`
+    );
+  }
+
+  function watchLink(title, className) {
+    const url = watchUrl(title);
+    if (!url) return null;
+    const a = document.createElement("a");
+    a.className = className;
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.title = `Watch ${title} on Crunchyroll`;
+    a.textContent = "▶ Watch";
+    a.addEventListener("click", (e) => e.stopPropagation());
+    return a;
+  }
+
   function groupHead(tag, className, label, count) {
     const summary = document.createElement("summary");
     summary.className = className;
@@ -678,6 +716,10 @@
     meta.className = "col-group-count";
     meta.textContent = countText(count);
     summary.append(heading, meta);
+    if (tag === "h1") {
+      const watch = watchLink(label, "col-watch");
+      if (watch) summary.appendChild(watch);
+    }
     return summary;
   }
 
@@ -872,6 +914,11 @@
     paintMeta(file);
     el.lbCounter.textContent = `${lbPos + 1} / ${visible.length}`;
     paintDetails(file);
+    if (el.lbWatch) {
+      const url = watchUrl(titleAndCharacter(file)[0]);
+      el.lbWatch.hidden = !url;
+      if (url) el.lbWatch.href = url;
+    }
   }
 
   /** Warm the next and previous originals so arrow-key browsing feels instant. */
