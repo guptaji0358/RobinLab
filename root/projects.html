@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projects — RobinLab</title>
+<meta name="description" content="Every app and tool built under the RobinLab name by Robin Gupta.">
+<meta name="author" content="Robin Gupta">
+<meta name="publisher" content="Robin Gupta Studios">
+<meta name="copyright" content="Copyright &copy; Robin Gupta">
+<meta name="application-name" content="RobinLab">
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/robinlab-icon-192.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#0b0d10">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/fx.css">
+<script>
+  /* Set before first paint so the boot curtain never flashes. fx.js removes it. */
+  (function (r) {
+    r.classList.add('fx-js');
+    try {
+      if (!sessionStorage.getItem('fx-boot') && !matchMedia('(prefers-reduced-motion: reduce)').matches) r.classList.add('fx-booting');
+    } catch (e) {}
+  })(document.documentElement);
+</script>
+</head>
+<body>
+
+<div class="fx-loader" aria-hidden="true">
+  <div class="fx-loader-panel top"></div>
+  <div class="fx-loader-panel bot"></div>
+  <div class="fx-boot">
+    <pre class="fx-boot-log"></pre>
+    <div class="fx-boot-bar"><i></i></div>
+    <div class="fx-boot-pct">0%</div>
+    <div class="fx-boot-skip">click or press any key to skip</div>
+  </div>
+</div>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/" class="brand">
+      <span class="brand-mark">RL</span>
+      <span class="brand-name">RobinLab</span>
+    </a>
+    <nav class="site-nav">
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section id="projects" class="projects container">
+    <div class="section-heading">
+      <h2>Projects</h2>
+      <p>A growing collection of applications built under the RobinLab name.</p>
+    </div>
+
+    <style>
+      .proj-search{position:relative;max-width:420px;margin:0 0 1.5rem}
+      .proj-search input{width:100%;box-sizing:border-box;padding:.7rem 2.4rem .7rem 1rem;border-radius:999px;
+        border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit}
+      .proj-search input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+      .proj-search input:focus{outline:2px solid #6ea8ff;outline-offset:2px}
+      .proj-search button{position:absolute;right:.6rem;top:50%;transform:translateY(-50%);border:0;background:none;
+        color:inherit;font-size:1.2rem;cursor:pointer;opacity:.7;display:none}
+      .proj-search.has-text button{display:block}
+      .proj-empty{display:none;opacity:.75;margin:1rem 0}
+    </style>
+    <div class="proj-search" id="projSearch" role="search">
+      <input type="search" id="projQuery" placeholder="Search projects…" aria-label="Search projects" autocomplete="off">
+      <button type="button" id="projClear" aria-label="Clear search">&times;</button>
+    </div>
+    <p class="proj-empty" id="projEmpty" aria-live="polite">No projects match your search.</p>
+
+    <div class="project-grid">
+
+      <article class="project-card" style="--c:#6ea8ff">
+        <img loading="lazy" decoding="async" src="assets/pywix-icon.ico" alt="" class="project-watermark">
+        <div class="project-card-top">
+          <span class="project-tag">
+            <span class="ic ic-monitor icon icon-sm" aria-hidden="true"></span>
+            Desktop App
+          </span>
+        </div>
+        <h3 class="project-title">
+          <span class="project-logo">
+            <img loading="lazy" decoding="async" src="assets/pywix-icon.ico" alt="" class="project-logo-img">
+          </span>
+          PyWix
+        </h3>
+        <p class="project-desc">
+          A desktop application, built and maintained as part of the RobinLab
+          project lineup.
+        </p>
+        <span class="claude-badge">
+          <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
+          Built with Claude Code
+        </span>
+        <a href="#" data-link="projects.pywix" class="project-link" target="_blank" rel="noopener">
+          Open PyWix
+          <span class="ic ic-arrow-right icon icon-sm" aria-hidden="true"></span>
+        </a>
+      </article>
+
+      <article class="project-card" style="--c:#4fe3c1">
+        <img loading="lazy" decoding="async" src="assets/codelens-icon.ico" alt="" class="project-watermark">
+        <div class="project-card-top">
+          <span class="project-tag">
+            <span class="ic ic-monitor icon icon-sm" aria-hidden="true"></span>
+            Desktop App
+          </span>
+        </div>
+        <h3 class="project-title">
+          <span class="project-logo">
+            <img loading="lazy" decoding="async" src="assets/codelens-icon.ico" alt="" class="project-logo-img">
+          </span>
+          CodeLens
+        </h3>
+        <p class="project-desc">
+          A desktop application, built and maintained as part of the RobinLab
+          project lineup.
+        </p>
+        <span class="claude-badge">
+          <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
+          Built with Claude Code
+        </span>
+        <a href="#" data-link="projects.codelens" class="project-link" target="_blank" rel="noopener">
+          Open CodeLens
+          <span class="ic ic-arrow-right icon icon-sm" aria-hidden="true"></span>
+        </a>
+      </article>
+
+      <article class="project-card" style="--c:#ffb454">
+        <img loading="lazy" decoding="async" src="assets/contactbook-icon.png" alt="" class="project-watermark">
+        <div class="project-card-top">
+          <span class="project-tag">
+            <span class="ic ic-monitor icon icon-sm" aria-hidden="true"></span>
+            Desktop App
+          </span>
+        </div>
+        <h3 class="project-title">
+          <span class="project-logo">
+            <img loading="lazy" decoding="async" src="assets/contactbook-icon.png" alt="" class="project-logo-img">
+          </span>
+          Contact Book
+        </h3>
+        <p class="project-desc">
+          A desktop application, built and maintained as part of the RobinLab
+          project lineup.
+        </p>
+        <span class="claude-badge">
+          <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
+          Built with Claude Code
+        </span>
+        <a href="#" data-link="projects.contactbook" class="project-link" target="_blank" rel="noopener">
+          Open Contact Book
+          <span class="ic ic-arrow-right icon icon-sm" aria-hidden="true"></span>
+        </a>
+      </article>
+
+      <article class="project-card" style="--c:#b48cff">
+        <img loading="lazy" decoding="async" src="projects/Motiva/Assets/logo/favicon.svg" alt="" class="project-watermark">
+        <div class="project-card-top">
+          <span class="project-tag">
+            <span class="ic ic-monitor icon icon-sm" aria-hidden="true"></span>
+            Desktop App
+          </span>
+        </div>
+        <h3 class="project-title">
+          <span class="project-logo">
+            <img loading="lazy" decoding="async" src="projects/Motiva/Assets/logo/favicon.svg" alt="" class="project-logo-img">
+          </span>
+          Motiva
+        </h3>
+        <p class="project-desc">
+          A native Windows app that plays videos and GIFs as a live desktop
+          wallpaper, behind your desktop icons.
+        </p>
+        <span class="claude-badge">
+          <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
+          Built with Claude Code
+        </span>
+        <a href="#" data-link="projects.motiva" class="project-link" target="_blank" rel="noopener">
+          Open Motiva
+          <span class="ic ic-arrow-right icon icon-sm" aria-hidden="true"></span>
+        </a>
+      </article>
+
+      <article class="project-card project-card-placeholder">
+        <div class="project-card-top">
+          <span class="project-tag project-tag-muted">
+            <span class="ic ic-clock icon icon-sm" aria-hidden="true"></span>
+            Upcoming
+          </span>
+        </div>
+        <h3 class="project-title">
+          <span class="project-logo project-logo-muted">
+            <span class="ic ic-mic icon" aria-hidden="true"></span>
+          </span>
+          Voicely
+        </h3>
+        <p class="project-desc">
+          An upcoming RobinLab app, currently in development.
+        </p>
+        <span class="claude-badge">
+          <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
+          Built with Claude Code
+        </span>
+      </article>
+
+      <article class="project-card project-card-placeholder">
+        <div class="project-card-top">
+          <span class="project-tag project-tag-muted">
+            <span class="ic ic-clock icon icon-sm" aria-hidden="true"></span>
+            Upcoming
+          </span>
+        </div>
+        <h3 class="project-title">
+          <span class="project-logo project-logo-muted">
+            <span class="ic ic-checklist icon" aria-hidden="true"></span>
+          </span>
+          TaskNest
+        </h3>
+        <p class="project-desc">
+          An upcoming RobinLab app, currently in development.
+        </p>
+        <span class="claude-badge">
+          <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
+          Built with Claude Code
+        </span>
+      </article>
+
+      <article class="project-card project-card-placeholder">
+        <div class="project-card-top">
+          <span class="project-tag project-tag-muted">
+            <span class="ic ic-clock icon icon-sm" aria-hidden="true"></span>
+            Upcoming
+          </span>
+        </div>
+        <h3 class="project-title">
+          <span class="project-logo project-logo-muted">
+            <span class="ic ic-grid icon" aria-hidden="true"></span>
+          </span>
+          Dockly
+        </h3>
+        <p class="project-desc">
+          An upcoming RobinLab app, currently in development.
+        </p>
+        <span class="claude-badge">
+          <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
+          Built with Claude Code
+        </span>
+      </article>
+
+      <article class="project-card project-card-placeholder">
+        <div class="project-card-top">
+          <span class="project-tag project-tag-muted">
+            <span class="ic ic-clock icon icon-sm" aria-hidden="true"></span>
+            Coming soon
+          </span>
+        </div>
+        <h3 class="project-title">
+          <span class="project-logo project-logo-muted">
+            <span class="ic ic-plus icon" aria-hidden="true"></span>
+          </span>
+          More on the way
+        </h3>
+        <p class="project-desc">
+          Additional projects will be added here as they're built.
+        </p>
+      </article>
+
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="footer-company">Robin Gupta Studios</span>
+      <span class="footer-tm" title="Robin Gupta Studios">RGS&trade;</span>
+    </div>
+    <p class="footer-legal">
+      <span>Built &amp; maintained by <strong>Robin Gupta</strong></span>
+      <span class="footer-sep">&middot;</span>
+      <span>Copyright &copy; <span id="year"></span> Robin Gupta</span>
+      <span class="footer-sep">&middot;</span>
+      <span>All rights reserved</span>
+    </p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var q = document.getElementById('projQuery'),
+      box = document.getElementById('projSearch'),
+      empty = document.getElementById('projEmpty'),
+      cards = [].slice.call(document.querySelectorAll('.project-card'));
+  function run() {
+    var t = q.value.trim().toLowerCase(), shown = 0;
+    box.classList.toggle('has-text', !!q.value);
+    cards.forEach(function (c) {
+      var ph = c.classList.contains('project-card-placeholder');
+      var hay = ['.project-title', '.project-tag', '.project-desc'].map(function (s) {
+        var e = c.querySelector(s); return e ? e.textContent : '';
+      }).join(' ').toLowerCase();
+      var ok = t ? (!ph && (' ' + hay.replace(/[^a-z0-9]+/g, ' ')).indexOf(' ' + t.replace(/[^a-z0-9]+/g, ' ')) !== -1) : true;
+      c.style.display = ok ? '' : 'none';
+      if (ok && !ph) shown++;
+    });
+    empty.style.display = (t && !shown) ? 'block' : 'none';
+  }
+  q.addEventListener('input', run);
+  document.getElementById('projClear').addEventListener('click', function () { q.value = ''; run(); q.focus(); });
+})();
+</script>
+<script src="js/links.js"></script>
+<script src="js/site.js"></script>
+<script src="js/fx.js"></script>
+</body>
+</html>
