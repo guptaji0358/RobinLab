@@ -16,7 +16,8 @@ window.RL_LINKS = {
 
   pages: {
     home:          '/',
-    projects:      '/#projects',
+    projects:      '/projects',
+    allProjects:   '/projects',
     collection:    '/collection',
     certificates:  '/certificates',
     presentations: '/presentations',
@@ -33,7 +34,7 @@ window.RL_LINKS = {
     { label: 'Certificates',  url: 'pages.certificates',  icon: 'ic-award' },
     { label: 'Presentations', url: 'pages.presentations', icon: 'ic-presentation' },
     { label: 'Music',         url: 'pages.music',         icon: 'ic-music' },
-    { label: 'Claude Skills', url: 'pages.skills',        icon: 'ic-sparkles-thin' },
+    { label: 'Claude Skills', url: 'pages.skills',        icon: 'ic-ai' },
     { label: 'About',         url: 'pages.about',         icon: 'ic-user' },
     { label: 'Contact',       url: 'pages.contact',       icon: 'ic-mail' }
   ],

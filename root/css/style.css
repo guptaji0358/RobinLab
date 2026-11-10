@@ -2150,6 +2150,7 @@ a.deck-open:hover { border-color: #3a4048; color: var(--text); }
 .ic-search{-webkit-mask-image:url(../assets/icons/actions/search.svg);mask-image:url(../assets/icons/actions/search.svg)}
 .ic-search-thin{-webkit-mask-image:url(../assets/icons/actions/search-thin.svg);mask-image:url(../assets/icons/actions/search-thin.svg)}
 .ic-share{-webkit-mask-image:url(../assets/icons/actions/share.svg);mask-image:url(../assets/icons/actions/share.svg)}
+.ic-ai{-webkit-mask-image:url(../assets/icons/features/ai.svg);mask-image:url(../assets/icons/features/ai.svg)}
 .ic-sparkles-thin{-webkit-mask-image:url(../assets/icons/features/sparkles-thin.svg);mask-image:url(../assets/icons/features/sparkles-thin.svg)}
 .ic-terminal-thin{-webkit-mask-image:url(../assets/icons/dev/terminal-thin.svg);mask-image:url(../assets/icons/dev/terminal-thin.svg)}
 .ic-x{-webkit-mask-image:url(../assets/icons/actions/x.svg);mask-image:url(../assets/icons/actions/x.svg)}
