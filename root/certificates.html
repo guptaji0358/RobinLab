@@ -102,6 +102,12 @@
       <span class="ic ic-close icon" aria-hidden="true"></span>
     </button>
 
+    <div class="lb-zoom" id="lb-zoom" role="group" aria-label="Zoom">
+      <button type="button" id="lb-zoom-out" aria-label="Zoom out" title="Zoom out (−)">−</button>
+      <button type="button" id="lb-zoom-reset" class="lb-zoom-level" aria-label="Reset zoom" title="Reset (0)">100%</button>
+      <button type="button" id="lb-zoom-in" aria-label="Zoom in" title="Zoom in (+)">+</button>
+    </div>
+
     <div class="lb-viewport">
       <button class="lb-nav lb-prev" id="lb-prev" type="button" aria-label="Previous artwork">
         <span class="ic ic-chevron-left icon" aria-hidden="true"></span>
@@ -116,6 +122,12 @@
       </button>
     </div>
 
+    <dl class="lb-details" id="lb-details" hidden>
+      <div><dt>Name</dt><dd id="lb-d-name"></dd></div>
+      <div><dt>Kind</dt><dd id="lb-d-kind">Detecting…</dd></div>
+      <div><dt>Size</dt><dd id="lb-d-size"></dd></div>
+    </dl>
+
     <div class="lb-bar">
       <div class="lb-info">
         <span class="lb-name" id="lb-name"></span>
@@ -123,6 +135,11 @@
       </div>
       <div class="lb-actions">
         <span class="lb-counter" id="lb-counter"></span>
+        <button class="lb-infobtn" id="lb-info" type="button" aria-expanded="false" aria-controls="lb-details" title="Show file details (I)">
+          <span class="ic ic-info icon icon-sm" aria-hidden="true"></span>
+          Details
+        </button>
+        <a class="lb-share lb-watch" id="lb-watch" href="#" target="_blank" rel="noopener noreferrer" hidden title="Watch this anime on Crunchyroll">▶ Watch</a>
         <button class="lb-share" id="lb-share" type="button" title="Copy a link that works for 30 minutes">
           <span class="ic ic-share icon icon-sm" aria-hidden="true"></span>
           Share
@@ -135,9 +152,9 @@
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+<script src="js/names.js"></script>
 <script src="js/collection.js"></script>
 <script src="js/links.js"></script>
 <script src="js/site.js"></script>
