@@ -29,11 +29,12 @@
   const DOWNLOAD_ENDPOINT = "/api/collection/download";
 
   const el = {
-    search: document.getElementById("col-search"),
-    sort: document.getElementById("col-sort"),
+    // The certificates page omits the search/sort/filter controls; detached stubs keep the code below safe.
+    search: document.getElementById("col-search") || document.createElement("input"),
+    sort: document.getElementById("col-sort") || document.createElement("select"),
     viewBtns: document.querySelectorAll(".col-view-btn"),
-    folders: document.getElementById("col-folders"),
-    stats: document.getElementById("col-stats"),
+    folders: document.getElementById("col-folders") || document.createElement("div"),
+    stats: document.getElementById("col-stats") || document.createElement("p"),
     packs: document.getElementById("col-packs"),
     state: document.getElementById("col-state"),
     year: document.getElementById("year"),
@@ -76,9 +77,9 @@
   const VIEW_KEY = "rl-collection-view";
   // /certificates reuses this script; certificates never appear in the collection.
   const CERT_SCOPE = document.body.dataset.scope === "certificates";
-  const isCertificate = (file) => /certificate/i.test(file.folder || "");
-  const EAGER_COUNT = 12;
-  const EAGER_COVERS = 12;
+  const isCertificate = (file) => /certificat|\bcerts?\b/i.test(`${file.folder || ""}/${file.path || ""}`);
+  const EAGER_COUNT = 6; // originals are 4-15 MB: few high-priority fetches so they don't starve each other
+  const EAGER_COVERS = 6;
   let coverSeq = 0; // pack-cover images created so far in this render
 
   /* Thumbnails are plain <img> tags: the browser decodes them progressively and
@@ -103,7 +104,7 @@
               setThumbSrc(img, img.dataset.src);
             }
           },
-          { rootMargin: "1500px 0px" },
+          { rootMargin: "600px 0px" },
         )
       : null;
 
@@ -314,7 +315,7 @@
 
   /* Pack cover slideshow ------------------------------------------------ */
 
-  const SLIDE_COUNT = 5; // images cycled per pack card
+  const SLIDE_COUNT = 1; // originals are 4-15 MB: a pack card shows one cover, no slideshow
   const SLIDE_MS = 1800; // time each image stays on screen
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const slideshows = new Set(); // { cover, slides, dots, index, nextAt, onscreen, paused }
@@ -441,7 +442,7 @@
       img.decoding = "async";
       img.draggable = false;
       cover.appendChild(img);
-      const src = file.thumbUrl || file.url;
+      const src = file.url;
       // Slides after the first wait for `loadRestOfSlides`.
       if (i > 0) {
         img.dataset.src = src;
@@ -601,10 +602,9 @@
     img.decoding = "async";
     img.draggable = false;
     img.alt = humanName(file);
-    // Grid cards use the generated WebP preview (tens of KB) rather than the
-    // full-resolution original, which is often several megabytes. The original
-    // is only fetched once the lightbox actually opens.
-    img.dataset.src = file.thumbUrl || file.url;
+    // Grid cards load the original file as-is (no derived copies). Lazy
+    // loading, async decode and the HTTP cache keep that affordable.
+    img.dataset.src = file.url;
     img.addEventListener("load", () => card.classList.add("is-loaded"));
     img.addEventListener("error", () => card.classList.add("is-broken"));
     media.appendChild(img);
@@ -877,13 +877,49 @@
     shareSession = null;
     stopShareTicker();
     lbToken++;
+    resetZoom();
     el.lbImg.removeAttribute("src");
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus({ preventScroll: true });
+  }
+
+  /* Zoom: wheel / pinch-less buttons / keys, drag to pan, double-click toggles. */
+  const zoom = { s: 1, x: 0, y: 0 };
+  const ZMIN = 1, ZMAX = 6;
+  const zoomLevel = document.getElementById("lb-zoom-reset");
+
+  function applyZoom() {
+    const img = el.lbImg;
+    img.style.transform = zoom.s === 1 ? "" : `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.s})`;
+    img.classList.toggle("lb-zoomed", zoom.s > 1);
+    if (zoomLevel) zoomLevel.textContent = `${Math.round(zoom.s * 100)}%`;
+  }
+
+  function resetZoom() {
+    zoom.s = 1; zoom.x = 0; zoom.y = 0;
+    applyZoom();
+  }
+
+  /** Zoom to scale `s`, keeping the point (cx, cy) — relative to the image centre — fixed. */
+  function zoomTo(s, cx = 0, cy = 0) {
+    s = Math.min(ZMAX, Math.max(ZMIN, s));
+    const k = s / zoom.s;
+    zoom.x = cx - (cx - zoom.x) * k;
+    zoom.y = cy - (cy - zoom.y) * k;
+    zoom.s = s;
+    if (s === 1) { zoom.x = 0; zoom.y = 0; }
+    applyZoom();
+  }
+
+  function pointerFromCentre(event) {
+    const r = el.lbImg.getBoundingClientRect();
+    // getBoundingClientRect already includes the current transform, so use its centre.
+    return [event.clientX - (r.left + r.width / 2) + zoom.x, event.clientY - (r.top + r.height / 2) + zoom.y];
   }
 
   function paintLightbox() {
     const file = visible[lbPos];
     if (!file) return;
+    resetZoom();
 
     lbDims = "";
     const full = new Image();
@@ -898,14 +934,9 @@
       if (el.lbDKind) el.lbDKind.textContent = w && h ? imageKind(w, h) : "Unknown";
       paintMeta(file);
     };
-    // The grid thumbnail is already cached, so the viewer opens instantly and
-    // sharpens once the original arrives.
-    if (file.thumbUrl) {
-      el.lbImg.src = file.thumbUrl;
-      el.lbImg.classList.add("is-preview");
-    } else {
-      el.lbImg.removeAttribute("src");
-    }
+    // The grid card already fetched this very file, so it is in the browser's
+    // HTTP cache and shows at once; otherwise the viewer fills in on arrival.
+    el.lbImg.removeAttribute("src");
     full.src = file.url;
     preloadNeighbours();
 
@@ -1086,9 +1117,45 @@
     if (event.target.hasAttribute("data-close")) closeLightbox();
   });
 
+  document.getElementById("lb-zoom-in").addEventListener("click", () => zoomTo(zoom.s * 1.5));
+  document.getElementById("lb-zoom-out").addEventListener("click", () => zoomTo(zoom.s / 1.5));
+  zoomLevel.addEventListener("click", resetZoom);
+
+  el.lbImg.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    const [cx, cy] = pointerFromCentre(event);
+    zoomTo(zoom.s * (event.deltaY < 0 ? 1.15 : 1 / 1.15), cx, cy);
+  }, { passive: false });
+
+  el.lbImg.addEventListener("dblclick", (event) => {
+    if (zoom.s > 1) resetZoom();
+    else { const [cx, cy] = pointerFromCentre(event); zoomTo(2.5, cx, cy); }
+  });
+
+  let pan = null;
+  el.lbImg.addEventListener("pointerdown", (event) => {
+    if (zoom.s <= 1) return;
+    pan = { id: event.pointerId, x: event.clientX - zoom.x, y: event.clientY - zoom.y };
+    el.lbImg.setPointerCapture(event.pointerId);
+    el.lbImg.classList.add("lb-panning");
+  });
+  el.lbImg.addEventListener("pointermove", (event) => {
+    if (!pan || pan.id !== event.pointerId) return;
+    zoom.x = event.clientX - pan.x;
+    zoom.y = event.clientY - pan.y;
+    applyZoom();
+  });
+  const endPan = () => { pan = null; el.lbImg.classList.remove("lb-panning"); };
+  el.lbImg.addEventListener("pointerup", endPan);
+  el.lbImg.addEventListener("pointercancel", endPan);
+
   document.addEventListener("keydown", (event) => {
     if (el.lightbox.hidden) return;
-    if (event.key === "Escape") closeLightbox();
+    const plain = !event.ctrlKey && !event.metaKey && !event.altKey;  // Ctrl +/- stays browser zoom
+    if (plain && (event.key === "+" || event.key === "=" || event.code === "NumpadAdd")) { event.preventDefault(); zoomTo(zoom.s * 1.5); }
+    else if (plain && (event.key === "-" || event.key === "_" || event.code === "NumpadSubtract")) { event.preventDefault(); zoomTo(zoom.s / 1.5); }
+    else if (event.key === "0") resetZoom();
+    else if (event.key === "Escape") closeLightbox();
     else if (event.key === "ArrowLeft") step(-1);
     else if (event.key === "ArrowRight") step(1);
     else if ((event.key === "i" || event.key === "I") && !event.ctrlKey && !event.metaKey && !event.altKey) toggleDetails();
