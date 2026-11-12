@@ -1,0 +1,55 @@
+
+{
+  "anime": [
+    {
+      "id": 1,
+      "title": "Alya Sometimes Hides Her Feelings in Russian",
+      "platforms": {
+        "crunchyroll": {
+          "url": "https://www.crunchyroll.com/series/G1XHJV0XM/alya-sometimes-hides-her-feelings-in-russian",
+          "available": true
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Demon Slayer: Kimetsu no Yaiba",
+      "platforms": {
+        "crunchyroll": {
+          "url": "https://www.crunchyroll.com/series/GY5P48XEY/demon-slayer-kimetsu-no-yaiba",
+          "available": true
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Jujutsu Kaisen",
+      "platforms": {
+        "crunchyroll": {
+          "url": "https://www.crunchyroll.com/series/GRDV0019R/jujutsu-kaisen",
+          "available": true
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Solo Leveling",
+      "platforms": {
+        "crunchyroll": {
+          "url": "https://www.crunchyroll.com/series/GDKHZEJ0K/solo-leveling",
+          "available": true
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Naruto",
+      "platforms": {
+        "crunchyroll": {
+          "url": "https://www.crunchyroll.com/series/GY9PJ5KWR/naruto",
+          "available": true
+        }
+      }
+    }
+  ]
+}
