@@ -11,6 +11,7 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 | `presentations.html`       | 142                     | `presentations.js`, `names.js`    |
 | `skills.html`              | 150                     | `skills.js`, `names.js`           |
 | `music.html`               | 101                     | `music.js`                        |
+| `projects.html`            | ~290                    | none (links.js, site.js, fx.js)   |
 | `certificates.html`        | 173                     | —                                 |
 
 (Verify the exact `<script>` list with `grep -n "<script" root/<page>.html`.)
