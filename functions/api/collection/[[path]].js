@@ -42,7 +42,9 @@ const LISTING_EDGE_SECONDS = 60;
 
 // Browser/CDN cache lifetime for image bytes (seconds). Files in the vault are
 // immutable, so this can be generous.
-const FILE_CACHE_SECONDS = 86_400;
+// Originals are 4-15 MB, so keep them in the browser a week; the ETag below makes
+// revalidation a tiny 304 instead of a re-download.
+const FILE_CACHE_SECONDS = 604_800;
 
 // Generated previews never change for a given path, so cache them for a year.
 const THUMB_CACHE_SECONDS = 31_536_000;
@@ -167,18 +169,18 @@ function json(body, status = 200, extraHeaders = {}) {
 }
 
 /** Resolve one bucket object, following the private bucket's signed redirect. */
-async function fetchBucketObject(token, path) {
+async function fetchBucketObject(token, path, extra = {}) {
   // `encodeURIComponent` encodes "/" as %2F, which the Hub's resolve route accepts.
   const resolveUrl = `${HF}/buckets/${BUCKET_ID}/resolve/${encodeURIComponent(path)}`;
   let upstream = await fetch(resolveUrl, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}`, ...extra },
     redirect: "manual",
   });
   // Private buckets answer 302 -> signed CDN URL. Follow it without the token.
   if (upstream.status >= 300 && upstream.status < 400) {
     const location = upstream.headers.get("Location");
     if (!location) throw new Error("Resolve returned a redirect with no target.");
-    upstream = await fetch(location);
+    upstream = await fetch(location, { headers: extra });
   }
   return upstream;
 }
@@ -297,8 +299,6 @@ async function handleList(env, request, url, ctx) {
           // space and show colour before the real preview arrives.
           ...(lqip ? { w: lqip[0], h: lqip[1], blur: `data:image/webp;base64,${lqip[2]}` } : {}),
           url: fileUrl(file.path),
-          // Lightweight grid preview; null means "use `url`" (see collection.js).
-          thumbUrl: thumbPath ? fileUrl(thumbPath) : null,
         })),
       },
       200,
@@ -352,12 +352,21 @@ export async function streamBucketFile(env, request, path, { allow = (entry) => 
 
   let upstream;
   try {
-    upstream = await fetchBucketObject(env.HF_TOKEN, path);
+    // Pass Range through so seeks / resumed downloads fetch only the bytes asked for.
+    const fwd = {};
+    for (const name of ["Range", "If-Range"]) {
+      const value = request.headers.get(name);
+      if (value) fwd[name] = value;
+    }
+    upstream = await fetchBucketObject(env.HF_TOKEN, path, fwd);
   } catch (err) {
     return json({ error: "upstream_error", message: String(err?.message || err) }, 502);
   }
 
   if (upstream.status === 404) return json({ error: "not_found", message: "No such file in this bucket." }, 404);
+  if (upstream.status === 416) {
+    return new Response(null, { status: 416, headers: { "Content-Range": upstream.headers.get("Content-Range") || "bytes */*" } });
+  }
   if (!upstream.ok) {
     return json({ error: "upstream_error", message: `Resolve failed (HTTP ${upstream.status})` }, 502);
   }
@@ -366,14 +375,29 @@ export async function streamBucketFile(env, request, path, { allow = (entry) => 
     "Content-Type": upstream.headers.get("Content-Type") || entry.contentType,
     // `inline` (never `attachment`) keeps the browser previewing instead of saving.
     "Content-Disposition": "inline",
-    "Cache-Control": `public, max-age=${FILE_CACHE_SECONDS}`,
+    "Cache-Control": `public, max-age=${FILE_CACHE_SECONDS}, stale-while-revalidate=86400`,
     "X-Content-Type-Options": "nosniff",
+    "Accept-Ranges": "bytes",
   });
-  const length = upstream.headers.get("Content-Length");
-  if (length) headers.set("Content-Length", length);
+  for (const name of ["Content-Length", "Content-Range", "ETag", "Last-Modified"]) {
+    const value = upstream.headers.get(name);
+    if (value) headers.set(name, value);
+  }
 
-  if (request.method === "HEAD") return new Response(null, { status: 200, headers });
-  return new Response(upstream.body, { status: 200, headers });
+  // Conditional revalidation: a matching ETag costs a header, not 10 MB.
+  const etag = headers.get("ETag");
+  const inm = request.headers.get("If-None-Match");
+  if (etag && inm && upstream.status === 200) {
+    const strip = (v) => v.trim().replace(/^W\//, "");
+    if (inm.trim() === "*" || inm.split(",").some((v) => strip(v) === strip(etag))) {
+      upstream.body?.cancel();
+      headers.delete("Content-Length");
+      return new Response(null, { status: 304, headers });
+    }
+  }
+
+  if (request.method === "HEAD") return new Response(null, { status: upstream.status, headers });
+  return new Response(upstream.body, { status: upstream.status, headers });
 }
 
 /**
@@ -405,6 +429,45 @@ function isHotlink(request, url) {
  * and both Hugging Face round trips, which is most of the latency of a grid card.
  * Thumbnails are generated once per file, so they are cached for a year.
  */
+/** Grid preview URL: resized on demand by the free HF Space (see handlePreview). */
+function previewUrl(file) {
+  return file.previewable ? `/api/collection/preview?path=${encodeURIComponent(file.path)}` : null;
+}
+
+async function handlePreview(env, request, url, ctx) {
+  if (isHotlink(request, url)) return json({ error: "forbidden", message: "Open images from the collection page." }, 403);
+  const path = url.searchParams.get("path") || "";
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const key = new Request(url.toString(), { method: "GET" });
+  if (cache) {
+    const hit = await cache.match(key);
+    if (hit) return hit;
+  }
+  // Fallback to the original if the resizer isn't configured or fails.
+  const original = () => handleFile(env, request, new URL(`/api/collection/file?path=${encodeURIComponent(path)}`, url), ctx);
+  if (!env.WATERMARK_URL || !env.WATERMARK_KEY) return original();
+  try {
+    const { files } = await getListing(env.HF_TOKEN);
+    if (!files.find((f) => f.path === path && f.previewable)) return json({ error: "not_found" }, 404);
+    const up = await fetch(`${env.WATERMARK_URL.replace(/\/+$/, "")}/preview?path=${encodeURIComponent(path)}&w=720`, {
+      headers: { "X-Watermark-Key": env.WATERMARK_KEY },
+    });
+    if (!up.ok) return original();
+    const res = new Response(up.body, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/webp",
+        "Cache-Control": `public, max-age=${THUMB_CACHE_SECONDS}, immutable`,
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+    if (cache) ctx?.waitUntil?.(cache.put(key, res.clone()));
+    return res;
+  } catch {
+    return original();
+  }
+}
+
 async function handleFile(env, request, url, ctx) {
   if (isHotlink(request, url)) {
     return json({ error: "forbidden", message: "Open images from the collection page." }, 403);
@@ -413,16 +476,24 @@ async function handleFile(env, request, url, ctx) {
   const path = url.searchParams.get("path");
   const isThumb = !!path && path.startsWith(THUMB_PREFIX);
   const cache = typeof caches !== "undefined" ? caches.default : null;
+  // The edge cache answers Range and conditional requests itself, so the lookup
+  // key carries those headers; the stored copy is always the full 200.
   const cacheKey = new Request(url.toString(), { method: "GET" });
+  const lookupHeaders = new Headers();
+  for (const name of ["Range", "If-Range", "If-None-Match", "If-Modified-Since"]) {
+    const value = request.headers.get(name);
+    if (value) lookupHeaders.set(name, value);
+  }
+  const lookupKey = new Request(url.toString(), { method: "GET", headers: lookupHeaders });
 
   if (cache && request.method === "GET") {
-    const hit = await cache.match(cacheKey);
+    const hit = await cache.match(lookupKey);
     if (hit) return hit;
   }
 
   const response = await streamBucketFile(env, request, path);
 
-  if (response.ok && request.method === "GET") {
+  if (response.status === 200 && request.method === "GET" && !request.headers.get("Range")) {
     const headers = new Headers(response.headers);
     headers.set(
       "Cache-Control",
@@ -528,7 +599,6 @@ async function resolveShare(env, url, secret) {
     size: entry.size,
     contentType: entry.contentType,
     url: fileUrl(entry.path),
-    thumbUrl: thumbPath ? fileUrl(thumbPath) : null,
     expiresAt: new Date(read.expiresAt).toISOString(),
     secondsLeft: Math.max(0, Math.ceil((read.expiresAt - Date.now()) / 1000)),
   });
@@ -777,6 +847,7 @@ export async function onRequest(context) {
   if (pathname.endsWith("/backdrop")) return handleBackdrop(env, url);
   if (pathname.endsWith("/skills")) return handleSkills(env);
   if (pathname.endsWith("/skill")) return handleSkill(env, url);
+  if (pathname.endsWith("/preview")) return handlePreview(env, request, url, { waitUntil });
   if (pathname.endsWith("/file")) return handleFile(env, request, url, { waitUntil });
   return handleList(env, request, url, { waitUntil });
 }

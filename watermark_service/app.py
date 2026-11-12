@@ -16,6 +16,7 @@ Environment (Space -> Settings -> Variables and secrets)
 from __future__ import annotations
 
 import hmac
+import io
 import os
 from urllib.parse import quote
 
@@ -97,6 +98,36 @@ def download(
             "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
         },
+    )
+
+
+@app.get("/preview")
+def preview(
+    path: str = Query(..., min_length=1, max_length=512),
+    w: int = Query(720, ge=64, le=1600),
+    x_watermark_key: str | None = Header(default=None),
+) -> Response:
+    """Resized WebP of one bucket image, for the grid. Free CPU instead of a CDN resizer."""
+    _check_key(x_watermark_key)
+    lowered = path.lower()
+    if ".." in path or path.startswith(("/", RESERVED_PREFIX)) or not lowered.endswith(ALLOWED_EXT):
+        raise HTTPException(415, "Only bucket images can be previewed.")
+    from PIL import Image
+
+    original = _fetch_original(path)
+    try:
+        img = Image.open(io.BytesIO(original))
+        img.draft("RGB", (w * 2, w * 2))
+        img = img.convert("RGBA" if "A" in img.getbands() else "RGB")
+        img.thumbnail((w, w * 4))
+        out = io.BytesIO()
+        img.save(out, "WEBP", quality=78, method=4)
+    except Exception as exc:
+        raise HTTPException(422, f"Could not process image: {exc}") from exc
+    return Response(
+        content=out.getvalue(),
+        media_type="image/webp",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
     )
 
 

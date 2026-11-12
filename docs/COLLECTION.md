@@ -323,3 +323,7 @@ service in `watermark_service/` (FastAPI + Pillow).
   answers `503 not_configured`.
 - **Limits:** the watermark only covers downloads. The lightbox still previews
   the original through `/api/collection/file`.
+- **Grid previews:** the same service also exposes `GET /preview?path=…&w=720`
+  (resized WebP, key-checked). The Pages Function relays it as
+  `/api/collection/preview` and caches the result at the edge; if the service is
+  unconfigured or fails it falls back to the original file.

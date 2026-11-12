@@ -9,3 +9,8 @@ HF_TOKEN=hf_your_token_here
 # Any long random string works, e.g. `python -c "import secrets;print(secrets.token_urlsafe(48))"`.
 # Optional: when it is missing, HF_TOKEN is used as the signing key instead.
 SHARE_SECRET=change_me_to_a_long_random_string
+
+# Watermarked downloads (watermark_service/, deployed as a Hugging Face Space).
+# WATERMARK_URL is the Space URL; WATERMARK_KEY is the shared secret set on the Space too.
+WATERMARK_URL=https://your-user-your-space.hf.space
+WATERMARK_KEY=change_me_to_a_long_random_string

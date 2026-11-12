@@ -49,12 +49,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from functools import partial
+from pathlib import Path
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 BUCKET_ID = "robinlabdev/robinvault"
 HF_HOST = "huggingface.co"
 LISTING_TTL_S = 60
-FILE_CACHE_SECONDS = 86400
+FILE_CACHE_SECONDS = 604800  # mirror of the Function: originals are large, ETag makes revalidation cheap
 
 # How long a share link stays valid. The expiry is inside the signed payload, so
 # editing the URL cannot extend it.
@@ -281,13 +282,13 @@ def pick_backdrop(files: list[dict], prev: str = "") -> dict:
     }
 
 
-def open_file_stream(token: str, path: str):
+def open_file_stream(token: str, path: str, extra: dict[str, str] | None = None):
     """Return (response_headers, connection, response) for a bucket file."""
     encoded = urllib.parse.quote(path, safe="")
     conn, resp = _open(
         HF_HOST,
         f"/buckets/{BUCKET_ID}/resolve/{encoded}",
-        {"Authorization": f"Bearer {token}", "Accept": "*/*"},
+        {"Authorization": f"Bearer {token}", "Accept": "*/*", **(extra or {})},
     )
 
     # Private bucket -> 302 to a short-lived signed URL. Follow without the token.
@@ -297,7 +298,7 @@ def open_file_stream(token: str, path: str):
         if not location:
             raise RuntimeError("Resolve returned a redirect with no target")
         parsed = urllib.parse.urlsplit(location)
-        conn, resp = _open(parsed.netloc, urllib.parse.urlunsplit(("", "", parsed.path, parsed.query, "")))
+        conn, resp = _open(parsed.netloc, urllib.parse.urlunsplit(("", "", parsed.path, parsed.query, "")), dict(extra or {}))
 
     return conn, resp
 
@@ -414,11 +415,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.headers.get("Sec-Fetch-Site") == "cross-site":
             self._send_json({"error": "forbidden", "message": "Download from the collection page."}, 403)
             return
-        if not self.watermark_url or not self.watermark_key:
-            self._send_json(
-                {"error": "not_configured", "message": "Set WATERMARK_URL and WATERMARK_KEY in .dev.vars."}, 503
-            )
-            return
+        local = not self.watermark_url or not self.watermark_key
         path = (urllib.parse.parse_qs(parsed.query).get("path") or [""])[0]
         if not path:
             self._send_json({"error": "missing_path", "message": "A file path is required."}, 400)
@@ -433,6 +430,33 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if not entry["contentType"].startswith("image/"):
             self._send_json({"error": "unsupported_type", "message": "Only images can be downloaded."}, 415)
+            return
+
+        if local:
+            # No Space configured: stamp the image here with the same Pillow code.
+            try:
+                sys.path.insert(0, str(Path(__file__).parent / "watermark_service"))
+                from watermark import apply_watermark  # type: ignore
+
+                conn, resp = open_file_stream(self.token or "", path, {})
+                try:
+                    original = resp.read()
+                finally:
+                    conn.close()
+                data, fmt = apply_watermark(original)
+            except Exception as err:  # noqa: BLE001
+                self._send_json({"error": "upstream_error", "message": f"Local watermark failed: {err}"}, 502)
+                return
+            stem = path.rsplit("/", 1)[-1].rpartition(".")[0]
+            ext = {"JPEG": "jpg"}.get(fmt, fmt.lower())
+            media = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}.get(fmt, "image/png")
+            self.send_response(200)
+            self.send_header("Content-Type", media)
+            self.send_header("Content-Disposition", f"attachment; filename*=UTF-8''{urllib.parse.quote(stem + '-RGS.' + ext)}")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "private, no-store")
+            self.end_headers()
+            self.wfile.write(data)
             return
 
         target = f"{self.watermark_url.rstrip('/')}/download?path={urllib.parse.quote(path, safe='')}"
@@ -682,7 +706,6 @@ class Handler(SimpleHTTPRequestHandler):
                 "size": entry["size"],
                 "contentType": entry["contentType"],
                 "url": url_for(entry["path"]),
-                "thumbUrl": url_for(thumb_path) if thumb_path else None,
                 "expiresAt": _iso_ms(read["expiresAt"]),
                 "secondsLeft": max(0, math.ceil((read["expiresAt"] - time.time() * 1000) / 1000)),
             }
@@ -717,7 +740,6 @@ class Handler(SimpleHTTPRequestHandler):
                         ),
                         "url": url_for(file["path"]),
                         # Lightweight grid preview; None means "use `url`".
-                        "thumbUrl": url_for(file["thumbPath"]) if file["thumbPath"] else None,
                     }
                     for file in files
                 ],
@@ -763,34 +785,59 @@ class Handler(SimpleHTTPRequestHandler):
             return
 
         try:
-            conn, resp = open_file_stream(self.token or "", path)
+            # Pass Range through so seeks / resumed downloads fetch only the bytes asked for.
+            fwd = {k: v for k in ("Range", "If-Range") if (v := self.headers.get(k))}
+            conn, resp = open_file_stream(self.token or "", path, fwd)
         except Exception as err:  # noqa: BLE001
             self._send_json({"error": "upstream_error", "message": str(err)}, 502)
             return
 
         try:
-            if resp.status != 200:
+            if resp.status == 416:
+                self.send_response(416)
+                self.send_header("Content-Range", resp.getheader("Content-Range") or "bytes */*")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            if resp.status not in (200, 206):
                 self._send_json({"error": "upstream_error", "message": f"Resolve failed (HTTP {resp.status})"}, 502)
                 return
 
-            length = resp.getheader("Content-Length")
-            self.send_response(200)
+            etag = resp.getheader("ETag")
+            cache_control = f"public, max-age={FILE_CACHE_SECONDS}, stale-while-revalidate=86400"
+            inm = self.headers.get("If-None-Match")
+            if etag and inm and resp.status == 200:
+                strip = lambda v: v.strip().removeprefix("W/")  # noqa: E731
+                if inm.strip() == "*" or any(strip(v) == strip(etag) for v in inm.split(",")):
+                    # Matching ETag: a header-only answer instead of re-sending the file.
+                    self.send_response(304)
+                    self.send_header("ETag", etag)
+                    self.send_header("Cache-Control", cache_control)
+                    self.end_headers()
+                    return
+
+            self.send_response(resp.status)
             self.send_header("Content-Type", resp.getheader("Content-Type") or entry["contentType"])
             self.send_header("Content-Disposition", "inline")
-            immutable = ", immutable" if path.startswith(THUMB_PREFIX) else ""
-            self.send_header("Cache-Control", f"public, max-age={FILE_CACHE_SECONDS}{immutable}")
+            self.send_header("Cache-Control", cache_control)
             self.send_header("X-Content-Type-Options", "nosniff")
-            if length:
-                self.send_header("Content-Length", length)
+            self.send_header("Accept-Ranges", "bytes")
+            for name in ("Content-Length", "Content-Range", "ETag", "Last-Modified"):
+                value = resp.getheader(name)
+                if value:
+                    self.send_header(name, value)
             self.end_headers()
 
             if self.command == "HEAD":
                 return
-            while True:
-                chunk = resp.read(64 * 1024)
-                if not chunk:
-                    break
-                self.wfile.write(chunk)
+            try:
+                while True:
+                    chunk = resp.read(256 * 1024)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+            except (BrokenPipeError, ConnectionResetError):
+                pass  # browser cancelled (scrolled away / navigated); stop streaming
         finally:
             conn.close()
 
