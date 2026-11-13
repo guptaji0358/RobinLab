@@ -150,9 +150,12 @@ class KnowledgeRetrieval:
                 seen_ids.add(rec.id)
                 results.append(SearchResult(record=rec, score=1.0, match_type="exact"))
 
-            # Stage 2: per-token keyword match, scored by token coverage.
+            # Stage 2: per-token keyword match, ranked by token coverage.
             tokens = self._tokens(normalized)
             if tokens and len(results) < max_results:
+                match_expr = " + ".join(
+                    ["(CASE WHEN content LIKE ? THEN 1 ELSE 0 END) + (CASE WHEN category LIKE ? THEN 1 ELSE 0 END)" for _ in tokens]
+                )
                 token_clauses = " OR ".join(
                     ["content LIKE ? OR category LIKE ?" for _ in tokens]
                 )
@@ -161,11 +164,11 @@ class KnowledgeRetrieval:
                     token_params.extend([f"%{tok}%", f"%{tok}%"])
                 cur.execute(
                     f"""
-                    SELECT * FROM knowledge
+                    SELECT *, ({match_expr}) AS token_hits FROM knowledge
                     WHERE {where_clause} AND ({token_clauses})
-                    ORDER BY updated_at DESC LIMIT ?
+                    ORDER BY token_hits DESC, updated_at DESC LIMIT ?
                     """,
-                    (*base_params, *token_params, max_results * 2),
+                    (*token_params, *base_params, *token_params, max_results * 2),
                 )
                 for row in cur.fetchall():
                     rec = _row_to_record(row)
@@ -186,7 +189,7 @@ class KnowledgeRetrieval:
                     )
 
             # Stage 3: FTS5 full-text match for ranking beyond literal substrings.
-            if tokens and len(results) < max_results:
+            if tokens and len(results) < max_results * 2:
                 fts_query = " OR ".join(f'"{tok}"' for tok in tokens)
                 try:
                     cur.execute(

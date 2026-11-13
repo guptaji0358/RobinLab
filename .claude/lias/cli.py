@@ -67,7 +67,16 @@ def init_subsystems(project_root: Path | None = None):
         project_root=cfg.project_root,
     )
     retrieval = KnowledgeRetrieval(db_path=cfg.db_path)
-    router = CapabilityRouter(registry=registry, runner=runner, retrieval=retrieval)
+    retrieval_cfg = cfg.get("retrieval", {})
+    router = CapabilityRouter(
+        registry=registry,
+        runner=runner,
+        retrieval=retrieval,
+        max_results=retrieval_cfg.get("max_results", 5),
+        max_context_chars=retrieval_cfg.get("max_context_chars", 4000),
+        min_relevance_score=retrieval_cfg.get("min_relevance_score", 0.2),
+        project_id=cfg.get("project_name", "RobinLabs"),
+    )
     recovery = RecoveryManager(cfg, registry)
     diag = LiasDiagnostics(config=cfg, registry=registry, recovery=recovery)
 
@@ -230,7 +239,8 @@ def main():
         print(json.dumps({
             "action": resp.action_type,
             "summary": resp.summary,
-            "tokens_saved_estimate": resp.tokens_saved_estimate,
+            "duration_ms": resp.duration_ms,
+            "result_chars": resp.result_chars,
             "data": resp.data,
         }, indent=2))
     elif args.command == "backup":
