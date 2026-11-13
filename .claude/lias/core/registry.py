@@ -27,6 +27,9 @@ class AutomationManifest:
     output_schema: Dict[str, Any] = field(default_factory=dict)
     dependencies: List[str] = field(default_factory=list)
     keywords: List[str] = field(default_factory=list)
+    generated: bool = False
+    validation: Dict[str, Any] = field(default_factory=dict)
+    created_by: str = "manual"
     cache_policy: Dict[str, Any] = field(default_factory=lambda: {"enabled": True, "ttl": 3600})
     failure_policy: Dict[str, Any] = field(default_factory=lambda: {"max_retries": 1, "quarantine_on_failures": 3})
 

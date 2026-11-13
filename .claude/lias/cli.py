@@ -34,6 +34,9 @@ from lias.knowledge.store import KnowledgeStore
 def init_subsystems(project_root: Path | None = None):
     cfg = LiasConfig(project_root=project_root)
     schema_file = cfg.lias_dir / "database" / "schema.sql"
+    if not schema_file.exists():
+        # Bootstrap a new/relocated project from the schema shipped with LIAS.
+        schema_file = SCRIPT_DIR / "database" / "schema.sql"
     initialize_database(cfg.db_path, schema_file)
     MigrationManager(cfg.db_path).apply_migrations()
 
@@ -142,6 +145,21 @@ def main():
     cand_parser = subparsers.add_parser("candidates", help="Inspect learned candidates")
     cand_parser.add_argument("--status", default=None, help="Filter: observed|promoted|quarantined")
 
+    # Learning / autonomous growth
+    learn_parser = subparsers.add_parser("learn", help="Observe work and grow local automation")
+    l_subs = learn_parser.add_subparsers(dest="l_action", required=True)
+    scan_p = l_subs.add_parser("scan", help="Scan execution logs for repeated workflows")
+    scan_p.add_argument("--min-runs", type=int, default=3, help="Runs required to record a candidate")
+    note_p = l_subs.add_parser("note", help="Record an explicitly confirmed fact")
+    note_p.add_argument("text", help="Text starting with Confirmed:/Rule:/Decision: etc.")
+    promote_p = l_subs.add_parser("promote", help="Promote validated knowledge candidates")
+    promote_p.add_argument("--min-frequency", type=int, default=None, help="Override promotion threshold")
+    gen_p = l_subs.add_parser("generate", help="Generate automation for one candidate")
+    gen_p.add_argument("candidate_id", help="Candidate id from 'candidates'")
+    gen_p.add_argument("--template", default=None, choices=["directory-summary", "log-summary"])
+    gen_all_p = l_subs.add_parser("generate-all", help="Generate for every eligible candidate")
+    gen_all_p.add_argument("--template", default=None, choices=["directory-summary", "log-summary"])
+
     args = parser.parse_args()
     cfg, registry, runner, store, retrieval, router, diag, cache, recovery = init_subsystems()
 
@@ -242,6 +260,64 @@ def main():
             print(json.dumps({"purged": cache.purge_expired()}, indent=2))
         elif args.c_action == "clear":
             print(json.dumps({"cleared": cache.clear()}, indent=2))
+    elif args.command == "learn":
+        from lias.learning.candidates import CandidateManager
+        from lias.learning.generator import AutomationGenerator
+        from lias.learning.observer import WorkflowObserver
+        from lias.learning.patterns import WORKFLOW_CATEGORIES
+
+        manager = CandidateManager(cfg.db_path, store)
+        observer = WorkflowObserver(manager)
+        generator = AutomationGenerator(cfg, registry, manager)
+        threshold = args.min_frequency if getattr(args, "min_frequency", None) is not None else cfg.get(
+            "learning", {}
+        ).get("promotion_frequency_threshold", 3)
+
+        if args.l_action == "scan":
+            observed = observer.observe_execution_log(cfg.db_path, min_runs=args.min_runs)
+            print(json.dumps({
+                "status": "success",
+                "observed": [
+                    {
+                        "id": c.id,
+                        "pattern": c.workflow_pattern,
+                        "frequency": c.frequency,
+                        "status": c.status,
+                    }
+                    for c in observed
+                ],
+            }, indent=2))
+        elif args.l_action == "note":
+            record = observer.observe_message(args.text)
+            print(json.dumps({
+                "status": "recorded" if record else "ignored",
+                "candidate": None if not record else {
+                    "id": record.id,
+                    "pattern": record.workflow_pattern,
+                    "frequency": record.frequency,
+                    "category": record.metadata.get("category"),
+                },
+                "hint": None if record else "Prefix with Confirmed:, Rule:, Decision:, Architecture decision: or Known resolution:",
+            }, indent=2))
+        elif args.l_action == "promote":
+            promoted = []
+            for candidate in manager.list_candidates(status="observed"):
+                if candidate.metadata.get("category") in WORKFLOW_CATEGORIES:
+                    continue
+                rec = manager.evaluate_and_promote(candidate.id, min_frequency=int(threshold))
+                if rec:
+                    promoted.append({"candidate_id": candidate.id, "knowledge_id": rec.id})
+            print(json.dumps({"status": "success", "promoted": promoted}, indent=2))
+        elif args.l_action == "generate":
+            result = generator.generate(args.candidate_id, template=args.template)
+            print(json.dumps(result.to_dict(), indent=2))
+            if result.status not in ("generated", "reused"):
+                sys.exit(2)
+        elif args.l_action == "generate-all":
+            results = []
+            for candidate in manager.list_candidates(status="observed"):
+                results.append(generator.generate(candidate.id, template=args.template).to_dict())
+            print(json.dumps({"status": "success", "results": results}, indent=2))
     elif args.command == "candidates":
         from lias.learning.candidates import CandidateManager
 
