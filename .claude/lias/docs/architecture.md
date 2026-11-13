@@ -1,87 +1,100 @@
 # LIAS v2.0 Architecture Specification
-**Local Intelligence & Automation System for RobinLabs**
 
-## 1. System Overview
-LIAS (Local Intelligence & Automation System) is a project-local automation and knowledge-retrieval layer embedded within `RobinLabs/.claude/lias/`. Its primary purpose is to reduce redundant Claude model operations by offloading deterministic, repetitive, and retrieval-intensive tasks to verified local execution while preserving full isolation, security, and project context.
+**Local Intelligence & Automation System for RobinLabs** — implemented in
+`.claude/lias/`. Each project keeps its own runtime, database, manifests,
+cache, logs and backups.
 
-## 2. Architectural Decisions Compliance
-- **D-001 (Project-Local Runtime)**: The runtime, SQLite database, automation scripts, manifests, and cache strictly live within `<PROJECT_ROOT>/.claude/lias/`. Zero cross-project knowledge leakage.
-- **D-002 (Hybrid Automatic Learning)**: Confirmed facts, architecture decisions, and tested commands persist to SQLite with provenance and confidence scores. Speculative or sensitive data (secrets, passwords) are automatically rejected.
-- **D-003 (Hybrid Triggering)**: Natural-language routing orchestrates capability identification -> automation execution -> local RAG search -> compact result delivery to Claude.
-- **D-004 (Permission Tiers)**:
-  - **Tier 0 (Read-Only)**: File statistics, knowledge search, environment checks. Automatic execution permitted.
-  - **Tier 1 (Controlled Local Modification)**: LIAS cache, knowledge updates, test execution, candidate logging within `.claude/lias/`. Automatic execution permitted within project policy.
-  - **Tier 2 (Sensitive / Consequential)**: Modifying production source code, deleting project files, network publishing. Requires explicit user authorization.
-- **D-005 (Autonomous Automation Growth)**: Reusable workflows are observed, scored, statically analyzed via Python AST, tested in isolation, and only activated upon passing validation.
+## 1. Design decisions
 
-## 3. Directory Layout
+- **D-001 Project-local runtime.** Everything lives under
+  `<PROJECT_ROOT>/.claude/lias/`. No cross-project knowledge access.
+- **D-002 Hybrid learning.** Explicitly confirmed facts and validated
+  resolutions are stored automatically with provenance. Speculation is not.
+- **D-003 Hybrid triggering.** The agent identifies capabilities from
+  `.claude/CLAUDE.md` and calls the CLI; deterministic hooks are not installed
+  because no supported hook mechanism exists in this environment.
+- **D-004 Tiered permissions.** Tier 0 automatic, Tier 1 automatic inside LIAS
+  state, Tier 2 requires authorization.
+- **D-005 Bounded growth.** Execution-log observation → scored candidate →
+  whitelisted template → static AST validation → isolated test → registration.
+
+## 2. Components
+
+| Module | Responsibility |
+| --- | --- |
+| `core/config.py` | project-root detection, merged settings, atomic writes |
+| `core/policy.py` | tiers, path containment, secret scrubbing, command checks |
+| `core/validation.py` | dependency-free JSON-schema subset for I/O |
+| `core/registry.py` | manifest validation, atomic JSON + SQLite registration |
+| `core/runner.py` | policy/schema checks, timeouts, retries, quarantine, caching |
+| `core/cache.py` | TTL cache, input hashing, file/directory fingerprints |
+| `core/router.py` | deterministic automation-name/keyword match, then knowledge |
+| `core/recovery.py` | verified backup/restore, integrity, config checks, logs |
+| `core/diagnostics.py` | doctor/status checks and counts |
+| `knowledge/store.py` | CRUD, provenance, versions, expiry, audit trail |
+| `knowledge/retrieval.py` | exact → keyword → FTS5, validity filters, budgets |
+| `knowledge/validation.py` | duplicate/contradiction/sensitive-candidate checks |
+| `knowledge/indexing.py` | foundational facts + markdown chunk indexing |
+| `learning/patterns.py` | declared-fact extraction, value scoring, thresholds |
+| `learning/observer.py` | message and execution-log observation |
+| `learning/candidates.py` | candidate frequency, promotion, quarantine |
+| `learning/generator.py` | template rendering, static scan, isolated test, activation |
+| `cli.py` | single entry point for every operation above |
+
+## 3. Data flow
+
 ```text
-<PROJECT_ROOT>/.claude/lias/
-├── cli.py                     # Unified CLI entry point
-├── core/
-│   ├── __init__.py
-│   ├── config.py              # Project root detection & config management
-│   ├── policy.py              # Security tier enforcement & sandboxing
-│   ├── registry.py            # Automation registry & JSON manifest validation
-│   ├── runner.py              # Safe subprocess executor with timeouts
-│   ├── router.py              # Capability routing & progressive disclosure
-│   ├── diagnostics.py         # System health & doctor checks
-│   ├── cache.py               # Deterministic caching with hash invalidation
-│   └── recovery.py            # Self-healing, rollback & quarantine
-├── database/
-│   ├── __init__.py
-│   ├── schema.sql             # Relational DDL + FTS5 full-text indexing
-│   ├── connection.py          # SQLite connection manager with WAL mode
-│   └── migrations.py          # Versioned schema migrations
-├── knowledge/
-│   ├── __init__.py
-│   ├── store.py               # Knowledge CRUD & provenance tracking
-│   ├── retrieval.py           # Multi-stage retrieval (exact + FTS5 search)
-│   ├── validation.py          # Contradiction detection & secret scrubbing
-│   └── indexing.py            # Incremental project indexing
-├── learning/
-│   ├── __init__.py
-│   ├── observer.py            # Pattern & workflow observation
-│   ├── candidates.py          # Cost-benefit scoring & promotion criteria
-│   └── generator.py           # Safe automation generation & isolated testing
-├── automation/
-│   ├── manifests/             # Automation JSON manifests
-│   ├── scripts/               # Deterministic Python/BAT automations
-│   └── generated/             # Autonomous validated automations
-├── docs/                      # Technical & operational documentation
-└── tests/                     # Automated test suite
+user request
+   │
+   ▼
+agent reads .claude/CLAUDE.md
+   │
+   ▼
+cli.py route "<request>"
+   ├─ 1 exact id/name ─────────────► runner ─► automation script
+   ├─ 2 keyword threshold ─────────► runner
+   ├─ 3 verified knowledge ────────► SQLite + FTS5
+   └─ 4 unmatched ─────────────────► Claude reasoning
+                                        │
+                              compact structured JSON
+                                        │
+                                        ▼
+                                 answer to the user
 ```
 
-## 4. Component Data Flow
-```text
-[User Prompt / Client]
-          │
-          ▼
-   [LIAS Router]
-    ├── 1. Exact Automation Match ──> [Runner] ──> [Automation Script] ──┐
-    ├── 2. Exact Knowledge Match   ──> [Knowledge Store] ────────────────┤
-    ├── 3. FTS5 Full-Text Search   ──> [Knowledge Retrieval] ────────────┤
-    └── 4. Learning Observer       ──> [Candidate Tracker]               │
-                                                                         ▼
-                                                            [Compact JSON Result]
-                                                                         │
-                                                                         ▼
-                                                             [Delivered to Claude]
-```
+## 4. Storage
 
-## 5. Security & Isolation Boundaries
-1. **Path Sandboxing**: Scripts and file operations must resolve strictly within `<PROJECT_ROOT>` unless explicitly granted. Path traversal (`..`) attempts are blocked.
-2. **Untrusted Data Isolation**: Retrieved knowledge and external documents are treated as untrusted text and never executed directly as shell commands.
-3. **Execution Safety**: Subprocess execution uses argument lists (`sys.executable, script_path, ...`), disables `shell=True` on dynamic inputs, enforces timeouts (default 30s), and bounds stdout/stderr captures.
-4. **Secret Scrubbing**: Knowledge input is filtered against regex patterns for API keys, bearer tokens, private keys, and `.env` formats.
+SQLite `database/lias.sqlite3` (git-ignored) with:
 
-## 6. Testing Strategy
-A modular unittest suite will verify:
-- Path normalization and project isolation
-- Security tier enforcement
-- Knowledge store persistence, FTS5 retrieval, expiration, and contradiction checks
-- Subprocess timeouts and bounded capture
-- Automation registration and manifest schemas
-- Autonomous growth lifecycle (discover -> score -> generate -> validate -> test -> activate)
-- Caching hit/miss and invalidation
-- Self-healing, quarantine, and database migrations
+- `knowledge` + `knowledge_fts` (triggers keep FTS in sync)
+- `automations`, `execution_log`, `candidates`, `cache_entries`
+- `audit_log`, `schema_migrations`
+
+Schema version 3 adds cache fingerprints and operation version. Migrations run
+idempotently on every CLI start.
+
+## 5. Security boundaries
+
+1. Path containment for entry points and working directories.
+2. Argument-array subprocess execution; no shell interpolation.
+3. Timeouts, bounded output, bounded retries and generation quotas.
+4. Secret scrubbing and secret-rejecting knowledge writes.
+5. Generated code is template-only and AST-scanned before isolated execution.
+6. Application checks are not an OS sandbox; client/OS permissions still apply.
+
+## 6. Testing strategy
+
+`tests/` contains unit and integration coverage for root detection, isolation,
+policy, registry, runner I/O schemas, timeouts, retries, quarantine, caching and
+invalidation, knowledge persistence, expiry, contradictions, audit, candidates,
+generation, recovery, routing and CLI integration. Tests use temporary projects
+for destructive and failure paths.
+
+## 7. Known limitations
+
+- No automatic prompt interception or Claude Code hooks in this environment.
+- No semantic/vector retrieval; deliberately FTS5 + deterministic matching.
+- Generated automations are limited to audited templates, not arbitrary code.
+- Token usage is not measurable locally, so only wall-clock and size metrics
+  are reported.
+- No background daemon, scheduler, network access or package installation.

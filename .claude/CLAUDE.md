@@ -4,8 +4,8 @@ Static site and project portfolio. Each project is a self-contained static site
 with its own `assets/`, `css/` and `js/`. There is no framework or bundler and no
 package manager and no build step.
 
-**Agents: read `AgentMemory/INDEX.md` first** — file/function maps and token-saving
-rules. Don't scan the tree or open big files whole.
+**Agents: read `.claude/memory/INDEX.md` first** — file/function maps and
+token-saving rules. Don't scan the tree or open big files whole.
 
 ## Layout
 
@@ -200,13 +200,36 @@ is the source of truth, but a `git push` alone never reaches production.
 
 ## Local Intelligence & Automation System (LIAS)
 
-LIAS is embedded in `.claude/lias/` to eliminate repetitive manual operations and retrieve project knowledge locally:
-- CLI command: `python .claude/lias/cli.py [doctor|status|knowledge|run|route]`
-- Windows wrapper: `.\.claude\lias\lias.bat [doctor|status|knowledge|run|route]`
-- Key Capabilities:
-  - `run source-file-stats`: scans files and lines of code without reading files into LLM context.
-  - `run env-check`: verifies Python, Git, Node, and Wrangler toolchains.
-  - `knowledge search "<query>"`: instantly retrieves project architecture, rules, and deployment facts via local SQLite FTS5.
-  - `route "<natural language query>"`: routes user prompts directly to local automation or knowledge before invoking complex LLM reasoning.
-Agents should execute local LIAS capabilities first instead of performing full-tree searches or rediscovering known project rules.
+LIAS lives in `.claude/lias/` and is the first stop for deterministic work and
+known project facts. Use it before scanning the tree or re-deriving rules.
+
+```powershell
+python .claude/lias/cli.py doctor                 # health + invalid manifests
+python .claude/lias/cli.py status                 # counts + recent runs
+python .claude/lias/cli.py route "<user request>"  # automation -> knowledge -> fallback
+python .claude/lias/cli.py run source-file-stats   # file/line counts
+python .claude/lias/cli.py run env-check           # Python/Git/Node/Wrangler
+python .claude/lias/cli.py knowledge search "deploy"
+python .claude/lias/cli.py learn note "Confirmed: <durable fact>"
+python .claude/lias/cli.py learn scan              # repeated local workflows
+```
+
+The Windows wrapper `.\.claude\lias\lias.bat <command>` is equivalent.
+
+Rules for agents:
+
+- `route` reports `action: automation` → use its structured `data`; do not read
+  the scanned files into context.
+- `action: knowledge` → answer from `matches`, cite `provenance`, and never
+  present an unverified or expired record as confirmed.
+- `action: unmatched` → normal reasoning/tools are appropriate; record durable
+  confirmations with `learn note` (prefix `Confirmed:`, `Rule:`, `Decision:`,
+  `Architecture decision:` or `Known resolution:`).
+- Do not fabricate token savings. LIAS reports measured wall-clock time only.
+- Do not claim automatic prompt interception: this environment has no supported
+  hook, so the agent must call the CLI explicitly.
+
+Docs: `.claude/lias/docs/` (architecture, setup, integration, knowledge,
+automation, security, troubleshooting, benchmarks).
+
 
