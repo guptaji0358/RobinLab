@@ -166,6 +166,44 @@ print(json.dumps({{"runs": n + 1}}))
         self.assertEqual(result.status, "denied")
         self.assertIn("escapes project root", result.error)
 
+    def test_manifest_id_traversal_rejected(self):
+        with self.assertRaises(ValueError):
+            self.registry.register(self._manifest(id="../../evil"))
+        (self.config.manifests_dir / "evil.json").write_text(
+            '{"id": "../../evil", "name": "Evil", "description": "x", "entry_point": "auto.py"}',
+            encoding="utf-8",
+        )
+        self.registry.sync_from_disk()
+        self.assertTrue(self.registry.load_errors)
+        self.assertFalse(any(m.id.endswith("evil") for m in self.registry.list_all(enabled_only=False)))
+        self.assertFalse((self.root / "evil.json").exists())
+
+    def test_invalid_output_is_not_cached(self):
+        marker = self.root / "runs2.txt"
+        self._script(
+            "auto.py",
+            f"""
+import json, pathlib
+p = pathlib.Path({str(marker)!r})
+n = int(p.read_text()) if p.exists() else 0
+p.write_text(str(n + 1))
+print(json.dumps({{"count": "bad"}}))
+""",
+        )
+        self.registry.register(
+            self._manifest(
+                cache_policy={"enabled": True, "ttl": 60},
+                output_schema={
+                    "type": "object",
+                    "required": ["count"],
+                    "properties": {"count": {"type": "integer"}},
+                },
+            )
+        )
+        self.assertFalse(self.runner.run("t-auto").output_valid)
+        self.assertFalse(self.runner.run("t-auto").cached)
+        self.assertEqual(marker.read_text(), "2")
+
 
 if __name__ == "__main__":
     unittest.main()

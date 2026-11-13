@@ -81,7 +81,7 @@ class LocalRunner:
             return self._fail(automation_id, "error", -1, f"Automation '{automation_id}' not found in registry.")
 
         failure_policy = manifest.failure_policy or {}
-        quarantine_after = int(failure_policy.get("quarantine_on_failures", 3) or 3)
+        quarantine_after = max(1, int(failure_policy.get("quarantine_on_failures", 3) or 3))
         previous_failures = self._consecutive_failures(automation_id, quarantine_after)
 
         if not manifest.enabled:
@@ -172,7 +172,8 @@ class LocalRunner:
             result.output_valid = ok
             if not ok:
                 result.warnings.append("Output schema mismatch: " + "; ".join(output_errors))
-            self._cache_store(manifest, payload, result.result, fingerprints)
+            if ok:
+                self._cache_store(manifest, payload, result.result, fingerprints)
         elif result.status in ("error", "timeout"):
             failures = self._consecutive_failures(automation_id, quarantine_after)
             if failures >= quarantine_after:

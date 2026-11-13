@@ -42,7 +42,7 @@ class CandidateManager:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> CandidateRecord:
         """Record or increment occurrence of an observed pattern or candidate."""
-        meta = metadata or {}
+        meta = dict(metadata or {})
         meta["category"] = category
 
         with db_session(self.db_path) as conn:
@@ -53,15 +53,21 @@ class CandidateManager:
             if row:
                 candidate_id = row["id"]
                 new_freq = row["frequency"] + 1
+                try:
+                    merged_meta = json.loads(row["metadata_json"] or "{}")
+                except Exception:
+                    merged_meta = {}
+                merged_meta.update(meta)
                 cur.execute(
                     """
                     UPDATE candidates
                     SET frequency = ?, estimated_savings = ?, risk_tier = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                     """,
-                    (new_freq, estimated_savings, risk_tier, json.dumps(meta), candidate_id),
+                    (new_freq, estimated_savings, risk_tier, json.dumps(merged_meta), candidate_id),
                 )
                 status = row["status"]
+                meta = merged_meta
             else:
                 candidate_id = f"cand_{uuid.uuid4().hex[:10]}"
                 new_freq = 1

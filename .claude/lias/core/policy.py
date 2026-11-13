@@ -21,6 +21,7 @@ class SecurityTier(enum.IntEnum):
 # Regex patterns that identify sensitive data (secrets, API keys, passwords)
 SECRET_PATTERNS = [
     re.compile(r"(?i)(api[_-]?key|secret|token|password|passwd|auth[_-]?token)\s*[:=]\s*['\"][a-zA-Z0-9_\-\.]{8,}['\"]"),
+    re.compile(r"(?i)\b[A-Z0-9_]*(?:API_?KEY|TOKEN|SECRET|PASSWORD|PASSWD)\s*=\s*[^\s'\"#]{8,}"),
     re.compile(r"(?i)bearer\s+[a-zA-Z0-9_\-\.]{15,}"),
     re.compile(r"-----BEGIN (RSA|EC|OPENSSH|DSA|PGP) PRIVATE KEY-----"),
     re.compile(r"(?i)ghp_[a-zA-Z0-9]{36}"),

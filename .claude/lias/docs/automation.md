@@ -38,6 +38,8 @@ python .claude/lias/cli.py run source-file-stats --input "{}"
    ```powershell
    python .claude/lias/cli.py quarantine list
    python .claude/lias/cli.py quarantine release source-file-stats
+   python .claude/lias/cli.py automation disable source-file-stats
+   python .claude/lias/cli.py automation enable source-file-stats
    ```
 
 Release inserts a `reset` history row and re-enables the automation.

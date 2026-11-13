@@ -143,6 +143,14 @@ def main():
     q_release = q_subs.add_parser("release", help="Re-enable an automation and reset its failures")
     q_release.add_argument("automation_id", help="Automation ID to release")
 
+    # Automation administration
+    auto_parser = subparsers.add_parser("automation", help="Enable or disable an automation")
+    a_subs = auto_parser.add_subparsers(dest="a_action", required=True)
+    a_disable = a_subs.add_parser("disable", help="Disable an automation without deleting it")
+    a_disable.add_argument("automation_id", help="Automation ID to disable")
+    a_enable = a_subs.add_parser("enable", help="Re-enable an automation and reset its failures")
+    a_enable.add_argument("automation_id", help="Automation ID to enable")
+
     # Cache
     cache_parser = subparsers.add_parser("cache", help="Inspect or clear the local cache")
     c_subs = cache_parser.add_subparsers(dest="c_action", required=True)
@@ -206,14 +214,18 @@ def main():
                     ),
                 }, indent=2))
                 sys.exit(2)
-            rec = store.add(
-                category=args.category,
-                content=args.content,
-                provenance=args.provenance,
-                confidence=args.confidence,
-                expires_at=args.expires,
-                on_secret="reject",
-            )
+            try:
+                rec = store.add(
+                    category=args.category,
+                    content=args.content,
+                    provenance=args.provenance,
+                    confidence=args.confidence,
+                    expires_at=args.expires,
+                    on_secret="reject",
+                )
+            except ValueError as exc:
+                print(json.dumps({"status": "rejected", "stored": False, "reason": str(exc)}, indent=2))
+                sys.exit(2)
             print(json.dumps({"status": "stored", "record": rec.to_dict()}, indent=2))
         elif args.k_action == "list":
             records = store.list_all(category=args.category)
@@ -262,6 +274,17 @@ def main():
             released = recovery.release(args.automation_id)
             print(json.dumps({"released": released, "automation_id": args.automation_id}, indent=2))
             if not released:
+                sys.exit(2)
+    elif args.command == "automation":
+        if args.a_action == "disable":
+            changed = registry.set_enabled(args.automation_id, False)
+            print(json.dumps({"automation_id": args.automation_id, "enabled": False, "changed": changed}, indent=2))
+            if not changed:
+                sys.exit(2)
+        elif args.a_action == "enable":
+            changed = recovery.release(args.automation_id)
+            print(json.dumps({"automation_id": args.automation_id, "enabled": True, "changed": changed}, indent=2))
+            if not changed:
                 sys.exit(2)
     elif args.command == "cache":
         if args.c_action == "stats":

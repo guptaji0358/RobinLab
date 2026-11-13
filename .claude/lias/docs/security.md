@@ -51,8 +51,9 @@ git-ignored.
 
 ## Reporting a suspected issue
 
-1. Disable the automation: `quarantine release` reverses this, so first inspect
-   `candidates` and the manifest.
+1. Disable the automation:
+   `python .claude/lias/cli.py automation disable <id>`.
+   `automation enable <id>` re-enables it and resets the failure streak.
 2. Run `python .claude/lias/cli.py fsck`.
 3. Create a backup before changing data.
 4. Document the affected automation id and caller in the issue.

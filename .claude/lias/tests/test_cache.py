@@ -83,6 +83,13 @@ class TestCache(unittest.TestCase):
     def test_migration_version(self):
         self.assertEqual(MigrationManager(self.config.db_path).get_current_version(), 3)
 
+    def test_partial_migration_is_tolerated(self):
+        # Simulate a crash after the ALTER but before recording version 3.
+        with db_session(self.config.db_path) as conn:
+            conn.execute("DELETE FROM schema_migrations WHERE version = 3")
+        self.assertEqual(MigrationManager(self.config.db_path).apply_migrations(), 1)
+        self.assertEqual(MigrationManager(self.config.db_path).get_current_version(), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

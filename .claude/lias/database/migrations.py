@@ -62,10 +62,14 @@ class MigrationManager:
             cur = conn.cursor()
             for version, desc, sql in MIGRATIONS:
                 if version > current:
-                    if sql.strip().startswith("--"):
-                        pass
-                    else:
-                        conn.executescript(sql)
+                    if not sql.strip().startswith("--"):
+                        try:
+                            conn.executescript(sql)
+                        except sqlite3.OperationalError as exc:
+                            # Re-running a partially applied migration must not
+                            # corrupt or abort the upgrade.
+                            if "duplicate column name" not in str(exc).lower():
+                                raise
                     cur.execute(
                         "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
                         (version, desc)

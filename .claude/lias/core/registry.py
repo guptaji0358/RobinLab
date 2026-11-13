@@ -5,11 +5,14 @@ Manages registered automation manifests, validates schemas, and tracks active au
 
 from __future__ import annotations
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from lias.database.connection import db_session
+
+ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 
 
 @dataclass
@@ -72,6 +75,8 @@ class AutomationRegistry:
 
     def register(self, manifest: AutomationManifest) -> None:
         """Register an automation manifest in disk JSON and the SQLite database."""
+        if not ID_PATTERN.match(manifest.id):
+            raise ValueError(f"Invalid automation id '{manifest.id}'")
         manifest_file = self.manifests_dir / f"{manifest.id}.json"
         manifest_data = manifest.to_dict()
 
@@ -114,6 +119,8 @@ class AutomationRegistry:
 
     def get(self, automation_id: str) -> Optional[AutomationManifest]:
         """Fetch automation manifest by ID."""
+        if not ID_PATTERN.match(automation_id):
+            return None
         manifest_file = self.manifests_dir / f"{automation_id}.json"
         if manifest_file.exists():
             try:
@@ -181,6 +188,9 @@ def validate_manifest_data(data: Dict[str, Any]) -> List[str]:
         value = data.get(field_name)
         if not isinstance(value, str) or not value.strip():
             errors.append(f"'{field_name}' is required")
+    manifest_id = data.get("id")
+    if isinstance(manifest_id, str) and not ID_PATTERN.match(manifest_id):
+        errors.append("'id' must match ^[a-z0-9][a-z0-9._-]{0,63}$ (no path separators)")
     tier = data.get("tier", 0)
     if not isinstance(tier, int) or tier not in (0, 1, 2):
         errors.append("'tier' must be 0, 1 or 2")

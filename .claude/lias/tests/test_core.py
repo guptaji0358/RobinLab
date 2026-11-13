@@ -67,6 +67,11 @@ class TestLiasCore(unittest.TestCase):
         self.assertNotIn("sk-1234567890", cleaned)
         self.assertIn("[REDACTED_SECRET]", cleaned)
 
+        env_sample = "HF_TOKEN=hf_abcdefghijklmnopqrstuvwxyz123456"
+        env_cleaned, env_secrets = self.policy.scrub_secrets(env_sample)
+        self.assertTrue(env_secrets)
+        self.assertNotIn("hf_abcdefghijklmnopqrstuvwxyz123456", env_cleaned)
+
     def test_knowledge_crud_and_fts5(self):
         rec = self.store.add(
             category="architecture",

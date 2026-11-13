@@ -31,6 +31,9 @@
     "node",
     "wrangler"
   ],
+  "generated": false,
+  "validation": {},
+  "created_by": "manual",
   "cache_policy": {
     "enabled": true,
     "ttl": 600

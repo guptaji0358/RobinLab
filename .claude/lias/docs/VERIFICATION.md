@@ -8,11 +8,13 @@ Run on 2026-11-13, Windows 11 (AMD64), Python 3.13.15, PowerShell 5.1.
 python -m unittest discover -s .claude\lias\tests -t .claude
 ```
 
-Result: **56 tests passed**. Coverage includes root detection, policy and path
-containment, registry/manifest validation, runner I/O schemas, timeouts,
-retries, quarantine, caching and invalidation, knowledge CRUD/FTS5/expiry,
-duplicates and contradictions, audit trail, candidate promotion, bounded
-generation, recovery/backup/restore, routing and CLI integration.
+Result: **59 tests passed**. Coverage includes root detection, policy and path
+containment (including unquoted secrets), registry/manifest validation and
+manifest-ID safety, runner I/O schemas, timeouts, retries, quarantine, caching
+and invalidation, partial-migration tolerance, knowledge CRUD/FTS5/expiry,
+duplicates and contradictions, audit trail, candidate promotion with metadata
+merging, bounded generation, recovery/backup/restore, routing and CLI
+integration.
 
 ## Acceptance scenarios
 
@@ -31,7 +33,7 @@ Result: **all seven scenarios passed** (machine-readable output in
 | D failure recovery | error → error → quarantined → released → runs again | PASS |
 | E project isolation | Two temp projects, separate DBs, 0 leaked records | PASS |
 | F permission compliance | Tier 2 `denied`, traversal `denied`, secret write `rejected` | PASS |
-| G efficiency | Cold 907 ms → warm 233 ms with a real cache hit; search 15 ms | PASS |
+| G efficiency | Cold → warm with a real cache hit (latest run 116 ms → 26 ms); search 2.8 ms | PASS |
 
 Scenario G is wall-clock evidence from this machine. It does **not** claim
 token savings; that number is not observable from a local process.

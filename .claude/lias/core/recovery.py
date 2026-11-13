@@ -8,7 +8,6 @@ touches unrelated project files or runs unattended in the background.
 
 from __future__ import annotations
 import datetime
-import os
 import shutil
 import sqlite3
 from pathlib import Path

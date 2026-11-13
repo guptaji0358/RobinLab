@@ -72,10 +72,13 @@ class LiasDiagnostics:
         # 4. Registered automations
         automations = self.registry.list_all(enabled_only=False)
         enabled_count = sum(1 for a in automations if a.enabled)
-        registry_status = "WARN" if self.registry.load_errors else "PASS"
+        duplicates = self.registry.find_duplicates()
+        registry_status = "WARN" if (self.registry.load_errors or duplicates) else "PASS"
         registry_details = f"{len(automations)} registered ({enabled_count} active)"
         if self.registry.load_errors:
             registry_details += f"; {len(self.registry.load_errors)} invalid manifest(s)"
+        if duplicates:
+            registry_details += f"; {len(duplicates)} duplicate definition(s)"
         checks.append({
             "component": "Automation Registry",
             "status": registry_status,
