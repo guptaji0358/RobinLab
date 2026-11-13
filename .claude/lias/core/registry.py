@@ -26,6 +26,7 @@ class AutomationManifest:
     input_schema: Dict[str, Any] = field(default_factory=dict)
     output_schema: Dict[str, Any] = field(default_factory=dict)
     dependencies: List[str] = field(default_factory=list)
+    keywords: List[str] = field(default_factory=list)
     cache_policy: Dict[str, Any] = field(default_factory=lambda: {"enabled": True, "ttl": 3600})
     failure_policy: Dict[str, Any] = field(default_factory=lambda: {"max_retries": 1, "quarantine_on_failures": 3})
 
@@ -38,19 +39,31 @@ class AutomationRegistry:
         self.manifests_dir = manifests_dir
         self.manifests_dir.mkdir(parents=True, exist_ok=True)
         self.db_path = db_path
+        self.load_errors: List[Dict[str, str]] = []
         self.sync_from_disk()
 
     def sync_from_disk(self) -> int:
         """Load any JSON manifests on disk into the database."""
         count = 0
-        for f in self.manifests_dir.glob("*.json"):
+        self.load_errors = []
+        for f in sorted(self.manifests_dir.glob("*.json")):
             try:
                 with open(f, "r", encoding="utf-8") as fh:
                     data = json.load(fh)
+                errors = validate_manifest_data(data)
+                if errors:
+                    self.load_errors.append({"manifest": f.name, "error": "; ".join(errors)})
+                    continue
                 manifest = AutomationManifest(**data)
+                if manifest.id != f.stem:
+                    self.load_errors.append(
+                        {"manifest": f.name, "error": f"id '{manifest.id}' does not match filename"}
+                    )
+                    continue
                 self.register(manifest)
                 count += 1
-            except Exception:
+            except Exception as exc:
+                self.load_errors.append({"manifest": f.name, "error": str(exc)})
                 continue
         return count
 
@@ -142,3 +155,33 @@ class AutomationRegistry:
         manifest.enabled = enabled
         self.register(manifest)
         return True
+
+    def find_duplicates(self) -> List[Dict[str, str]]:
+        """Detect manifests that point at the same entry point or share a name."""
+        seen: Dict[str, str] = {}
+        duplicates: List[Dict[str, str]] = []
+        for manifest in self.list_all(enabled_only=False):
+            for key in (f"entry:{manifest.entry_point}", f"name:{manifest.name.lower()}"):
+                if not key.split(":", 1)[1]:
+                    continue
+                if key in seen:
+                    duplicates.append({"kept": seen[key], "duplicate": manifest.id, "reason": key})
+                else:
+                    seen[key] = manifest.id
+        return duplicates
+
+
+def validate_manifest_data(data: Dict[str, Any]) -> List[str]:
+    """Validate required manifest fields without executing anything."""
+    errors: List[str] = []
+    for field_name in ("id", "name", "description", "entry_point"):
+        value = data.get(field_name)
+        if not isinstance(value, str) or not value.strip():
+            errors.append(f"'{field_name}' is required")
+    tier = data.get("tier", 0)
+    if not isinstance(tier, int) or tier not in (0, 1, 2):
+        errors.append("'tier' must be 0, 1 or 2")
+    timeout = data.get("timeout_seconds", 30)
+    if not isinstance(timeout, int) or not (1 <= timeout <= 600):
+        errors.append("'timeout_seconds' must be an integer between 1 and 600")
+    return errors

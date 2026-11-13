@@ -5,31 +5,41 @@
   "tier": 0,
   "entry_point": ".claude/lias/automation/scripts/source_file_stats.py",
   "enabled": true,
-  "version": "1.0.0",
-  "timeout_seconds": 30,
+  "version": "1.1.0",
+  "timeout_seconds": 60,
   "working_dir": ".",
   "input_schema": {},
   "output_schema": {
     "type": "object",
     "properties": {
-      "files_scanned": {
-        "type": "integer"
+      "status": {
+        "type": "string"
       },
-      "total_lines": {
-        "type": "integer"
-      },
-      "languages": {
-        "type": "object"
-      },
-      "directories": {
+      "result": {
         "type": "object"
       }
     }
   },
   "dependencies": [],
+  "keywords": [
+    "source",
+    "stats",
+    "statistics",
+    "lines",
+    "line",
+    "files",
+    "loc",
+    "count"
+  ],
   "cache_policy": {
     "enabled": true,
-    "ttl": 300
+    "ttl": 300,
+    "fingerprint_paths": [
+      "root",
+      "functions",
+      "tools",
+      "dev_server.py"
+    ]
   },
   "failure_policy": {
     "max_retries": 1,

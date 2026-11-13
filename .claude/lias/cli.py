@@ -17,6 +17,7 @@ CLAUDE_DIR = SCRIPT_DIR.parent
 if str(CLAUDE_DIR) not in sys.path:
     sys.path.insert(0, str(CLAUDE_DIR))
 
+from lias.core.cache import CacheManager
 from lias.core.config import LiasConfig
 from lias.core.diagnostics import LiasDiagnostics
 from lias.core.policy import PolicyEngine
@@ -41,12 +42,20 @@ def init_subsystems(project_root: Path | None = None):
         allow_tier2_auto=cfg.get("security", {}).get("tier2_auto_exec", False),
     )
     registry = AutomationRegistry(manifests_dir=cfg.manifests_dir, db_path=cfg.db_path)
+    cache_cfg = cfg.get("cache", {})
+    cache = CacheManager(
+        db_path=cfg.db_path,
+        enabled=cache_cfg.get("enabled", True),
+        default_ttl=cache_cfg.get("default_ttl_seconds", 3600),
+        max_entries=cache_cfg.get("max_cache_entries", 1000),
+    )
     runner = LocalRunner(
         project_root=cfg.project_root,
         registry=registry,
         policy=policy,
         db_path=cfg.db_path,
         max_output_bytes=cfg.get("runner", {}).get("max_output_bytes", 100000),
+        cache=cache,
     )
     store = KnowledgeStore(
         db_path=cfg.db_path,

@@ -43,6 +43,27 @@ def file_fingerprint(path: Path) -> Dict[str, Any]:
     }
 
 
+def path_fingerprint(path: Path) -> Dict[str, Any]:
+    """Fingerprint a file by content, a directory by its file listing, or a miss."""
+    if path.is_dir():
+        entries = []
+        try:
+            for child in sorted(path.rglob("*")):
+                if not child.is_file():
+                    continue
+                rel = child.relative_to(path).as_posix()
+                try:
+                    stat = child.stat()
+                except OSError:
+                    continue
+                entries.append(f"{rel}:{stat.st_size}:{stat.st_mtime_ns}")
+        except OSError:
+            return {"path": str(path), "exists": False}
+        digest = hashlib.sha256("\n".join(entries).encode("utf-8")).hexdigest()
+        return {"path": str(path), "exists": True, "kind": "dir", "files": len(entries), "sha256": digest}
+    return file_fingerprint(path)
+
+
 class CacheManager:
     def __init__(
         self,
