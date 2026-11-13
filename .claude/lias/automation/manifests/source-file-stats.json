@@ -1,0 +1,38 @@
+{
+  "id": "source-file-stats",
+  "name": "Source File Statistics",
+  "description": "Calculates file count, language distribution, and line count across RobinLabs directories.",
+  "tier": 0,
+  "entry_point": ".claude/lias/automation/scripts/source_file_stats.py",
+  "enabled": true,
+  "version": "1.0.0",
+  "timeout_seconds": 30,
+  "working_dir": ".",
+  "input_schema": {},
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "files_scanned": {
+        "type": "integer"
+      },
+      "total_lines": {
+        "type": "integer"
+      },
+      "languages": {
+        "type": "object"
+      },
+      "directories": {
+        "type": "object"
+      }
+    }
+  },
+  "dependencies": [],
+  "cache_policy": {
+    "enabled": true,
+    "ttl": 300
+  },
+  "failure_policy": {
+    "max_retries": 1,
+    "quarantine_on_failures": 3
+  }
+}

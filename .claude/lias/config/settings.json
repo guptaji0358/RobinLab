@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "project_name": "RobinLabs",
+  "runner": {
+    "default_timeout_seconds": 30,
+    "max_output_bytes": 100000,
+    "max_memory_mb": 512
+  },
+  "retrieval": {
+    "max_results": 5,
+    "max_context_chars": 4000,
+    "min_relevance_score": 0.2
+  },
+  "learning": {
+    "auto_learn_facts": true,
+    "require_verification_above_tier": 0,
+    "promotion_frequency_threshold": 3,
+    "promotion_estimated_token_savings": 500
+  },
+  "cache": {
+    "enabled": true,
+    "default_ttl_seconds": 3600,
+    "max_cache_entries": 1000
+  },
+  "security": {
+    "tier0_auto_exec": true,
+    "tier1_auto_exec": true,
+    "tier2_auto_exec": false,
+    "allow_network_scripts": false
+  },
+  "resource_limits": {
+    "max_generated_automations": 50,
+    "max_log_mb": 10,
+    "max_db_mb": 100
+  }
+}

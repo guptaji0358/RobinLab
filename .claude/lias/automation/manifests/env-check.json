@@ -1,0 +1,38 @@
+{
+  "id": "env-check",
+  "name": "Environment & Tooling Check",
+  "description": "Verifies Python, Git, Node, and Wrangler availability and toolchain health.",
+  "tier": 0,
+  "entry_point": ".claude/lias/automation/scripts/env_check.py",
+  "enabled": true,
+  "version": "1.0.0",
+  "timeout_seconds": 15,
+  "working_dir": ".",
+  "input_schema": {},
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "python": {
+        "type": "object"
+      },
+      "git": {
+        "type": "object"
+      },
+      "node": {
+        "type": "object"
+      },
+      "wrangler": {
+        "type": "object"
+      }
+    }
+  },
+  "dependencies": [],
+  "cache_policy": {
+    "enabled": true,
+    "ttl": 600
+  },
+  "failure_policy": {
+    "max_retries": 1,
+    "quarantine_on_failures": 3
+  }
+}
