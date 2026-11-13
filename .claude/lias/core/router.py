@@ -55,13 +55,30 @@ class CapabilityRouter:
         search_results = self.retrieval.search(query, max_results=3)
         if search_results:
             top_res = search_results[0]
-            if top_res.score >= 0.3:
+            # Verify that at least one substantive query word appears in the record
+            stop_words = {
+                "a", "an", "the", "about", "for", "with", "in", "on", "at", "by", "from",
+                "to", "of", "and", "or", "is", "are", "was", "were", "what", "where", "how",
+                "can", "you", "me", "this", "that", "these", "those", "have", "has", "had"
+            }
+            query_keywords = [w for w in normalized.split() if len(w) > 3 and w not in stop_words]
+            has_keyword_match = any(
+                kw in top_res.record.content.lower() or kw in top_res.record.category.lower()
+                for kw in query_keywords
+            )
+
+            if (top_res.match_type == "exact" or has_keyword_match) and top_res.score >= 0.3:
                 return RoutedResponse(
                     action_type="knowledge",
                     summary=f"Found {len(search_results)} verified knowledge records for query.",
                     data={
                         "query": query,
-                        "matches": [r.to_dict() for r in search_results],
+                        "matches": [r.to_dict() for r in search_results if (
+                            r.match_type == "exact" or any(
+                                kw in r.record.content.lower() or kw in r.record.category.lower()
+                                for kw in query_keywords
+                            )
+                        )],
                     },
                     tokens_saved_estimate=200 * len(search_results),
                 )

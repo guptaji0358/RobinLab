@@ -197,3 +197,16 @@ is the source of truth, but a `git push` alone never reaches production.
 
 - `docs/COLLECTION.md` — bucket architecture, API contract, thumbnails, deploy
   details, security notes.
+
+## Local Intelligence & Automation System (LIAS)
+
+LIAS is embedded in `.claude/lias/` to eliminate repetitive manual operations and retrieve project knowledge locally:
+- CLI command: `python .claude/lias/cli.py [doctor|status|knowledge|run|route]`
+- Windows wrapper: `.\.claude\lias\lias.bat [doctor|status|knowledge|run|route]`
+- Key Capabilities:
+  - `run source-file-stats`: scans files and lines of code without reading files into LLM context.
+  - `run env-check`: verifies Python, Git, Node, and Wrangler toolchains.
+  - `knowledge search "<query>"`: instantly retrieves project architecture, rules, and deployment facts via local SQLite FTS5.
+  - `route "<natural language query>"`: routes user prompts directly to local automation or knowledge before invoking complex LLM reasoning.
+Agents should execute local LIAS capabilities first instead of performing full-tree searches or rediscovering known project rules.
+

@@ -88,6 +88,9 @@ def main():
     list_p = k_subs.add_parser("list", help="List knowledge records")
     list_p.add_argument("--category", default=None, help="Filter category")
 
+    index_p = k_subs.add_parser("index", help="Index foundational facts and project docs")
+    index_p.add_argument("--seed-only", action="store_true", help="Only index foundational facts")
+
     # Route
     route_p = subparsers.add_parser("route", help="Route natural-language intent")
     route_p.add_argument("query", help="User intent or natural-language request")
@@ -124,6 +127,20 @@ def main():
         elif args.k_action == "list":
             records = store.list_all(category=args.category)
             print(json.dumps([r.to_dict() for r in records], indent=2))
+        elif args.k_action == "index":
+            from lias.knowledge.indexing import ProjectIndexer
+            indexer = ProjectIndexer(store=store, project_root=cfg.project_root)
+            seed_count = indexer.index_foundational()
+            doc_count = 0
+            if not args.seed_only:
+                for md in [cfg.claude_dir / "CLAUDE.md", cfg.project_root / "docs" / "COLLECTION.md"]:
+                    if md.exists():
+                        doc_count += indexer.index_markdown_file(md)
+            print(json.dumps({
+                "status": "success",
+                "foundational_facts_indexed": seed_count,
+                "document_chunks_indexed": doc_count,
+            }, indent=2))
     elif args.command == "route":
         resp = router.route(args.query)
         print(json.dumps({
