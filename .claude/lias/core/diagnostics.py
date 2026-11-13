@@ -16,9 +16,10 @@ from lias.database.connection import db_session
 
 
 class LiasDiagnostics:
-    def __init__(self, config: LiasConfig, registry: AutomationRegistry):
+    def __init__(self, config: LiasConfig, registry: AutomationRegistry, recovery=None):
         self.config = config
         self.registry = registry
+        self.recovery = recovery
 
     def run_doctor(self) -> Dict[str, Any]:
         """Perform comprehensive health inspection and report issues."""
@@ -71,13 +72,40 @@ class LiasDiagnostics:
         # 4. Registered automations
         automations = self.registry.list_all(enabled_only=False)
         enabled_count = sum(1 for a in automations if a.enabled)
+        registry_status = "WARN" if self.registry.load_errors else "PASS"
+        registry_details = f"{len(automations)} registered ({enabled_count} active)"
+        if self.registry.load_errors:
+            registry_details += f"; {len(self.registry.load_errors)} invalid manifest(s)"
         checks.append({
             "component": "Automation Registry",
-            "status": "PASS",
-            "details": f"{len(automations)} registered ({enabled_count} active)",
+            "status": registry_status,
+            "details": registry_details,
         })
 
-        # 5. Directory permissions
+        # 5. Configuration
+        config_issues = self.recovery.validate_config() if self.recovery else []
+        checks.append({
+            "component": "Configuration",
+            "status": "PASS" if not config_issues else "WARN",
+            "details": "Valid" if not config_issues else "; ".join(config_issues[:5]),
+        })
+
+        # 6. Quarantine and backups
+        if self.recovery:
+            quarantined = self.recovery.quarantined()
+            checks.append({
+                "component": "Quarantine",
+                "status": "PASS" if not quarantined else "WARN",
+                "details": "None" if not quarantined
+                else ", ".join(q["automation_id"] for q in quarantined),
+            })
+            checks.append({
+                "component": "Backups",
+                "status": "PASS",
+                "details": f"{len(self.recovery.list_backups())} verified backup(s)",
+            })
+
+        # 7. Directory permissions
         dir_status = "PASS"
         for p in [self.config.config_dir, self.config.database_dir, self.config.cache_dir, self.config.logs_dir]:
             if not os.access(p, os.W_OK):
@@ -102,6 +130,7 @@ class LiasDiagnostics:
         """Compact runtime status summary."""
         doc = self.run_doctor()
         recent_executions: List[Dict[str, Any]] = []
+        counts = {"knowledge": 0, "automations": 0, "candidates": 0, "cache_entries": 0}
         try:
             with db_session(self.config.db_path) as conn:
                 cur = conn.cursor()
@@ -118,12 +147,24 @@ class LiasDiagnostics:
                         "status": r["status"],
                         "start_time": r["start_time"],
                     })
+                for key, table in (
+                    ("knowledge", "knowledge"),
+                    ("automations", "automations"),
+                    ("candidates", "candidates"),
+                    ("cache_entries", "cache_entries"),
+                ):
+                    try:
+                        counts[key] = cur.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                    except Exception:
+                        pass
         except Exception:
             pass
 
         return {
             "health": doc["status"],
             "version": doc["version"],
+            "project_root": str(self.config.project_root),
+            "counts": counts,
             "checks_summary": {c["component"]: c["status"] for c in doc["checks"]},
             "recent_executions": recent_executions,
         }

@@ -21,6 +21,7 @@ from lias.core.cache import CacheManager
 from lias.core.config import LiasConfig
 from lias.core.diagnostics import LiasDiagnostics
 from lias.core.policy import PolicyEngine
+from lias.core.recovery import RecoveryManager
 from lias.core.registry import AutomationRegistry
 from lias.core.router import CapabilityRouter
 from lias.core.runner import LocalRunner
@@ -64,9 +65,10 @@ def init_subsystems(project_root: Path | None = None):
     )
     retrieval = KnowledgeRetrieval(db_path=cfg.db_path)
     router = CapabilityRouter(registry=registry, runner=runner, retrieval=retrieval)
-    diag = LiasDiagnostics(config=cfg, registry=registry)
+    recovery = RecoveryManager(cfg, registry)
+    diag = LiasDiagnostics(config=cfg, registry=registry, recovery=recovery)
 
-    return cfg, registry, runner, store, retrieval, router, diag
+    return cfg, registry, runner, store, retrieval, router, diag, cache, recovery
 
 
 def main():
@@ -97,9 +99,14 @@ def main():
     add_p.add_argument("--content", required=True, help="Knowledge fact/content")
     add_p.add_argument("--provenance", default="user-cli", help="Source of knowledge")
     add_p.add_argument("--confidence", type=float, default=1.0, help="Confidence 0.0-1.0")
+    add_p.add_argument("--expires", default=None, help="ISO timestamp after which the record expires")
+    add_p.add_argument("--force", action="store_true", help="Store despite a duplicate/contradiction warning")
 
     list_p = k_subs.add_parser("list", help="List knowledge records")
     list_p.add_argument("--category", default=None, help="Filter category")
+
+    del_p = k_subs.add_parser("delete", help="Delete a knowledge record by id")
+    del_p.add_argument("record_id", help="Knowledge record id")
 
     index_p = k_subs.add_parser("index", help="Index foundational facts and project docs")
     index_p.add_argument("--seed-only", action="store_true", help="Only index foundational facts")
@@ -108,8 +115,35 @@ def main():
     route_p = subparsers.add_parser("route", help="Route natural-language intent")
     route_p.add_argument("query", help="User intent or natural-language request")
 
+    # Backup / restore / integrity
+    backup_p = subparsers.add_parser("backup", help="Create a verified database backup")
+    backup_p.add_argument("--reason", default="manual", help="Short reason for the backup")
+
+    restore_p = subparsers.add_parser("restore", help="Restore a LIAS backup")
+    restore_p.add_argument("backup_path", help="Path to a backup inside .claude/lias/backups")
+
+    subparsers.add_parser("fsck", help="Check database integrity and configuration")
+
+    # Quarantine
+    q_parser = subparsers.add_parser("quarantine", help="Inspect or release quarantined automations")
+    q_subs = q_parser.add_subparsers(dest="q_action", required=True)
+    q_subs.add_parser("list", help="List disabled/quarantined automations")
+    q_release = q_subs.add_parser("release", help="Re-enable an automation and reset its failures")
+    q_release.add_argument("automation_id", help="Automation ID to release")
+
+    # Cache
+    cache_parser = subparsers.add_parser("cache", help="Inspect or clear the local cache")
+    c_subs = cache_parser.add_subparsers(dest="c_action", required=True)
+    c_subs.add_parser("stats", help="Show cache statistics")
+    c_subs.add_parser("purge", help="Remove expired cache entries")
+    c_subs.add_parser("clear", help="Remove all cache entries")
+
+    # Candidates
+    cand_parser = subparsers.add_parser("candidates", help="Inspect learned candidates")
+    cand_parser.add_argument("--status", default=None, help="Filter: observed|promoted|quarantined")
+
     args = parser.parse_args()
-    cfg, registry, runner, store, retrieval, router, diag = init_subsystems()
+    cfg, registry, runner, store, retrieval, router, diag, cache, recovery = init_subsystems()
 
     if args.command == "doctor":
         res = diag.run_doctor()
@@ -130,16 +164,35 @@ def main():
             out = [r.to_dict() for r in results]
             print(json.dumps(out, indent=2))
         elif args.k_action == "add":
+            from lias.knowledge.validation import KnowledgeValidator
+
+            validation = KnowledgeValidator(store).validate_candidate(
+                category=args.category, content=args.content, confidence=args.confidence
+            )
+            if not validation.is_valid and not args.force:
+                print(json.dumps({
+                    "status": validation.status,
+                    "stored": False,
+                    "reason": validation.reason,
+                    "conflicting_record": (
+                        validation.conflicting_record.id if validation.conflicting_record else None
+                    ),
+                }, indent=2))
+                sys.exit(2)
             rec = store.add(
                 category=args.category,
                 content=args.content,
                 provenance=args.provenance,
                 confidence=args.confidence,
+                expires_at=args.expires,
+                on_secret="reject",
             )
-            print(json.dumps(rec.to_dict(), indent=2))
+            print(json.dumps({"status": "stored", "record": rec.to_dict()}, indent=2))
         elif args.k_action == "list":
             records = store.list_all(category=args.category)
             print(json.dumps([r.to_dict() for r in records], indent=2))
+        elif args.k_action == "delete":
+            print(json.dumps({"deleted": store.delete(args.record_id), "id": args.record_id}, indent=2))
         elif args.k_action == "index":
             from lias.knowledge.indexing import ProjectIndexer
             indexer = ProjectIndexer(store=store, project_root=cfg.project_root)
@@ -162,6 +215,50 @@ def main():
             "tokens_saved_estimate": resp.tokens_saved_estimate,
             "data": resp.data,
         }, indent=2))
+    elif args.command == "backup":
+        path = recovery.backup(args.reason)
+        print(json.dumps({"status": "success", "backup": str(path)}, indent=2))
+    elif args.command == "restore":
+        safety = recovery.restore(Path(args.backup_path))
+        print(json.dumps({
+            "status": "success",
+            "restored_from": args.backup_path,
+            "safety_backup": str(safety),
+        }, indent=2))
+    elif args.command == "fsck":
+        print(json.dumps(recovery.self_check(), indent=2))
+    elif args.command == "quarantine":
+        if args.q_action == "list":
+            print(json.dumps(recovery.quarantined(), indent=2))
+        elif args.q_action == "release":
+            released = recovery.release(args.automation_id)
+            print(json.dumps({"released": released, "automation_id": args.automation_id}, indent=2))
+            if not released:
+                sys.exit(2)
+    elif args.command == "cache":
+        if args.c_action == "stats":
+            print(json.dumps(cache.stats(), indent=2))
+        elif args.c_action == "purge":
+            print(json.dumps({"purged": cache.purge_expired()}, indent=2))
+        elif args.c_action == "clear":
+            print(json.dumps({"cleared": cache.clear()}, indent=2))
+    elif args.command == "candidates":
+        from lias.learning.candidates import CandidateManager
+
+        manager = CandidateManager(cfg.db_path, store)
+        items = manager.list_candidates(status=args.status)
+        print(json.dumps([
+            {
+                "id": c.id,
+                "pattern": c.workflow_pattern,
+                "frequency": c.frequency,
+                "estimated_savings": c.estimated_savings,
+                "risk_tier": c.risk_tier,
+                "status": c.status,
+                "metadata": c.metadata,
+            }
+            for c in items
+        ], indent=2))
 
 
 if __name__ == "__main__":

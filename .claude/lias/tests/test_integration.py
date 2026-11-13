@@ -16,7 +16,10 @@ from lias.cli import init_subsystems
 class TestClientIntegration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.cfg, cls.registry, cls.runner, cls.store, cls.retrieval, cls.router, cls.diag = init_subsystems()
+        (
+            cls.cfg, cls.registry, cls.runner, cls.store, cls.retrieval,
+            cls.router, cls.diag, cls.cache, cls.recovery,
+        ) = init_subsystems()
 
     def test_doctor_healthy(self):
         doc = self.diag.run_doctor()
