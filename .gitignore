@@ -21,3 +21,6 @@ Thumbs.db
 # Cloudflare / Node
 .wrangler/
 node_modules/
+
+# LIAS benchmark results
+.claude/lias/benchmarks/results/
