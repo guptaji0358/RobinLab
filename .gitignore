@@ -7,6 +7,12 @@
 __pycache__/
 *.pyc
 
+# LIAS runtime (project-local databases, caches, logs, backups)
+.claude/lias/database/*.sqlite3*
+.claude/lias/cache/
+.claude/lias/logs/
+.claude/lias/backups/
+
 # OS junk
 desktop.ini
 Thumbs.db
