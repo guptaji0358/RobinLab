@@ -27,6 +27,15 @@ MIGRATIONS: List[Tuple[int, str, str]] = [
         );
         CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id);
         """
+    ),
+    (
+        3,
+        "Add cache fingerprints and operation version",
+        """
+        ALTER TABLE cache_entries ADD COLUMN fingerprints_json TEXT NOT NULL DEFAULT '[]';
+        ALTER TABLE cache_entries ADD COLUMN operation_version TEXT NOT NULL DEFAULT '1.0.0';
+        CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache_entries(expires_at);
+        """
     )
 ]
 
