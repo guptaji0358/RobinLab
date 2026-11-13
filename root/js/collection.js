@@ -675,15 +675,17 @@
      listed falls back to a Crunchyroll search. */
   const watchMap = new Map();
   const normTitle = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  fetch("data/anime-watch.json")
-    .then((r) => (r.ok ? r.json() : {}))
-    .then((obj) => {
-      for (const [k, v] of Object.entries(obj || {})) {
-        if (typeof v === "string" && /^https:\/\//i.test(v)) watchMap.set(normTitle(k), v);
-      }
-      if (typeof render === "function" && el.lightbox.hidden) render();
-    })
-    .catch(() => {});
+  if (!CERT_SCOPE) {
+    fetch("data/anime-watch.json")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((obj) => {
+        for (const [k, v] of Object.entries(obj || {})) {
+          if (typeof v === "string" && /^https:\/\//i.test(v)) watchMap.set(normTitle(k), v);
+        }
+        if (typeof render === "function" && el.lightbox.hidden) render();
+      })
+      .catch(() => {});
+  }
 
   function watchUrl(title) {
     if (!title || title === UNSORTED) return "";
@@ -796,6 +798,17 @@
     return frag;
   }
 
+  /* Certificates are one flat set — no anime title/character dropdown groups. */
+  function buildFlatGrid(files) {
+    const grid = document.createElement("div");
+    grid.className = "col-grid";
+    for (const file of files) {
+      grid.appendChild(buildCard(file, visible.length));
+      visible.push(file);
+    }
+    return grid;
+  }
+
   function render() {
     if (imageObserver) imageObserver.disconnect();
     el.packs.textContent = "";
@@ -806,7 +819,9 @@
 
     const matched = [];
     for (const folder of folders) matched.push(...packs.get(folder).filter(matchesQuery).sort(sorter));
-    const frag = matched.length ? buildGroups(matched) : document.createDocumentFragment();
+    const frag = matched.length
+      ? (CERT_SCOPE ? buildFlatGrid(matched) : buildGroups(matched))
+      : document.createDocumentFragment();
 
     if (!visible.length) {
       showState(
@@ -946,7 +961,7 @@
     el.lbCounter.textContent = `${lbPos + 1} / ${visible.length}`;
     paintDetails(file);
     if (el.lbWatch) {
-      const url = watchUrl(titleAndCharacter(file)[0]);
+      const url = CERT_SCOPE ? "" : watchUrl(titleAndCharacter(file)[0]);
       el.lbWatch.hidden = !url;
       if (url) el.lbWatch.href = url;
     }
