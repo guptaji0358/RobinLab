@@ -33,11 +33,26 @@ class KnowledgeRecord:
         return asdict(self)
 
 
+def _project_root_for(db_path: Path) -> Path:
+    """Resolve the project root from a database path without relying on cwd."""
+    current = db_path.resolve().parent
+    for parent in [current] + list(current.parents):
+        if (parent / ".claude").is_dir() or (parent / ".git").exists():
+            return parent
+    # Fallback: <root>/.claude/lias/database/<db>
+    return db_path.resolve().parents[3]
+
+
 class KnowledgeStore:
-    def __init__(self, db_path: Path, project_id: str = "RobinLabs"):
+    def __init__(
+        self,
+        db_path: Path,
+        project_id: str = "RobinLabs",
+        project_root: Optional[Path] = None,
+    ):
         self.db_path = db_path
         self.project_id = project_id
-        self.policy = PolicyEngine(project_root=db_path.parent.parent.parent)
+        self.policy = PolicyEngine(project_root=project_root or _project_root_for(db_path))
 
     def _generate_id(self, category: str, content: str) -> str:
         h = hashlib.sha256(f"{category}:{content.strip().lower()}".encode("utf-8")).hexdigest()[:12]
@@ -53,17 +68,26 @@ class KnowledgeStore:
         verified: bool = True,
         expires_at: Optional[str] = None,
         custom_id: Optional[str] = None,
+        on_secret: str = "redact",
     ) -> KnowledgeRecord:
-        """Add or update a knowledge record safely."""
+        """Add or update a knowledge record safely.
+
+        ``on_secret`` controls handling of detected credentials: ``redact``
+        (default) removes them before persistence, ``reject`` refuses the write.
+        """
         clean_content, had_secrets = self.policy.scrub_secrets(content)
+        if had_secrets and on_secret == "reject":
+            raise ValueError("Knowledge content contains sensitive credentials and was rejected.")
         record_id = custom_id or self._generate_id(category, clean_content)
         now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        action = "update"
 
         with db_session(self.db_path) as conn:
             cur = conn.cursor()
             cur.execute("SELECT id, version FROM knowledge WHERE id = ?", (record_id,))
             existing = cur.fetchone()
             if existing:
+                action = "update"
                 new_version = existing["version"] + 1
                 cur.execute(
                     """
@@ -86,6 +110,7 @@ class KnowledgeStore:
                 )
                 version = new_version
             else:
+                action = "create"
                 version = 1
                 cur.execute(
                     """
@@ -107,6 +132,13 @@ class KnowledgeStore:
                     ),
                 )
 
+            self._audit(cur, action, record_id, {
+                "category": category,
+                "provenance": provenance,
+                "version": version,
+                "secrets_redacted": had_secrets,
+            })
+
         return KnowledgeRecord(
             id=record_id,
             category=category,
@@ -120,6 +152,20 @@ class KnowledgeStore:
             project_id=self.project_id,
             version=version,
         )
+
+    @staticmethod
+    def _audit(cur, action: str, entity_id: str, details: Dict[str, Any]) -> None:
+        """Append an audit row; never let auditing break the primary write."""
+        try:
+            cur.execute(
+                """
+                INSERT INTO audit_log (action, entity_type, entity_id, details_json)
+                VALUES (?, 'knowledge', ?, ?)
+                """,
+                (action, entity_id, json.dumps(details)),
+            )
+        except Exception:
+            pass
 
     def get(self, record_id: str) -> Optional[KnowledgeRecord]:
         """Retrieve a specific record by its ID."""
@@ -144,11 +190,14 @@ class KnowledgeStore:
             )
 
     def delete(self, record_id: str) -> bool:
-        """Delete a record by ID."""
+        """Delete a record by ID and record the action in the audit log."""
         with db_session(self.db_path) as conn:
             cur = conn.cursor()
             cur.execute("DELETE FROM knowledge WHERE id = ?", (record_id,))
-            return cur.rowcount > 0
+            deleted = cur.rowcount > 0
+            if deleted:
+                self._audit(cur, "delete", record_id, {})
+            return deleted
 
     def list_all(
         self,

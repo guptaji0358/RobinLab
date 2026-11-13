@@ -48,7 +48,11 @@ def init_subsystems(project_root: Path | None = None):
         db_path=cfg.db_path,
         max_output_bytes=cfg.get("runner", {}).get("max_output_bytes", 100000),
     )
-    store = KnowledgeStore(db_path=cfg.db_path, project_id=cfg.get("project_name", "RobinLabs"))
+    store = KnowledgeStore(
+        db_path=cfg.db_path,
+        project_id=cfg.get("project_name", "RobinLabs"),
+        project_root=cfg.project_root,
+    )
     retrieval = KnowledgeRetrieval(db_path=cfg.db_path)
     router = CapabilityRouter(registry=registry, runner=runner, retrieval=retrieval)
     diag = LiasDiagnostics(config=cfg, registry=registry)
