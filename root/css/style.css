@@ -1179,6 +1179,78 @@ a { color: inherit; text-decoration: none; }
   align-items: start;
 }
 
+/* Certificates flow — numbered nodes on a spine joined by arrows, cards zig-zag. */
+.cert-flow {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  width: 100%;
+  max-width: 980px;
+  position: relative;
+}
+.cert-flow::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 20px;
+  bottom: 20px;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(var(--accent), var(--border));
+  opacity: 0.55;
+}
+.cert-step {
+  position: relative;
+  width: 50%;
+  padding: 0 52px 64px 0;
+  box-sizing: border-box;
+}
+.cert-step:nth-child(even) { margin-left: 50%; padding: 0 0 64px 52px; }
+.cert-step:last-child { padding-bottom: 0; }
+.cert-step .col-card { width: 100%; }
+.cert-node {
+  position: absolute;
+  top: 8px;
+  right: -22px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bg-elevated);
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  font: 500 14px var(--font-mono);
+  box-shadow: 0 0 0 5px var(--accent-soft), 0 0 18px var(--accent-soft);
+  z-index: 1;
+}
+.cert-step:nth-child(even) .cert-node { right: auto; left: -22px; }
+/* Arrow from this step's node to the next one's (a diagonal hop across the spine). */
+.cert-arrow {
+  position: absolute;
+  right: -9px;
+  width: 18px;
+  height: 18px;
+  border-right: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  transform: rotate(45deg);
+  z-index: 1;
+  top: calc(100% - 40px);
+  background: var(--bg);
+}
+.cert-step:nth-child(even) .cert-arrow { right: auto; left: -9px; }
+.cert-step:last-child .cert-arrow { display: none; }
+
+@media (max-width: 720px) {
+  .cert-flow::before { left: 22px; }
+  .cert-step,
+  .cert-step:nth-child(even) { width: 100%; margin-left: 0; padding: 0 0 56px 64px; }
+  .cert-node,
+  .cert-step:nth-child(even) .cert-node { left: 0; right: auto; }
+  .cert-arrow,
+  .cert-step:nth-child(even) .cert-arrow { left: 13px; right: auto; }
+}
+
 /* Landscape view — wide 16:9 cards; the image is letterboxed, never cropped. */
 .col-packs.is-landscape .col-grid {
   grid-template-columns: repeat(auto-fill, minmax(min(460px, 100%), 1fr));

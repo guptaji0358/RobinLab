@@ -800,13 +800,29 @@
 
   /* Certificates are one flat set — no anime title/character dropdown groups. */
   function buildFlatGrid(files) {
-    const grid = document.createElement("div");
-    grid.className = "col-grid";
-    for (const file of files) {
-      grid.appendChild(buildCard(file, visible.length));
+    /* A numbered flow: 01 → 02 → 03 … on a central spine, cards alternating sides. */
+    const flow = document.createElement("ol");
+    flow.className = "cert-flow";
+    files = [...files].reverse();
+    files.forEach((file, i) => {
+      const step = document.createElement("li");
+      step.className = "cert-step";
+      const node = document.createElement("span");
+      node.className = "cert-node";
+      node.setAttribute("aria-hidden", "true");
+      node.textContent = String(i + 1).padStart(2, "0");
+      step.appendChild(node);
+      step.appendChild(buildCard(file, visible.length));
+      if (i < files.length - 1) {
+        const arrow = document.createElement("span");
+        arrow.className = "cert-arrow";
+        arrow.setAttribute("aria-hidden", "true");
+        step.appendChild(arrow);
+      }
+      flow.appendChild(step);
       visible.push(file);
-    }
-    return grid;
+    });
+    return flow;
   }
 
   function render() {
