@@ -2211,6 +2211,7 @@ a.deck-open:hover { border-color: #3a4048; color: var(--text); }
 .ic-image-thin{-webkit-mask-image:url(../assets/icons/media/image-thin.svg);mask-image:url(../assets/icons/media/image-thin.svg)}
 .ic-info{-webkit-mask-image:url(../assets/icons/status/info.svg);mask-image:url(../assets/icons/status/info.svg)}
 .ic-landscape{-webkit-mask-image:url(../assets/icons/media/landscape.svg);mask-image:url(../assets/icons/media/landscape.svg)}
+.ic-logos{-webkit-mask-image:url(../assets/icons/navigation/logos.svg);mask-image:url(../assets/icons/navigation/logos.svg)}
 .ic-layers-thin{-webkit-mask-image:url(../assets/icons/dev/layers-thin.svg);mask-image:url(../assets/icons/dev/layers-thin.svg)}
 .ic-linkedin{-webkit-mask-image:url(../assets/icons/brands/linkedin.svg);mask-image:url(../assets/icons/brands/linkedin.svg)}
 .ic-lock{-webkit-mask-image:url(../assets/icons/status/lock.svg);mask-image:url(../assets/icons/status/lock.svg)}

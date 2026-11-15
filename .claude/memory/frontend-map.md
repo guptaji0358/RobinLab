@@ -8,11 +8,12 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 | -------------------------- | ----------------------- | --------------------------------- |
 | `index.html` `/`           | 636 — hub, about, contact, JSON-LD | `main.js`, `fx.js`, `site.js`, `links.js` |
 | `collection.html`          | 196                     | `collection.js`, `names.js`       |
+| `logos.html`               | 200                     | `logos.js`, `names.js`            |
+| `certificates.html`        | 173                     | `collection.js`, `names.js`       |
 | `presentations.html`       | 142                     | `presentations.js`, `names.js`    |
 | `skills.html`              | 150                     | `skills.js`, `names.js`           |
 | `music.html`               | 101                     | `music.js`                        |
 | `projects.html`            | ~290                    | none (links.js, site.js, fx.js)   |
-| `certificates.html`        | 173                     | —                                 |
 
 (Verify the exact `<script>` list with `grep -n "<script" root/<page>.html`.)
 
@@ -26,6 +27,7 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 - `music.js` (163) — audio player: `load` 59, `step` 78, `stopAll` 53.
 - `skills.js` (158) — `buildCard` 48, `copySkill` 111, `load` 130 (calls `/api/collection/skills`, `/skill`).
 - `presentations.js` (319) — `buildCard` 120, `render` 156, `openDeck` 182 (Office Web Viewer embed), `closeDeck` 243, `load` 284.
+- `logos.js` (330) — `/logos`: filters `/api/collection/files` to `LOGO/`, builds dark+light preview cards, full-size viewer (arrow keys, dark/light/checker), and Blob-URL downloads of the original.
 - `collection.js` (1188) — the big one:
   - names/labels 142–172 · toast/copy 202–214 · search & chips 251–320
   - pack covers/slideshows 323–425 · pack tree & list 477–557 · tabs/stats 558–581
@@ -33,6 +35,7 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
   - lightbox 748–853 (`openLightbox`, `paintLightbox`, `step`)
   - **share** `shareCurrent` 854 · **download** `downloadCurrent` 892
   - data: `buildPacks` 996 · `ingest` 1031 · cached manifest 1064–1081 · `load` 1082 · `openShared` 1131 · `boot` 1181
+  - `isLogo` (near `CERT_SCOPE`) keeps the bucket's `LOGO/` folder out of the artwork grid.
 
 ## CSS files
 
@@ -44,6 +47,7 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 - `theme.css` (164) — colour/theme variables.
 - `profile.css` (191) — about/profile blocks.
 - `fx.css` (477) — effects (pairs with `fx.js`). `music.css` (54) — music page.
+- `logos.css` — the `/logos` grid, dark/light stages, broken-preview state and full-size viewer.
 
 ## Projects (root/projects/, each self-contained)
 

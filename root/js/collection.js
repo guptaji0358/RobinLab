@@ -78,6 +78,11 @@
   // /certificates reuses this script; certificates never appear in the collection.
   const CERT_SCOPE = document.body.dataset.scope === "certificates";
   const isCertificate = (file) => /certificat|\bcerts?\b/i.test(`${file.folder || ""}/${file.path || ""}`);
+  // Brand marks have their own page (/logos), so they stay out of the artwork grid.
+  const isLogo = (file) => {
+    const folder = String(file.folder || "").replace(/\\/g, "/").toLowerCase();
+    return folder === "logo" || folder.startsWith("logo/");
+  };
   const EAGER_COUNT = 6; // originals are 4-15 MB: few high-priority fetches so they don't starve each other
   const EAGER_COVERS = 6;
   let coverSeq = 0; // pack-cover images created so far in this render
@@ -1248,7 +1253,8 @@
     // Presentations have their own page — this view is images only.
     allFiles = (Array.isArray(files) ? files : [])
       .filter(isPreviewable)
-      .filter((file) => isCertificate(file) === CERT_SCOPE);
+      .filter((file) => isCertificate(file) === CERT_SCOPE)
+      .filter((file) => !isLogo(file));
 
     buildPacks();
 

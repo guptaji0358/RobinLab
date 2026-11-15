@@ -1,0 +1,361 @@
+/* Logos page — brand marks from the bucket's LOGO/ folder.
+   Pairs with js/logos.js. Reuses .col-hero, .col-body, .col-search, .col-state,
+   .toast and the .icon mask registry from style.css. */
+
+.lg-heading {
+  margin: 0 0 16px;
+  font-size: clamp(20px, 3vw, 26px);
+  letter-spacing: -0.01em;
+}
+
+.lg-toolbar { margin-bottom: 16px; }
+.lg-stats { margin: 0 0 0 auto; align-self: center; }
+
+/* ---- Grid of marks ------------------------------------------------------ */
+
+.lg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+  max-width: 1680px;
+  margin: 0 auto;
+}
+
+.lg-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lg-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(118, 168, 255, 0.5);
+  box-shadow: var(--glow);
+}
+
+/* Two previews of the same image, stacked: one on dark, one on light. */
+.lg-open {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.lg-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3.4 / 1;
+  min-width: 0;
+  padding: 14px 18px;
+  overflow: hidden;
+}
+
+.lg-stage-dark {
+  background: radial-gradient(120% 100% at 50% 40%, #1a2133, #070a14 72%);
+}
+
+.lg-stage-light {
+  background: radial-gradient(120% 100% at 50% 40%, #ffffff, #dce3f0 78%);
+  box-shadow: inset 0 1px 0 rgba(130, 163, 255, 0.18);
+}
+
+.lg-stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lg-stage-dark img { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5)); }
+.lg-stage-light img { filter: drop-shadow(0 4px 10px rgba(29, 45, 80, 0.2)); }
+
+.lg-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px 0;
+}
+
+.lg-name {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lg-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.lg-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding: 10px 14px 14px;
+}
+
+.lg-download {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.lg-download:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.lg-download:disabled { opacity: 0.6; cursor: progress; }
+
+.lg-card.is-broken .lg-stage img { display: none; }
+.lg-card.is-broken .lg-stage::after {
+  content: "Preview unavailable";
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+.lg-card.is-broken .lg-stage-dark::after { color: var(--text-muted); }
+.lg-card.is-broken .lg-stage-light::after { color: #5c6b85; }
+
+/* ---- Full-size viewer --------------------------------------------------- */
+
+.lg-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.lg-lightbox[hidden] { display: none; }
+
+.lg-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 5, 12, 0.86);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.lg-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1040px, 100%);
+  height: min(90vh, 940px);
+  height: min(90dvh, 940px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-elevated);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.lg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lg-heading-wrap { display: flex; flex-direction: column; min-width: 0; }
+
+.lg-v-name {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lg-v-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.lg-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.lg-close:hover { border-color: var(--accent); color: var(--accent); }
+
+.lg-viewport {
+  position: relative;
+  display: flex;
+  flex: 1;
+  gap: 14px;
+  min-height: 0;
+  padding: 18px;
+}
+
+.lg-canvas {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(14px, 3vw, 36px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.lg-canvas[data-bg="dark"] { background: #070a14; }
+.lg-canvas[data-bg="light"] { background: #eef2f9; }
+.lg-canvas[data-bg="checker"] {
+  background-color: #dbe1ec;
+  background-image: repeating-conic-gradient(#eef2f9 0% 25%, #cfd7e5 0% 50%);
+  background-size: 28px 28px;
+}
+
+.lg-canvas img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.lg-canvas.is-broken img { display: none; }
+.lg-canvas.is-broken::after {
+  content: "Preview unavailable";
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #5c6b85;
+}
+
+.lg-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: rgba(9, 13, 26, 0.84);
+  color: var(--text);
+  cursor: pointer;
+  opacity: 0.9;
+  transform: translateY(-50%);
+}
+
+.lg-nav:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
+.lg-nav:disabled { opacity: 0.3; cursor: default; }
+.lg-prev { left: 5px; }
+.lg-next { right: 5px; }
+
+.lg-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.lg-bg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lg-bg button {
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.lg-bg button + button { border-left: 1px solid var(--border); }
+.lg-bg button:hover { color: var(--text); }
+.lg-bg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+
+.lg-dim,
+.lg-counter {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.lg-counter { margin-left: auto; }
+.lg-v-download { flex: 0 0 auto; padding: 8px 14px; }
+
+body.lg-lock { overflow: hidden; }
+
+/* ---- Responsive --------------------------------------------------------- */
+
+@media (max-width: 620px) {
+  .lg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .lg-stage { aspect-ratio: 2 / 1; padding: 12px; }
+  .lg-info { padding: 10px 12px 0; }
+  .lg-name { font-size: 13px; }
+  .lg-actions { padding: 8px 12px 12px; }
+  .lg-lightbox { padding: 10px; }
+  .lg-panel { height: 94vh; height: 94dvh; border-radius: 12px; }
+  .lg-viewport { padding: 10px; }
+  .lg-canvas { padding: 16px; }
+  .lg-nav { width: 32px; height: 32px; }
+  .lg-foot { gap: 8px; padding: 10px 12px; }
+  .lg-counter { margin-left: 0; }
+  .lg-v-download { margin-left: auto; }
+  .lg-v-download .lg-dl-label { display: none; }
+}
+
+@media (max-width: 380px) {
+  .lg-grid { grid-template-columns: 1fr; }
+  .lg-stage { aspect-ratio: 3 / 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-card,
+  .lg-card:hover { transition: none; transform: none; }
+  .lg-download { transition: none; }
+}

@@ -15,6 +15,13 @@ Folders become **packs** at any nesting depth, with images shown at their real a
 A lone top-level folder (such as `wallpapers/`) is treated as a container, not a pack. New folders
 appear on the next page load; no code change is needed.
 
+The bucket's **`LOGO/`** folder is the one exception: it powers the separate
+**`/logos`** page (`root/logos.html`, `root/js/logos.js`). Every image in `LOGO/`
+(and any subfolder below it) is shown there on a dark and a light stage and can be
+downloaded as the untouched original; `collection.js` hides that folder so brand
+marks never appear twice. The logos page reads the same manifest — no extra API
+endpoint and no watermark service.
+
 PowerPoint decks are **not** shown in the Collection. They live on their own page,
 `/presentations` (`root/presentations.html`), which embeds the deck with
 **Microsoft Office Web Viewer** (`view.officeapps.live.com`). Microsoft's servers

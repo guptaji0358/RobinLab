@@ -59,19 +59,21 @@ No other file needs to change: the deploy picks the folder up automatically.
 
 ## Pages
 
-Four routes, all served from `root/`:
+All routes are served from `root/`:
 
 | Route | File | Content |
 | --- | --- | --- |
 | `/` | `index.html` | Project hub, about, contact |
 | `/collection` | `collection.html` | Images from the bucket, grouped by folder ("packs") |
+| `/logos` | `logos.html` | Brand marks from the bucket's `LOGO/` folder, shown on dark and light |
+| `/certificates` | `certificates.html` | Certificates from the bucket, as a numbered flow |
 | `/presentations` | `presentations.html` | `.pptx` decks, embedded via Microsoft Office Web Viewer |
 | `/skills` | `skills.html` | Claude skills from the bucket's `Claude Skills/` folder, plus a how-to-use method |
 
-The footer identity is the same on all three pages — **Robin Gupta Studios /
+The footer identity is the same on every page — **Robin Gupta Studios /
 RGS™ / Built & maintained by Robin Gupta / Copyright © <year> Robin Gupta** —
-plus `<meta name="author|publisher|copyright">` in each `<head>`. Change all
-three together; `index.html` also carries the Organization JSON-LD block.
+plus `<meta name="author|publisher|copyright">` in each `<head>`. Change them
+together; `index.html` also carries the Organization JSON-LD block.
 
 ### Site icons
 
@@ -96,6 +98,12 @@ Both vault pages read `/api/collection/files` (the Pages Function in
 `functions/`, or `dev_server.py` locally). Images load through
 `/api/collection/file?path=…`; the proxy serves **images** and **`.pptx`** only,
 everything else is rejected with `415`.
+
+`/logos` reuses the same manifest but keeps only files in the `LOGO/` folder
+(any depth below it). The Collection and Certificates pages hide that folder, so
+brand marks never appear twice. Logos show two previews (dark and light), open in
+a dedicated viewer, and download as the untouched original through a Blob URL —
+no watermark service involved. New images in `LOGO/` appear automatically.
 
 The lightbox's **Share** button calls `POST /api/collection/share`, which mints an
 HMAC-signed link (`/collection?share=<token>`) for that one image. The expiry is

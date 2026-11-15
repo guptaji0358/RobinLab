@@ -19,6 +19,7 @@ window.RL_LINKS = {
     projects:      '/projects',
     allProjects:   '/projects',
     collection:    '/collection',
+    logos:         '/logos',
     certificates:  '/certificates',
     presentations: '/presentations',
     music:         '/music',
@@ -31,6 +32,7 @@ window.RL_LINKS = {
   nav: [
     { label: 'Projects',      url: 'pages.projects',      icon: 'ic-grid' },
     { label: 'Collection',    url: 'pages.collection',    icon: 'ic-image-thin' },
+    { label: 'Logos',         url: 'pages.logos',         icon: 'ic-logos' },
     { label: 'Certificates',  url: 'pages.certificates',  icon: 'ic-award' },
     { label: 'Presentations', url: 'pages.presentations', icon: 'ic-presentation' },
     { label: 'Music',         url: 'pages.music',         icon: 'ic-music' },
