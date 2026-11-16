@@ -1362,17 +1362,32 @@ a { color: inherit; text-decoration: none; }
 
 .col-card.is-loaded .col-card-media img { opacity: 1; }
 
-/* Loading → reveal: a light sweep passes over the card while its image is on
-   the way, then the picture settles in (fade + soft focus + slight zoom-out). */
-.col-card:not(.is-loaded):not(.is-broken) .col-card-media::before {
+/* Skeleton: a quiet tint over the card's own blurred preview, with a soft
+   shimmer band moving across it (transform only — GPU-friendly, no layout).
+   It fades out when the image is decoded, and is dropped for a failed card. */
+.col-card-media { box-shadow: inset 0 0 0 999px rgba(255, 255, 255, 0.035); }
+
+.col-card-media::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.10) 50%, transparent 70%);
+  border-radius: inherit;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.09) 50%, transparent 70%);
   transform: translateX(-100%);
-  animation: col-sweep 1.4s ease-in-out infinite;
+  animation: col-sweep 1.5s ease-in-out infinite;
+  will-change: transform;
+  transition: opacity 0.35s ease-out, visibility 0s;
+}
+
+.col-card.is-loaded .col-card-media::before,
+.col-card.is-broken .col-card-media::before {
+  opacity: 0;
+  visibility: hidden;
+  animation-play-state: paused;
+  will-change: auto;
+  transition: opacity 0.35s ease-out, visibility 0s 0.35s;
 }
 
 .col-card-media img {
@@ -1398,7 +1413,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .col-card:not(.is-loaded):not(.is-broken) .col-card-media::before { animation: none; }
+  .col-card-media::before { animation: none; transform: none; background: rgba(255, 255, 255, 0.05); }
   .col-card-media img { transform: none; filter: none; clip-path: none; transition: opacity 0.12s ease-out; }
   .col-card, .col-card.rv:not(.in) { transform: none; opacity: 1; transition: none; }
 }
