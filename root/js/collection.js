@@ -126,6 +126,22 @@
         )
       : null;
 
+  const prefersReduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const canTilt = !prefersReduced && window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const revealObserver =
+    !prefersReduced && "IntersectionObserver" in window
+      ? new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              entry.target.classList.add("in");
+              revealObserver.unobserve(entry.target);
+            }
+          },
+          { threshold: 0.06, rootMargin: "0px 0px -4% 0px" },
+        )
+      : null;
+
   let allFiles = [];
   let packs = new Map();
   let visible = [];
@@ -608,6 +624,30 @@
     card.className = "col-card";
     card.title = `${file.name} — click to preview`;
     card.addEventListener("click", () => openLightbox(index));
+
+    // Entrance: cards rise into place as they scroll in, staggered across a row.
+    if (revealObserver) {
+      card.style.setProperty("--d", `${(index % 6) * 70}ms`);
+      card.classList.add("rv");
+      revealObserver.observe(card);
+    }
+    // Pointer tilt with a light glare that follows the cursor (mouse/pen only).
+    if (canTilt) {
+      card.addEventListener("pointermove", (e) => {
+        if (e.pointerType === "touch") return;
+        const r = card.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width;
+        const y = (e.clientY - r.top) / r.height;
+        card.style.setProperty("--rx", `${((0.5 - y) * 7).toFixed(2)}deg`);
+        card.style.setProperty("--ry", `${((x - 0.5) * 9).toFixed(2)}deg`);
+        card.style.setProperty("--mx", `${(x * 100).toFixed(1)}%`);
+        card.style.setProperty("--my", `${(y * 100).toFixed(1)}%`);
+      });
+      card.addEventListener("pointerleave", () => {
+        card.style.removeProperty("--rx");
+        card.style.removeProperty("--ry");
+      });
+    }
 
     const media = document.createElement("span");
     media.className = "col-card-media";
