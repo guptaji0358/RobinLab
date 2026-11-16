@@ -93,6 +93,8 @@
   function setThumbSrc(img, url, priority) {
     if (priority === "high") img.fetchPriority = "high";
     img.src = url;
+    // Once it has arrived there is nothing left to cancel or restart.
+    if (imageObserver) img.addEventListener("load", () => imageObserver.unobserve(img), { once: true });
   }
 
   // Browsers' native lazy-loading waits until an image is a viewport or two
@@ -102,11 +104,22 @@
     "IntersectionObserver" in window
       ? new IntersectionObserver(
           (entries) => {
+            // Originals are 5-31 MB, so a fast scroll must not queue a download for
+            // every card it flies past: start only after a card has stayed near the
+            // viewport briefly, and cancel unfinished downloads that scrolled away.
             for (const entry of entries) {
-              if (!entry.isIntersecting) continue;
               const img = entry.target;
-              imageObserver.unobserve(img);
-              setThumbSrc(img, img.dataset.src);
+              if (entry.isIntersecting) {
+                if (img.getAttribute("src") || img._startTimer) continue;
+                img._startTimer = setTimeout(() => {
+                  img._startTimer = 0;
+                  setThumbSrc(img, img.dataset.src);
+                }, 200);
+              } else {
+                clearTimeout(img._startTimer);
+                img._startTimer = 0;
+                if (img.getAttribute("src") && !img.complete) img.removeAttribute("src");
+              }
             }
           },
           { rootMargin: "600px 0px" },
