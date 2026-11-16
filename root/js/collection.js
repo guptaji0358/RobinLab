@@ -666,7 +666,16 @@
     // Grid cards load the original file as-is (no derived copies). Lazy
     // loading, async decode and the HTTP cache keep that affordable.
     img.dataset.src = file.url;
-    img.addEventListener("load", () => card.classList.add("is-loaded"));
+    // The skeleton goes away only once the picture can actually be painted:
+    // `load` means the bytes arrived, `decode()` means they are ready to show.
+    img.addEventListener("load", () => {
+      const ready = () => card.classList.add("is-loaded");
+      if (!img.decode) return ready();
+      img.decode().then(ready, () => {
+        // A rejected decode is a real failure, unless the src was withdrawn (scrolled away).
+        if (img.getAttribute("src")) card.classList.add("is-broken");
+      });
+    });
     img.addEventListener("error", () => card.classList.add("is-broken"));
     media.appendChild(img);
 
