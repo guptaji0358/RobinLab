@@ -123,8 +123,7 @@
   let lastFocused = null;
   let lbDims = "";
   let lbToken = 0; // bumped per paint so a slow original never overwrites a newer image
-  let lbAbort = null; // cancels the in-flight original when the viewer moves on
-  let lbObjectUrl = ""; // Blob URL of the image on screen, revoked when replaced/closed
+  let lbProbe = null; // the Image loading the original; cleared to cancel
   let lbWarm = null; // the one neighbour being pre-warmed
   let lbDir = 1; // direction of the last step (1 next, -1 previous)
   // Set only while the lightbox was opened from a shared link: drives the
@@ -921,7 +920,6 @@
     cancelLightboxLoad();
     resetZoom();
     el.lbImg.removeAttribute("src");
-    if (lbObjectUrl) { URL.revokeObjectURL(lbObjectUrl); lbObjectUrl = ""; }
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus({ preventScroll: true });
   }
 
@@ -989,53 +987,37 @@
   }
 
   /**
-   * Fetch the original exactly once (abortable, with progress), decode it before
-   * it is shown, and display it through a Blob URL — no second download or decode.
+   * Load the original through a plain Image so the browser shares the grid card's
+   * in-flight / cached copy of the same URL (no duplicate download), decode it off
+   * the main thread, then show it. Cancelled by clearing `src`.
    */
   async function loadOriginal(file, token) {
-    const ctl = new AbortController();
-    lbAbort = ctl;
+    const probe = new Image();
+    probe.decoding = "async";
+    lbProbe = probe;
+    probe.src = file.url;
     try {
-      const res = await fetch(file.url, { signal: ctl.signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const total = Number(res.headers.get("Content-Length")) || file.size || 0;
-      const chunks = [];
-      let got = 0;
-      const reader = res.body.getReader();
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        got += value.length;
-        if (token === lbToken && el.lbDKind && total) {
-          el.lbDKind.textContent = `Loading ${Math.min(99, Math.round((got / total) * 100))}%`;
-        }
-      }
-      const url = URL.createObjectURL(new Blob(chunks, { type: res.headers.get("Content-Type") || "" }));
-      const probe = new Image();
-      probe.src = url;
-      try { await probe.decode(); } catch { throw new Error("Unsupported or corrupt image"); }
-      if (token !== lbToken) { URL.revokeObjectURL(url); return; }
-      const old = lbObjectUrl;
-      lbObjectUrl = url;
-      el.lbImg.src = url;
-      if (old) URL.revokeObjectURL(old);
-      el.lbImg.classList.remove("is-preview");
-      const { naturalWidth: w, naturalHeight: h } = probe;
-      if (w && h) lbDims = ` · ${w}×${h}`;
-      if (el.lbDKind) el.lbDKind.textContent = w && h ? imageKind(w, h) : "Unknown";
-      paintMeta(file);
-      preloadNext(lbDir);
-    } catch (err) {
-      if (token !== lbToken || err?.name === "AbortError") return;
-      el.lbImg.src = file.url; // last resort: let the browser load it directly
+      await probe.decode();
+    } catch {
+      if (token !== lbToken) return;
+      // Decode can reject for formats it cannot pre-decode; show it directly instead.
+      el.lbImg.src = file.url;
       el.lbImg.classList.remove("is-preview");
       if (el.lbDKind) el.lbDKind.textContent = "Unknown";
+      return;
     }
+    if (token !== lbToken) return;
+    el.lbImg.src = file.url;
+    el.lbImg.classList.remove("is-preview");
+    const { naturalWidth: w, naturalHeight: h } = probe;
+    if (w && h) lbDims = ` · ${w}×${h}`;
+    if (el.lbDKind) el.lbDKind.textContent = w && h ? imageKind(w, h) : "Unknown";
+    paintMeta(file);
+    preloadNext(lbDir);
   }
 
   function cancelLightboxLoad() {
-    if (lbAbort) { lbAbort.abort(); lbAbort = null; }
+    if (lbProbe) { lbProbe.src = ""; lbProbe = null; }
     if (lbWarm) { lbWarm.src = ""; lbWarm = null; }
   }
 
