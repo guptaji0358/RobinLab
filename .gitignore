@@ -24,3 +24,7 @@ node_modules/
 
 # LIAS benchmark results
 .claude/lias/benchmarks/results/
+
+# Local dev server (tools/devctl.py)
+.dev_server.pid
+.dev_server.log
