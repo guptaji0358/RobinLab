@@ -123,6 +123,10 @@
   let lastFocused = null;
   let lbDims = "";
   let lbToken = 0; // bumped per paint so a slow original never overwrites a newer image
+  let lbAbort = null; // cancels the in-flight original when the viewer moves on
+  let lbObjectUrl = ""; // Blob URL of the image on screen, revoked when replaced/closed
+  let lbWarm = null; // the one neighbour being pre-warmed
+  let lbDir = 1; // direction of the last step (1 next, -1 previous)
   // Set only while the lightbox was opened from a shared link: drives the
   // "N min left" note and stops when the viewer closes.
   let shareSession = null;
@@ -896,6 +900,7 @@
 
   function openLightbox(index) {
     lbPos = index;
+    lbDir = 1;
     if (lbPos < 0 || lbPos >= visible.length) return;
 
     lastFocused = document.activeElement;
@@ -913,8 +918,10 @@
     shareSession = null;
     stopShareTicker();
     lbToken++;
+    cancelLightboxLoad();
     resetZoom();
     el.lbImg.removeAttribute("src");
+    if (lbObjectUrl) { URL.revokeObjectURL(lbObjectUrl); lbObjectUrl = ""; }
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus({ preventScroll: true });
   }
 
@@ -958,23 +965,16 @@
     resetZoom();
 
     lbDims = "";
-    const full = new Image();
     const token = ++lbToken;
-    full.decoding = "async";
-    full.onload = () => {
-      if (token !== lbToken) return;
-      el.lbImg.src = file.url;
-      el.lbImg.classList.remove("is-preview");
-      const { naturalWidth: w, naturalHeight: h } = full;
-      if (w && h) lbDims = ` · ${w}×${h}`;
-      if (el.lbDKind) el.lbDKind.textContent = w && h ? imageKind(w, h) : "Unknown";
-      paintMeta(file);
-    };
-    // The grid card already fetched this very file, so it is in the browser's
-    // HTTP cache and shows at once; otherwise the viewer fills in on arrival.
+    cancelLightboxLoad();
+    // Show the tiny blurred placeholder at once, then swap in the original after
+    // it has been fetched once and decoded off the main thread.
     el.lbImg.removeAttribute("src");
-    full.src = file.url;
-    preloadNeighbours();
+    if (file.blur) {
+      el.lbImg.src = file.blur;
+      el.lbImg.classList.add("is-preview");
+    }
+    loadOriginal(file, token);
 
     el.lbImg.alt = humanName(file);
     el.lbName.textContent = humanName(file);
@@ -988,13 +988,65 @@
     }
   }
 
-  /** Warm the next and previous originals so arrow-key browsing feels instant. */
-  function preloadNeighbours() {
-    if (visible.length < 2) return;
-    for (const delta of [1, -1]) {
-      const near = visible[(lbPos + delta + visible.length) % visible.length];
-      if (near) new Image().src = near.url;
+  /**
+   * Fetch the original exactly once (abortable, with progress), decode it before
+   * it is shown, and display it through a Blob URL — no second download or decode.
+   */
+  async function loadOriginal(file, token) {
+    const ctl = new AbortController();
+    lbAbort = ctl;
+    try {
+      const res = await fetch(file.url, { signal: ctl.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const total = Number(res.headers.get("Content-Length")) || file.size || 0;
+      const chunks = [];
+      let got = 0;
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        got += value.length;
+        if (token === lbToken && el.lbDKind && total) {
+          el.lbDKind.textContent = `Loading ${Math.min(99, Math.round((got / total) * 100))}%`;
+        }
+      }
+      const url = URL.createObjectURL(new Blob(chunks, { type: res.headers.get("Content-Type") || "" }));
+      const probe = new Image();
+      probe.src = url;
+      try { await probe.decode(); } catch { throw new Error("Unsupported or corrupt image"); }
+      if (token !== lbToken) { URL.revokeObjectURL(url); return; }
+      const old = lbObjectUrl;
+      lbObjectUrl = url;
+      el.lbImg.src = url;
+      if (old) URL.revokeObjectURL(old);
+      el.lbImg.classList.remove("is-preview");
+      const { naturalWidth: w, naturalHeight: h } = probe;
+      if (w && h) lbDims = ` · ${w}×${h}`;
+      if (el.lbDKind) el.lbDKind.textContent = w && h ? imageKind(w, h) : "Unknown";
+      paintMeta(file);
+      preloadNext(lbDir);
+    } catch (err) {
+      if (token !== lbToken || err?.name === "AbortError") return;
+      el.lbImg.src = file.url; // last resort: let the browser load it directly
+      el.lbImg.classList.remove("is-preview");
+      if (el.lbDKind) el.lbDKind.textContent = "Unknown";
     }
+  }
+
+  function cancelLightboxLoad() {
+    if (lbAbort) { lbAbort.abort(); lbAbort = null; }
+    if (lbWarm) { lbWarm.src = ""; lbWarm = null; }
+  }
+
+  /** After the current image is on screen, warm ONE neighbour (the way the viewer is heading). */
+  function preloadNext(dir) {
+    if (visible.length < 2) return;
+    const near = visible[(lbPos + dir + visible.length) % visible.length];
+    if (!near) return;
+    lbWarm = new Image();
+    lbWarm.fetchPriority = "low";
+    lbWarm.src = near.url;
   }
 
   /** Classify by the long edge (so portrait and landscape agree), e.g. "4K UHD · Landscape". */
@@ -1028,6 +1080,7 @@
   function step(delta) {
     if (!visible.length) return;
     lbPos = (lbPos + delta + visible.length) % visible.length;
+    lbDir = delta < 0 ? -1 : 1;
     paintLightbox();
   }
 
