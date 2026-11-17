@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "code-lens": {
+      "type": "stdio",
+      "command": "C:/Users/lenovo/.codelens-mcp-venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "codelens_agent.mcp_server",
+        "--root",
+        "D:/Apps/MyApps/RobinLabs"
+      ],
+      "env": {
+        "PYTHONPATH": "D:/Apps/MyApps/Pendiing/Code-Lens/scripts"
+      }
+    }
+  }
+}
