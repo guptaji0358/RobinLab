@@ -1,0 +1,70 @@
+{
+  "id": "git-commit-push",
+  "name": "Git Commit & Push",
+  "description": "Stages only the given files/folders, commits with the given message, then pushes. Inputs: paths (list), message.",
+  "tier": 1,
+  "entry_point": ".claude/lias/automation/scripts/git_commit_push.py",
+  "enabled": true,
+  "version": "1.0.0",
+  "timeout_seconds": 60,
+  "working_dir": ".",
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "paths",
+      "message"
+    ],
+    "properties": {
+      "paths": {
+        "type": "array"
+      },
+      "message": {
+        "type": "string"
+      },
+      "log": {
+        "type": "string",
+        "enum": [
+          "short",
+          "long",
+          "none"
+        ]
+      },
+      "no_push": {
+        "type": "boolean"
+      },
+      "branch": {
+        "type": "string"
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string"
+      },
+      "result": {
+        "type": "object"
+      }
+    }
+  },
+  "dependencies": [],
+  "keywords": [
+    "git",
+    "commit",
+    "push",
+    "stage",
+    "add"
+  ],
+  "generated": false,
+  "validation": {},
+  "created_by": "manual",
+  "cache_policy": {
+    "enabled": false,
+    "ttl": 0
+  },
+  "failure_policy": {
+    "max_retries": 0,
+    "quarantine_on_failures": 3
+  }
+}
