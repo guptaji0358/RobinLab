@@ -24,6 +24,7 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 - `names.js` (31) — `pretty()` Title Case display names, `ext()`.
 - `main.js` (12) — tiny hub bootstrap.
 - `fx.js` (601) — visual effects: `boot` loader 20, `background` canvas 64, `hero` 213, `marquee` 292, `cursor` 308, `reveal` 394, `hscroll` 489, `scrollFx` 540. Pair: `css/fx.css`.
+- `motion.js` + `css/motion.css` — additive "kinetic layer", loaded after `fx.js` on all 8 pages, no shared state with it: pointer-velocity ink trail canvas (`.rlm-ink`), damped-spring chips/tags (`.pf-chips li, .pf-skills span, .project-tag`, via the `translate` property) with click/tap shockwave, device-tilt drift of `#fx-bg` (Android only; iOS skipped, needs a permission prompt). Off under reduced motion. `RLMotion.disable()/enable()`.
 - `music.js` (163) — audio player: `load` 59, `step` 78, `stopAll` 53.
 - `skills.js` (158) — `buildCard` 48, `copySkill` 111, `load` 130 (calls `/api/collection/skills`, `/skill`).
 - `presentations.js` (319) — `buildCard` 120, `render` 156, `openDeck` 182 (Office Web Viewer embed), `closeDeck` 243, `load` 284.
