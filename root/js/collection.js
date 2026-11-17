@@ -83,42 +83,103 @@
     const folder = String(file.folder || "").replace(/\\/g, "/").toLowerCase();
     return folder === "logo" || folder.startsWith("logo/");
   };
-  const EAGER_COUNT = 6; // originals are 4-15 MB: few high-priority fetches so they don't starve each other
-  const EAGER_COVERS = 6;
-  let coverSeq = 0; // pack-cover images created so far in this render
+  /* Image scheduler ----------------------------------------------------------
+   * Grid cards load the untouched originals (4-15 MB each). Started all at once
+   * they share one connection's bandwidth, so every image finishes late and the
+   * ones on screen finish last. Instead at most MAX_ACTIVE downloads run at a
+   * time and the next one is always the pending image nearest the viewport.
+   * Benchmarked at 3: the first on-screen images arrive about twice as fast as
+   * with 6 in parallel, and the whole batch finishes in the same total time
+   * (the link, not the request count, is the limit). Image bytes are untouched. */
+  const MAX_ACTIVE = 3;
+  const pendingImages = new Set();
+  const activeImages = new Set();
 
-  /* Thumbnails are plain <img> tags: the browser decodes them progressively and
-   * keeps them in its HTTP cache (the proxy marks previews immutable for a year),
-   * so revisiting a pack is instant and nothing is held in JS memory. */
-  function setThumbSrc(img, url, priority) {
-    if (priority === "high") img.fetchPriority = "high";
-    img.src = url;
-    // Once it has arrived there is nothing left to cancel or restart.
-    if (imageObserver) img.addEventListener("load", () => imageObserver.unobserve(img), { once: true });
+  // Distance in px from the viewport; 0 when on screen. Hidden cards are never preferred.
+  function viewportDistance(img) {
+    const r = img.getBoundingClientRect();
+    if (!r.width && !r.height) return Infinity;
+    if (r.bottom < 0) return -r.bottom;
+    if (r.top > innerHeight) return r.top - innerHeight;
+    return 0;
   }
 
-  // Browsers' native lazy-loading waits until an image is a viewport or two
-  // away, which on a proxied grid shows blank cards while scrolling. Starting
-  // 1500px ahead keeps the images ready before they are seen.
+  function pumpImages() {
+    // A lightbox original is the urgent download: don't start grid images behind it.
+    if (document.body.classList.contains("lb-open")) return;
+    while (activeImages.size < MAX_ACTIVE && pendingImages.size) {
+      let best = null;
+      let bestScore = Infinity;
+      for (const img of pendingImages) {
+        const score = viewportDistance(img) + (img._bg ? 1e6 : 0);
+        if (score < bestScore) { best = img; bestScore = score; }
+      }
+      if (!best) break;
+      pendingImages.delete(best);
+      startImage(best);
+    }
+  }
+
+  function startImage(img) {
+    const url = img.dataset.src;
+    if (!url || img.getAttribute("src")) return;
+    activeImages.add(img);
+    const release = () => {
+      img.removeEventListener("load", release);
+      img.removeEventListener("error", release);
+      if (activeImages.delete(img)) pumpImages();
+    };
+    img.addEventListener("load", release);
+    img.addEventListener("error", release);
+    img.fetchPriority = !img._bg && viewportDistance(img) === 0 ? "high" : "low";
+    img.src = url;
+    if (imageObserver) img.addEventListener("load", () => imageObserver.unobserve(img._watch || img), { once: true });
+  }
+
+  /** Queue an image; `priority === "low"` is for background work (extra slideshow frames). */
+  function setThumbSrc(img, url, priority) {
+    if (url) img.dataset.src = url;
+    if (img.getAttribute("src") || pendingImages.has(img) || activeImages.has(img)) return; // never twice
+    img._bg = priority === "low";
+    pendingImages.add(img);
+    pumpImages();
+  }
+
+  /** Drop a not-yet-started image, or abort one that is still downloading. */
+  function cancelImage(img) {
+    pendingImages.delete(img);
+    if (activeImages.delete(img)) {
+      if (!img.complete) img.removeAttribute("src");
+      pumpImages();
+    }
+  }
+
+  function resetImageQueue() {
+    pendingImages.clear();
+    for (const img of [...activeImages]) cancelImage(img);
+  }
+
+  // Start a card once it has stayed near the viewport briefly (a fast scroll must
+  // not queue a download for every card it flies past); on-screen cards start now.
   const imageObserver =
     "IntersectionObserver" in window
       ? new IntersectionObserver(
           (entries) => {
-            // Originals are 5-31 MB, so a fast scroll must not queue a download for
-            // every card it flies past: start only after a card has stayed near the
-            // viewport briefly, and cancel unfinished downloads that scrolled away.
             for (const entry of entries) {
-              const img = entry.target;
+              // Card images are watched through their media box (`_img`): the <img>
+              // itself starts fully clipped (clip-path wipe), which IntersectionObserver
+              // reports as zero visible area, so it would never start loading.
+              const img = entry.target._img || entry.target;
               if (entry.isIntersecting) {
                 if (img.getAttribute("src") || img._startTimer) continue;
-                img._startTimer = setTimeout(() => {
-                  img._startTimer = 0;
-                  setThumbSrc(img, img.dataset.src);
-                }, 200);
+                const queue = () => { img._startTimer = 0; setThumbSrc(img, img.dataset.src); };
+                const r = entry.boundingClientRect;
+                if (r.bottom > 0 && r.top < innerHeight) queue();
+                else img._startTimer = setTimeout(queue, 200);
               } else {
                 clearTimeout(img._startTimer);
                 img._startTimer = 0;
-                if (img.getAttribute("src") && !img.complete) img.removeAttribute("src");
+                cancelImage(img);
               }
             }
           },
@@ -440,7 +501,7 @@
     if (!first || !first.complete) return;
     show.restLoaded = true;
     if (saveData) return;
-    for (const img of show.slides) if (img.dataset.src && !img.src) setThumbSrc(img, img.dataset.src);
+    for (const img of show.slides) if (img.dataset.src && !img.src) setThumbSrc(img, img.dataset.src, "low");
   }
 
   if (!reduceMotion) {
@@ -483,10 +544,6 @@
       // Slides after the first wait for `loadRestOfSlides`.
       if (i > 0) {
         img.dataset.src = src;
-      } else if (coverSeq++ < EAGER_COVERS) {
-        // The first covers load at once, the rest start 1500px before they
-        // scroll in (native lazy-loading waits much longer).
-        setThumbSrc(img, src, "high");
       } else if (imageObserver) {
         img.dataset.src = src;
         imageObserver.observe(img);
@@ -575,7 +632,6 @@
   function renderPackList() {
     if (!el.packList) return;
     el.packList.textContent = "";
-    coverSeq = 0;
     if (el.tabImagesCount) el.tabImagesCount.textContent = String(allFiles.length);
 
     const keys = sortedPackKeys();
@@ -681,11 +737,10 @@
 
     // The first screenful starts downloading immediately at high priority; the
     // rest begin well before they scroll into view (see `watchImages`).
-    if (index < EAGER_COUNT) {
-      img.fetchPriority = "high";
-      setThumbSrc(img, img.dataset.src, "high");
-    } else if (imageObserver) {
-      imageObserver.observe(img);
+    if (imageObserver) {
+      media._img = img;
+      img._watch = media;
+      imageObserver.observe(media);
     } else {
       setThumbSrc(img, img.dataset.src);
     }
@@ -897,6 +952,7 @@
 
   function render() {
     if (imageObserver) imageObserver.disconnect();
+    resetImageQueue();
     el.packs.textContent = "";
     visible = [];
 
@@ -975,6 +1031,7 @@
     if (el.lightbox.hidden) return;
     el.lightbox.hidden = true;
     document.body.classList.remove("lb-open");
+    pumpImages();
     lbPos = -1;
     shareSession = null;
     stopShareTicker();
