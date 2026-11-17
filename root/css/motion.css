@@ -1,0 +1,8 @@
+/* RobinLab kinetic layer (pairs with js/motion.js). Additive: only styles its own canvas. */
+.rlm-ink {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: 5; pointer-events: none;
+  mix-blend-mode: screen;
+}
+.pf-chips li, .pf-skills span, .project-tag { will-change: translate; }
+@media (prefers-reduced-motion: reduce) { .rlm-ink { display: none; } }
