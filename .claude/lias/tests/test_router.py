@@ -73,7 +73,7 @@ class TestRouter(unittest.TestCase):
     def test_knowledge_routing_and_freshness(self):
         self.store.add(
             "routing",
-            "The collection page is served from root/collection.html via Cloudflare Pages.",
+            "The collection page is served from scripts/root/collection.html via Cloudflare Pages.",
             "CLAUDE.md:pages",
         )
         result = self.router.route("Which file serves the collection page?")

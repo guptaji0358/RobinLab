@@ -1,11 +1,11 @@
 # Collection — private Hugging Face bucket viewer
 
-The **Collection** page (`root/collection.html`) lists and previews the artwork in the
+The **Collection** page (`scripts/root/collection.html`) lists and previews the artwork in the
 private Hugging Face bucket **`robinlabdev/robinvault`**.
 
 Folders become **packs** at any nesting depth, with images shown at their real aspect ratio
 (never cropped to squares). Only images appear here. The Packs tab has two modes, set by
-`DEFAULT_PACK_MODE` in `root/js/collection.js` (or `?packs=all` / `?packs=nested` on the URL):
+`DEFAULT_PACK_MODE` in `scripts/root/js/collection.js` (or `?packs=all` / `?packs=nested` on the URL):
 
 - `nested`: only a folder that has subfolders is a pack. Each image is filed under its
   nearest such folder; everything else (folders without subfolders, loose images) is one **General** pack.
@@ -16,17 +16,17 @@ A lone top-level folder (such as `wallpapers/`) is treated as a container, not a
 appear on the next page load; no code change is needed.
 
 The bucket's **`LOGO/`** folder is the one exception: it powers the separate
-**`/logos`** page (`root/logos.html`, `root/js/logos.js`). Every image in `LOGO/`
+**`/logos`** page (`scripts/root/logos.html`, `scripts/root/js/logos.js`). Every image in `LOGO/`
 (and any subfolder below it) is shown there on a dark and a light stage and can be
 downloaded as the untouched original; `collection.js` hides that folder so brand
 marks never appear twice. The logos page reads the same manifest — no extra API
 endpoint and no watermark service.
 
 PowerPoint decks are **not** shown in the Collection. They live on their own page,
-`/presentations` (`root/presentations.html`), which embeds the deck with
+`/presentations` (`scripts/root/presentations.html`), which embeds the deck with
 **Microsoft Office Web Viewer** (`view.officeapps.live.com`). Microsoft's servers
 download the file themselves, so decks are also exposed on a clean public route,
-`/decks/<name>.pptx` (`functions/decks/[[path]].js`), which serves only files from
+`/decks/<name>.pptx` (`scripts/functions/decks/[[path]].js`), which serves only files from
 `presentations/`. That route is intentionally public: the decks are built for
 college students and the page offers a direct `.pptx` download, plus an email link
 for requesting a new deck.
@@ -67,7 +67,7 @@ demand and streams them straight through.
 
 ## API contract
 
-Both endpoints are served by `functions/api/collection/[[path]].js` in production and by
+Both endpoints are served by `scripts/functions/api/collection/[[path]].js` in production and by
 `dev_server.py` locally. The behaviour is identical.
 
 | Method | Path | Purpose |
@@ -152,7 +152,7 @@ Scope, honestly stated:
 Bucket files are full resolution (often 1–5 MB). Rendering 64 of them in a grid meant
 pulling **~128 MB** just to browse, which no browser handles well.
 
-`tools/make_thumbs.py` generates a small WebP copy of every image and uploads it back
+`scripts/tools/make_thumbs.py` generates a small WebP copy of every image and uploads it back
 into the **same bucket** under a reserved `_thumbs/` prefix:
 
 ```
@@ -172,12 +172,12 @@ New uploads simply have no thumbnail until you re-run the script; the grid falls
 the full-size image in the meantime, so nothing breaks.
 
 ```powershell
-python tools/make_thumbs.py                 # add missing thumbnails only
-python tools/make_thumbs.py --dry-run       # show what would happen
-python tools/make_thumbs.py --force         # rebuild every thumbnail
-python tools/make_thumbs.py --width 900     # max edge in px (default 720)
-python tools/make_thumbs.py --quality 85    # WebP quality (default 78)
-python tools/make_thumbs.py --prune         # also delete orphaned thumbnails
+python scripts/tools/make_thumbs.py                 # add missing thumbnails only
+python scripts/tools/make_thumbs.py --dry-run       # show what would happen
+python scripts/tools/make_thumbs.py --force         # rebuild every thumbnail
+python scripts/tools/make_thumbs.py --width 900     # max edge in px (default 720)
+python scripts/tools/make_thumbs.py --quality 85    # WebP quality (default 78)
+python scripts/tools/make_thumbs.py --prune         # also delete orphaned thumbnails
 ```
 
 Originals are **never** modified or deleted. `--prune` only ever removes paths inside
@@ -190,7 +190,7 @@ Originals are **never** modified or deleted. `--prune` only ever removes paths i
 A plain `python -m http.server 5500 --directory root` serves the static pages but has no
 `/api/collection/*` proxy.
 
-Use the bundled dev server instead. It serves `root/` **and** runs the bucket proxy:
+Use the bundled dev server instead. It serves `scripts/root/` **and** runs the bucket proxy:
 
 ```powershell
 # 1. Create a token at https://huggingface.co/settings/tokens (a Read token is enough)
@@ -227,11 +227,11 @@ available.
 | Source | **Direct Upload** — a `git push` does *not* deploy (`Git Provider: No`) |
 | Build step | none |
 | Publish directory | `root` |
-| Config | `wrangler.toml` (`pages_build_output_dir = "root"`) |
+| Config | `scripts/wrangler.toml` (`pages_build_output_dir = "root"`) |
 | Secret | `HF_TOKEN` (encrypted, Pages → Settings → Environment variables) |
 | Secret (optional) | `SHARE_SECRET` — signs 30-minute share links; falls back to `HF_TOKEN` |
 
-Projects live in `root/projects/`, inside the published directory, so there is no
+Projects live in `scripts/root/projects/`, inside the published directory, so there is no
 mirror step.
 
 > **A `git push` is not a deploy here.** Check
@@ -247,13 +247,13 @@ then re-add the secrets).
 Deploy with:
 
 ```powershell
-npx wrangler pages deploy root --project-name=robinlab --branch=master
+cd scripts; npx wrangler pages deploy root --project-name=robinlab --branch=master
 ```
 
 `npx` is blocked by the PowerShell execution policy on this machine — use
 `cmd /c "npx wrangler pages deploy ..."` there.
 
-`wrangler.toml` points at `root/` for static assets; the Function in `functions/` is
+`scripts/wrangler.toml` points at `scripts/root/` for static assets; the Function in `scripts/functions/` is
 picked up automatically from the project root.
 
 > **Note:** `compatibility_date` in `wrangler.toml` must not be in the future relative to
@@ -264,7 +264,7 @@ picked up automatically from the project root.
 
 The front end only depends on the API contract above, so any runtime works — Vercel
 (`api/collection/[...path].js`), Netlify (`netlify/functions/`), a VPS, etc. Keep the
-token in the host's secret store; never in `root/`.
+token in the host's secret store; never in `scripts/root/`.
 
 ### Attaching a custom domain
 
@@ -301,7 +301,7 @@ reasonable shape:
 1. Verify the user's entitlement (e.g. a signed session cookie or license token).
 2. Add a `/api/collection/download?path=...` endpoint that returns the same bytes with
    `Content-Disposition: attachment` **only** when the entitlement check passes.
-3. Enable the Download button in `root/js/collection.js` / `root/collection.html` and
+3. Enable the Download button in `scripts/root/js/collection.js` / `scripts/root/collection.html` and
    point it at that endpoint.
 
 > Note: any "view-only" measure in the browser is a deterrent, not real protection —

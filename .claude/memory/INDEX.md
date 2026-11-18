@@ -16,11 +16,11 @@ off, `grep -n` the function name (cheap) rather than reading the whole file.
 
 ## 10-line mental model
 
-- Static site, **no build step, no package manager**. Only `root/` is published.
-- Projects live in `root/projects/<Name>/` — one copy, never a top-level `projects/`.
+- Static site, **no build step, no package manager**. Only `scripts/root/` is published.
+- Projects live in `scripts/root/projects/<Name>/` — one copy, never a top-level `projects/`.
 - Pages: `index` (hub, 3 featured projects), `projects` (all project cards), `collection`, `presentations`, `skills`, `music`, `certificates`.
 - Images/decks/skills live in a Hugging Face bucket, proxied by a Cloudflare Pages Function.
-- **The API exists twice**: `functions/api/collection/[[path]].js` (production) and
+- **The API exists twice**: `scripts/functions/api/collection/[[path]].js` (production) and
   `dev_server.py` (local). A change to one almost always needs the other.
 - Watermarked downloads go through `watermark_service/` (FastAPI, separate HF Space).
 - Deploy is manual (`deploy.bat`); `git push` does not deploy.

@@ -43,7 +43,7 @@ class TestLearning(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_declared_fact_extraction(self):
-        fact = extract_declared_fact("Confirm: Projects live in root/projects/.")
+        fact = extract_declared_fact("Confirm: Projects live in scripts/root/projects/.")
         self.assertIsNotNone(fact)
         self.assertEqual(fact.category, "decision")
         self.assertGreaterEqual(fact.confidence, 0.9)
@@ -55,13 +55,13 @@ class TestLearning(unittest.TestCase):
         self.assertIsNone(extract_declared_fact("Just a normal question about routing?"))
 
     def test_duplicate_and_contradiction_detection(self):
-        self.store.add("rule", "Projects live in root/projects as the single copy.", "test")
-        dup = self.validator.validate_candidate("rule", "Projects live in root/projects as the single copy.")
+        self.store.add("rule", "Projects live in scripts/root/projects as the single copy.", "test")
+        dup = self.validator.validate_candidate("rule", "Projects live in scripts/root/projects as the single copy.")
         self.assertEqual(dup.status, "duplicate")
         self.assertFalse(dup.is_valid)
 
         contradiction = self.validator.validate_candidate(
-            "rule", "Projects never live in root/projects as the single copy."
+            "rule", "Projects never live in scripts/root/projects as the single copy."
         )
         self.assertEqual(contradiction.status, "contradiction")
 

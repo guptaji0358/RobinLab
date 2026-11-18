@@ -4,7 +4,7 @@
 
 | Production (Cloudflare Pages Function)         | Local mirror (`dev_server.py`)            |
 | ---------------------------------------------- | ----------------------------------------- |
-| `functions/api/collection/[[path]].js` (≈760)  | `dev_server.py` (832)                     |
+| `scripts/functions/api/collection/[[path]].js` (≈760)  | `dev_server.py` (832)                     |
 
 Change one → check the other. Both talk to the Hugging Face bucket
 `robinlabdev/robinvault` with `HF_TOKEN` (never exposed to the browser).
@@ -20,7 +20,7 @@ Change one → check the other. Both talk to the Hugging Face bucket
 | `GET …/backdrop[?prev=]`       | `handleBackdrop` (above `onRequest`) | `pick_backdrop` (above `open_file_stream`) |
 | `GET …/skills`                 | `handleSkills` 692, `getSkills` 674 | `get_skills` 331, `summarise_skill` 302 |
 | `GET …/skill?id=`              | `handleSkill` 709         | `_serve_skill` 432               |
-| `GET /decks/<name>.pptx`       | `functions/decks/[[path]].js` (51 lines) | `_serve_file(..., decks_only=True)` |
+| `GET /decks/<name>.pptx`       | `scripts/functions/decks/[[path]].js` (51 lines) | `_serve_file(..., decks_only=True)` |
 
 Share tokens: HMAC-signed, expiry inside payload, **30 min**; `410` after expiry.
 JS: `createShareToken` 111 / `readShareToken` 121. Python: `create_share_token` 127 / `read_share_token` 134.
@@ -41,5 +41,5 @@ Prod: Cloudflare Pages → Settings → Environment variables. Never print or co
 
 ## Tools
 
-`tools/make_icons.py` — favicon/manifest set from `root/assets/robinlab-logo.png`.
-`tools/make_thumbs.py` — bucket thumbnails (LQIP source). Both are Python, run on demand.
+`scripts/tools/make_icons.py` — favicon/manifest set from `scripts/root/assets/robinlab-logo.png`.
+`scripts/tools/make_thumbs.py` — bucket thumbnails (LQIP source). Both are Python, run on demand.

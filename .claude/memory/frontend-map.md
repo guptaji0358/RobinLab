@@ -15,7 +15,7 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 | `music.html`               | 101                     | `music.js`                        |
 | `projects.html`            | ~290                    | none (links.js, site.js, fx.js)   |
 
-(Verify the exact `<script>` list with `grep -n "<script" root/<page>.html`.)
+(Verify the exact `<script>` list with `grep -n "<script" scripts/root/<page>.html`.)
 
 ## JS files
 
@@ -51,11 +51,11 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 - `fx.css` (477) — effects (pairs with `fx.js`). `music.css` (54) — music page.
 - `logos.css` — the `/logos` grid, dark/light stages, broken-preview state and full-size viewer.
 
-## Projects (root/projects/, each self-contained)
+## Projects (scripts/root/projects/, each self-contained)
 
 `CodeLens/` (index+style) · `Contact Book/` (index+script+style; link as `Contact%20Book`) ·
 `Motiva/` (css/, js/, Assets/) · `Pywix/` (css/, js/main.js).
-Hub icons: `root/assets/`. See `workflows.md` → Add a project.
+Hub icons: `scripts/root/assets/`. See `workflows.md` → Add a project.
 
 ## Footer identity (change all pages together)
 

@@ -2,12 +2,12 @@
 
 ## Before reading anything
 1. Read `AgentMemory/INDEX.md`, then **one** topic file. Don't open the others.
-2. Locate by name: `Grep` a function (`grep -n "function openLightbox" root/js/collection.js`),
+2. Locate by name: `Grep` a function (`grep -n "function openLightbox" scripts/root/js/collection.js`),
    then `Read` with `offset`/`limit` ≈ 60–120 lines around the hit.
 
 ## Never read in full (big files)
-`root/css/style.css` (2070) · `root/js/collection.js` (1188) · `dev_server.py` (832) ·
-`root/index.html` (636) · `root/js/fx.js` (601) · `functions/api/collection/[[path]].js` (~760).
+`scripts/root/css/style.css` (2070) · `scripts/root/js/collection.js` (1188) · `dev_server.py` (832) ·
+`scripts/root/index.html` (636) · `scripts/root/js/fx.js` (601) · `scripts/functions/api/collection/[[path]].js` (~760).
 Use the section/line maps in `frontend-map.md` / `backend-map.md`.
 
 ## Never read at all
@@ -27,5 +27,5 @@ If the request is ambiguous (which page? production or local only? which route?)
 short question first. A wrong 1000-line edit costs far more than a question.
 
 ## Parity checklist (prevents rework)
-API change → both `functions/api/collection/[[path]].js` and `dev_server.py`.
+API change → both `scripts/functions/api/collection/[[path]].js` and `dev_server.py`.
 Footer/identity change → all page `<head>`/footers. New page → nav in `site.js`, route list in `CLAUDE.md`, this folder.

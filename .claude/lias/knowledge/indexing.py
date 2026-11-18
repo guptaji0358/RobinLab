@@ -15,12 +15,12 @@ from lias.knowledge.store import KnowledgeStore
 FOUNDATIONAL_FACTS: List[Tuple[str, str, str]] = [
     (
         "architecture",
-        "RobinLabs is a static site and project portfolio. There is no framework, bundler, or build step. Cloudflare Pages publishes only the root/ directory.",
+        "RobinLabs is a static site and project portfolio. There is no framework, bundler, or build step. Cloudflare Pages publishes only the scripts/root/ directory.",
         "CLAUDE.md:Layout"
     ),
     (
         "rule",
-        "Projects live in root/projects/<name>/. There is no second copy or top-level sync directory.",
+        "Projects live in scripts/root/projects/<name>/. There is no second copy or top-level sync directory.",
         "CLAUDE.md:The one rule"
     ),
     (
@@ -35,12 +35,12 @@ FOUNDATIONAL_FACTS: List[Tuple[str, str, str]] = [
     ),
     (
         "backend",
-        "Cloudflare Pages Function at functions/api/collection/* acts as proxy to HuggingFace dataset bucket. dev_server.py provides local emulation.",
+        "Cloudflare Pages Function at scripts/functions/api/collection/* acts as proxy to HuggingFace dataset bucket. dev_server.py provides local emulation.",
         "CLAUDE.md:dev_server.py"
     ),
     (
         "tooling",
-        "tools/make_icons.py regenerates site favicons and icons from root/assets/robinlab-logo.png. tools/make_thumbs.py generates collection thumbnails.",
+        "scripts/tools/make_icons.py regenerates site favicons and icons from scripts/root/assets/robinlab-logo.png. scripts/tools/make_thumbs.py generates collection thumbnails.",
         "CLAUDE.md:Site icons"
     ),
 ]

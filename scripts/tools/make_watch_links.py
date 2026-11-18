@@ -1,24 +1,24 @@
-"""Build root/data/anime-watch.json from AnimeWatchURL.json.
+"""Build scripts/root/data/anime-watch.json from AnimeWatchURL.json.
 
 AnimeWatchURL.json is the source of truth and is only ever READ here.
 The site (js/collection.js) loads the generated {"Title": "url"} map and uses it
 for the "Watch" buttons; titles not listed fall back to a Crunchyroll search.
 
-    python tools/make_watch_links.py
-    python tools/make_watch_links.py --source other.json --out some/path.json
+    python scripts/tools/make_watch_links.py
+    python scripts/tools/make_watch_links.py --source other.json --out some/path.json
 """
 import argparse
 import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--source", default=ROOT / "AnimeWatchURL.json", type=Path)
-    ap.add_argument("--out", default=ROOT / "root" / "data" / "anime-watch.json", type=Path)
+    ap.add_argument("--out", default=ROOT / "scripts" / "root" / "data" / "anime-watch.json", type=Path)
     ap.add_argument("--platform", default="crunchyroll")
     args = ap.parse_args()
 

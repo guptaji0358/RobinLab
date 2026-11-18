@@ -1,9 +1,9 @@
 """Start / stop / restart / check the local RobinLab dev server in one command.
 
-    python tools/devctl.py start [--port 5500] [--open]
-    python tools/devctl.py stop  [--port 5500]
-    python tools/devctl.py restart
-    python tools/devctl.py status
+    python scripts/tools/devctl.py start [--port 5500] [--open]
+    python scripts/tools/devctl.py stop  [--port 5500]
+    python scripts/tools/devctl.py restart
+    python scripts/tools/devctl.py status
 
 It runs `dev_server.py` detached (no console window), remembers its PID in
 `.dev_server.pid`, and stops it by PID or, failing that, by whatever process is
@@ -22,7 +22,7 @@ import time
 import webbrowser
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 PID_FILE = ROOT / ".dev_server.pid"
 LOG_FILE = ROOT / ".dev_server.log"
 HOST = "127.0.0.1"

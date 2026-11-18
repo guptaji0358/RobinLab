@@ -38,9 +38,9 @@
     "enabled": true,
     "ttl": 300,
     "fingerprint_paths": [
-      "root",
-      "functions",
-      "tools",
+      "scripts/root",
+      "scripts/functions",
+      "scripts/tools",
       "dev_server.py"
     ]
   },

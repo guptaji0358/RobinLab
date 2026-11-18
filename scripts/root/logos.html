@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Certificates — RobinLab</title>
-<meta name="description" content="Certificates issued to and by Robin Gupta Studios.">
+<title>Logos — RobinLab</title>
+<meta name="description" content="Brand marks and app icons from the RobinLab vault, shown on dark and light backgrounds and downloadable as the original files.">
 <meta name="author" content="Robin Gupta">
 <meta name="publisher" content="Robin Gupta Studios">
 <meta name="copyright" content="Copyright &copy; Robin Gupta">
@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
 <link rel="stylesheet" href="css/fx.css">
   <link rel="stylesheet" href="css/motion.css">
+<link rel="stylesheet" href="css/logos.css">
 <script>
   /* Set before first paint so the boot curtain never flashes. fx.js removes it. */
   (function (r) {
@@ -31,8 +32,9 @@
   })(document.documentElement);
 </script>
 <link rel="stylesheet" href="css/soft-edges.css">
+<link rel="stylesheet" href="css/veins.css">
 </head>
-<body class="col-page" data-scope="certificates">
+<body class="col-page lg-page">
 
 <div class="fx-loader" aria-hidden="true">
   <div class="fx-loader-panel top"></div>
@@ -60,21 +62,32 @@
 
   <section class="col-hero container">
     <p class="eyebrow">robinvault</p>
-    <h1>Certificates</h1>
+    <h1>Logos</h1>
     <p class="hero-sub">
-      Certificates streamed live from the private RobinLab bucket. Open any one to view it
-      at full size or grab a share link that lasts 30 minutes.
+      Brand marks and app icons from the vault. Every one is shown on dark and
+      light so you can see how it holds up, and opens full size when you need a
+      closer look.
     </p>
     <div class="col-notice">
-      <span class="ic ic-lock icon icon-sm" aria-hidden="true"></span>
-      Free to download — every download carries a small RGS™ watermark.
+      <span class="ic ic-download-tray icon icon-sm" aria-hidden="true"></span>
+      Downloads are the original files &mdash; no watermark, no re-encoding.
     </div>
   </section>
 
-  <section class="col-body container">
-    <div class="col-state" id="col-state" hidden></div>
+  <section class="col-body container" aria-labelledby="lg-grid-title">
+    <h2 class="lg-heading" id="lg-grid-title">The marks</h2>
 
-    <div class="col-packs" id="col-packs"></div>
+    <div class="col-toolbar lg-toolbar">
+      <div class="col-search">
+        <span class="ic ic-search icon" aria-hidden="true"></span>
+        <input id="lg-search" type="search" placeholder="Search logos…" autocomplete="off" spellcheck="false" aria-label="Search logos">
+      </div>
+      <p class="col-stats lg-stats" id="lg-stats" aria-live="polite"></p>
+    </div>
+
+    <div class="col-state" id="lg-state" hidden></div>
+
+    <div class="lg-grid" id="lg-grid"></div>
   </section>
 
 </main>
@@ -92,72 +105,59 @@
       <span class="footer-sep">&middot;</span>
       <span>All rights reserved</span>
     </p>
+    <span class="footer-note">Logos read from the robinvault bucket</span>
   </div>
 </footer>
 
-<!-- Lightbox viewer (click any artwork) -->
-<div class="lightbox" id="lightbox" hidden>
-  <div class="lightbox-backdrop" data-close></div>
+<!-- Logo viewer (click any mark) -->
+<div class="lg-lightbox" id="lg-lightbox" hidden>
+  <div class="lg-backdrop" data-close></div>
 
-  <div class="lightbox-panel" role="dialog" aria-modal="true" aria-label="Artwork viewer">
-    <button class="lb-close" id="lb-close" type="button" aria-label="Close viewer">
-      <span class="ic ic-close icon" aria-hidden="true"></span>
-    </button>
-
-    <div class="lb-zoom" id="lb-zoom" role="group" aria-label="Zoom">
-      <button type="button" id="lb-zoom-out" aria-label="Zoom out" title="Zoom out (−)">−</button>
-      <button type="button" id="lb-zoom-reset" class="lb-zoom-level" aria-label="Reset zoom" title="Reset (0)">100%</button>
-      <button type="button" id="lb-zoom-in" aria-label="Zoom in" title="Zoom in (+)">+</button>
+  <div class="lg-panel" role="dialog" aria-modal="true" aria-labelledby="lg-v-name">
+    <div class="lg-head">
+      <div class="lg-heading-wrap">
+        <span class="lg-v-name" id="lg-v-name"></span>
+        <span class="lg-v-meta" id="lg-v-meta"></span>
+      </div>
+      <button class="lg-close" id="lg-close" type="button" aria-label="Close viewer">
+        <span class="ic ic-close icon" aria-hidden="true"></span>
+      </button>
     </div>
 
-    <div class="lb-viewport">
-      <button class="lb-nav lb-prev" id="lb-prev" type="button" aria-label="Previous artwork">
+    <div class="lg-viewport">
+      <button class="lg-nav lg-prev" id="lg-prev" type="button" aria-label="Previous logo">
         <span class="ic ic-chevron-left icon" aria-hidden="true"></span>
       </button>
 
-      <figure class="lb-stage">
-        <img id="lb-img" alt="" draggable="false">
-      </figure>
+      <div class="lg-canvas" id="lg-canvas" data-bg="checker">
+        <img id="lg-img" alt="" draggable="false">
+      </div>
 
-      <button class="lb-nav lb-next" id="lb-next" type="button" aria-label="Next artwork">
+      <button class="lg-nav lg-next" id="lg-next" type="button" aria-label="Next logo">
         <span class="ic ic-chevron-right icon" aria-hidden="true"></span>
       </button>
     </div>
 
-    <dl class="lb-details" id="lb-details" hidden>
-      <div><dt>Name</dt><dd id="lb-d-name"></dd></div>
-      <div><dt>Kind</dt><dd id="lb-d-kind">Detecting…</dd></div>
-      <div><dt>Size</dt><dd id="lb-d-size"></dd></div>
-    </dl>
-
-    <div class="lb-bar">
-      <div class="lb-info">
-        <span class="lb-name" id="lb-name"></span>
-        <span class="lb-meta" id="lb-meta"></span>
+    <div class="lg-foot">
+      <div class="lg-bg" id="lg-bg" role="group" aria-label="Preview background">
+        <button type="button" data-bg="dark" aria-pressed="false">Dark</button>
+        <button type="button" data-bg="light" aria-pressed="false">Light</button>
+        <button type="button" data-bg="checker" aria-pressed="true">Checker</button>
       </div>
-      <div class="lb-actions">
-        <span class="lb-counter" id="lb-counter"></span>
-        <button class="lb-infobtn" id="lb-info" type="button" aria-expanded="false" aria-controls="lb-details" title="Show file details (I)">
-          <span class="ic ic-info icon icon-sm" aria-hidden="true"></span>
-          Details
-        </button>
-        <a class="lb-share lb-watch" id="lb-watch" href="#" target="_blank" rel="noopener noreferrer" hidden title="Watch this anime on Crunchyroll">▶ Watch</a>
-        <button class="lb-share" id="lb-share" type="button" title="Copy a link that works for 30 minutes">
-          <span class="ic ic-share icon icon-sm" aria-hidden="true"></span>
-          Share
-        </button>
-        <button class="lb-download" id="lb-download" type="button" title="Download this image with the RGS watermark">
-          <span class="ic ic-download icon icon-sm" aria-hidden="true"></span>
-          Download
-        </button>
-      </div>
+      <span class="lg-dim" id="lg-v-dim"></span>
+      <span class="lg-counter" id="lg-v-counter"></span>
+      <button class="lg-download lg-v-download" id="lg-v-download" type="button" aria-label="Download original file">
+        <span class="ic ic-download icon icon-sm" aria-hidden="true"></span>
+        <span class="lg-dl-label">Download original</span>
+      </button>
     </div>
   </div>
 </div>
+
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="js/names.js"></script>
-<script src="js/collection.js"></script>
+<script src="js/logos.js"></script>
 <script src="js/links.js"></script>
 <script src="js/site.js"></script>
 <script src="js/fx.js"></script>

@@ -15,12 +15,12 @@ automatically falls back to the full-resolution file when a thumbnail is
 missing, so the site keeps working if you add images and forget to re-run this.
 
 Usage:
-    python tools/make_thumbs.py                 # add any missing thumbnails
-    python tools/make_thumbs.py --dry-run       # show what would happen
-    python tools/make_thumbs.py --force         # rebuild every thumbnail
-    python tools/make_thumbs.py --width 900     # max edge in px (default 720)
-    python tools/make_thumbs.py --quality 85    # WebP quality (default 78)
-    python tools/make_thumbs.py --prune         # also drop orphaned thumbnails
+    python scripts/tools/make_thumbs.py                 # add any missing thumbnails
+    python scripts/tools/make_thumbs.py --dry-run       # show what would happen
+    python scripts/tools/make_thumbs.py --force         # rebuild every thumbnail
+    python scripts/tools/make_thumbs.py --width 900     # max edge in px (default 720)
+    python scripts/tools/make_thumbs.py --quality 85    # WebP quality (default 78)
+    python scripts/tools/make_thumbs.py --prune         # also drop orphaned thumbnails
 
 Original files are never modified or deleted. `--prune` only ever removes files
 inside the `_thumbs/` prefix.
@@ -189,7 +189,7 @@ def process(entry: dict, token: str, max_edge: int, quality: int) -> dict:
 # Entry point
 # --------------------------------------------------------------------------- #
 def main() -> int:
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--width", type=int, default=DEFAULT_WIDTH, help=f"max edge in px (default {DEFAULT_WIDTH})")

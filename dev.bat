@@ -1,6 +1,8 @@
 @echo off
 rem Local dev server control:  dev start | stop | restart | status   [--port N] [--open]
 cd /d "%~dp0"
+rem Send Python bytecode to .cache/ instead of __pycache__ folders in the tree.
+set "PYTHONPYCACHEPREFIX=%~dp0.cache\__pycache__"
 if "%~1"=="" (
   python tools\devctl.py status
   echo Usage: dev start^|stop^|restart^|status [--port N] [--open]

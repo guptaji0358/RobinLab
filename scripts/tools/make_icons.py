@@ -6,17 +6,17 @@ ROBINLAB wordmark and the tagline. A wordmark is unreadable at 16-48 px, so the
 script keeps only the emblem, centres it on the artwork's own background colour
 and writes the standard icon sizes.
 
-    python tools/make_icons.py                          # uses root/assets/robinlab-logo.png
-    python tools/make_icons.py --source path/to/logo.png
+    python scripts/tools/make_icons.py                          # uses scripts/root/assets/robinlab-logo.png
+    python scripts/tools/make_icons.py --source path/to/logo.png
 
-Outputs (all under root/assets/):
+Outputs (all under scripts/root/assets/):
 
     robinlab-mark.png        512x512 emblem, used for large/manifest icons
     robinlab-icon-192.png    192x192 manifest icon
     apple-touch-icon.png     180x180, opaque background (iOS applies its own mask)
     favicon.ico              16/32/48/64 multi-size favicon
 
-The source image itself is copied to root/assets/robinlab-logo.png (1024x1024)
+The source image itself is copied to scripts/root/assets/robinlab-logo.png (1024x1024)
 by `--install-logo`, which is how the repo stopped depending on a file outside
 it. Re-running is safe: every output is deterministic.
 
@@ -32,8 +32,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-ASSETS = PROJECT_ROOT / "root" / "assets"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+ASSETS = PROJECT_ROOT / "scripts" / "root" / "assets"
 
 # Content detection: pixels brighter than this count as artwork. The background
 # is a near-black navy (~2, 4, 19), so 45 separates glyph/glow from empty space.
@@ -113,12 +113,12 @@ def main() -> int:
         "--source",
         type=Path,
         default=ASSETS / "robinlab-logo.png",
-        help="studio logo PNG (default: root/assets/robinlab-logo.png)",
+        help="studio logo PNG (default: scripts/root/assets/robinlab-logo.png)",
     )
     parser.add_argument(
         "--install-logo",
         action="store_true",
-        help="copy --source to root/assets/robinlab-logo.png (1024px) before generating icons",
+        help="copy --source to scripts/root/assets/robinlab-logo.png (1024px) before generating icons",
     )
     args = parser.parse_args()
 

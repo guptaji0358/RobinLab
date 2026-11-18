@@ -15,7 +15,7 @@ metadata, temporary information (with expiry), and historical decisions.
 ## Adding knowledge
 
 ```powershell
-python .claude/lias/cli.py knowledge add --category rule --content "Projects live in root/projects/." --provenance "CLAUDE.md:The one rule"
+python .claude/lias/cli.py knowledge add --category rule --content "Projects live in scripts/root/projects/." --provenance "CLAUDE.md:The one rule"
 ```
 
 - Secrets are rejected (`on_secret=reject` in the CLI path). The store can

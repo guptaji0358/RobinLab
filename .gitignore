@@ -25,9 +25,12 @@ node_modules/
 # LIAS benchmark results
 .claude/lias/benchmarks/results/
 
-# Local dev server (tools/devctl.py)
+# Local dev server (scripts/tools/devctl.py)
 .dev_server.pid
 .dev_server.log
 
 # Private evaluation data (ratings, reviews) - never commit
-.private/
+.claude/.private/
+
+# Local caches (wrangler, bytecode)
+.cache/

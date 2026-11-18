@@ -1,0 +1,45 @@
+/* Vein prototype — All pages, text cards (not image cards).
+   Static SVG variants; no JS, no animation. Loaded after soft-edges.css and
+   overrides its fog/mist for these cards. Remove the <link> from the pages to revert. */
+body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status) {
+  overflow: visible;
+  isolation: isolate;
+  border-color: transparent;
+  background-color: rgba(11, 16, 30, 0.62);
+  background-image: none;
+  -webkit-mask-image: none; mask-image: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: none;
+  filter: none;
+}
+body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder),
+body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder):nth-child(even) {
+  background-color: rgba(11, 16, 30, 0.62);
+  background-image: none;
+  box-shadow: none;
+}
+body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder):hover { box-shadow: none; filter: brightness(1.1); }
+
+/* the vein layer: extends 70px past every side, sits behind the content */
+body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder)::before {
+  display: block;
+  content: "";
+  position: absolute;
+  inset: -70px;
+  z-index: -1;
+  padding: 0;
+  border-radius: 0;
+  background: url("../assets/veins/vein-a.svg") center / 100% 100% no-repeat;
+  -webkit-mask: none; mask: none;
+  filter: none;
+  opacity: .9;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
+body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder):nth-child(2n)::before {
+  background-image: url("../assets/veins/vein-b.svg");
+}
+/* a third and fourth look: mirrored copies */
+body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder):nth-child(3n)::before { transform: scaleX(-1); }
+body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder):nth-child(4n)::before { transform: scaleY(-1); }
+body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder):hover::before { opacity: 1; }

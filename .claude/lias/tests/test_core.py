@@ -128,7 +128,7 @@ class TestLiasCore(unittest.TestCase):
     def test_router_dispatch(self):
         self.store.add(
             category="decision",
-            content="Projects live in root/projects/ with no second copy.",
+            content="Projects live in scripts/root/projects/ with no second copy.",
             provenance="user",
         )
         routed = self.router.route("Where do projects live?")

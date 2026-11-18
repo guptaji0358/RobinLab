@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Collection — RobinLab</title>
-<meta name="description" content="Browse the private RobinLab vault — artwork streamed from a Hugging Face bucket.">
+<title>Certificates — RobinLab</title>
+<meta name="description" content="Certificates issued to and by Robin Gupta Studios.">
 <meta name="author" content="Robin Gupta">
 <meta name="publisher" content="Robin Gupta Studios">
 <meta name="copyright" content="Copyright &copy; Robin Gupta">
@@ -31,8 +31,9 @@
   })(document.documentElement);
 </script>
 <link rel="stylesheet" href="css/soft-edges.css">
+<link rel="stylesheet" href="css/veins.css">
 </head>
-<body class="col-page">
+<body class="col-page" data-scope="certificates">
 
 <div class="fx-loader" aria-hidden="true">
   <div class="fx-loader-panel top"></div>
@@ -60,57 +61,18 @@
 
   <section class="col-hero container">
     <p class="eyebrow">robinvault</p>
-    <h1>Collection</h1>
+    <h1>Certificates</h1>
     <p class="hero-sub">
-      Artwork streamed live from a private RobinLab bucket. Every folder is a
-      pack — browse at full size, nothing to install.
-      Open any image to grab a share link that lasts 30 minutes.
+      Certificates streamed live from the private RobinLab bucket. Open any one to view it
+      at full size or grab a share link that lasts 30 minutes.
     </p>
     <div class="col-notice">
       <span class="ic ic-lock icon icon-sm" aria-hidden="true"></span>
       Free to download — every download carries a small RGS™ watermark.
     </div>
-    <p class="col-pitch">
-      You&rsquo;ll find the same wallpaper online, but never at the same quality.
-      Test it out, then buy &mdash; or buy ChatGPT and make your own.
-    </p>
   </section>
 
   <section class="col-body container">
-    <div class="col-tabs" id="col-tabs" role="tablist" aria-label="Collection views">
-      <button type="button" class="col-tab" role="tab" data-tab="packs" aria-selected="false">Packs <span class="col-tab-count" id="col-tab-packs-count"></span></button>
-      <button type="button" class="col-tab" role="tab" data-tab="images" aria-selected="true">All images <span class="col-tab-count" id="col-tab-images-count"></span></button>
-    </div>
-
-    <div class="col-packlist" id="col-packlist" hidden></div>
-
-    <div class="col-toolbar">
-      <div class="col-search">
-        <span class="ic ic-search icon" aria-hidden="true"></span>
-        <input id="col-search" type="search" placeholder="Search artwork…" autocomplete="off" spellcheck="false" aria-label="Search artwork">
-      </div>
-      <div class="col-view" role="group" aria-label="Layout">
-        <button type="button" class="col-view-btn" data-view="grid" aria-pressed="true" title="Natural proportions">Grid</button>
-        <button type="button" class="col-view-btn" data-view="landscape" aria-pressed="false" title="Wide landscape cards">
-          <span class="ic ic-landscape icon icon-sm" aria-hidden="true"></span>
-          Landscape
-        </button>
-      </div>
-      <label class="col-sort">
-        <span>Sort</span>
-        <select id="col-sort" aria-label="Sort artwork">
-          <option value="name">Name (A–Z)</option>
-          <option value="recent">Recently added</option>
-          <option value="largest">Largest first</option>
-          <option value="smallest">Smallest first</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="col-chips" id="col-folders" role="group" aria-label="Filter by folder"></div>
-
-    <p class="col-stats" id="col-stats" aria-live="polite"></p>
-
     <div class="col-state" id="col-state" hidden></div>
 
     <div class="col-packs" id="col-packs"></div>
@@ -193,7 +155,6 @@
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="js/names.js"></script>

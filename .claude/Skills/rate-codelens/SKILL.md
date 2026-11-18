@@ -10,14 +10,14 @@ Code-Lens is the user's own MCP server. I am its **user/tester, not its develope
 ## Rules
 - Read-only. NEVER edit, create or fix Code-Lens code, and never commit. Only report.
 - Ratings are my own judgment, not Code-Lens output; say so. No encouragement ratings.
-- Save results to `D:/Apps/MyApps/RobinLabs/.private/evaluations/codelens-review-<YYYY-MM-DD>.md` (git-ignored; never commit or publish).
+- Save results to `D:/Apps/MyApps/RobinLabs/.claude/.private/evaluations/codelens-review-<YYYY-MM-DD>.md` (git-ignored; never commit or publish).
 - Start by reading the previous review in that folder and compare: which reported bugs are fixed, which remain, any regressions.
 
 ## Steps
 1. Load the tools: ToolSearch `select:mcp__code-lens__get_capabilities,...` (all 8 code-lens tools). If the server is missing/disconnected, say so and stop; do not claim results.
 2. `get_capabilities` (check version change).
 3. `list_files` (extensions + exclude + detail + pagination cursor).
-4. `get_file_outline`: Python (`dev_server.py`), JS (`root/js/motion.js`, `functions/api/collection/[[path]].js`), HTML (`root/index.html`, expect "unsupported").
+4. `get_file_outline`: Python (`dev_server.py`), JS (`scripts/root/js/motion.js`, `scripts/functions/api/collection/[[path]].js`), HTML (`scripts/root/index.html`, expect "unsupported").
 5. `search_symbols` (e.g. `pick_backdrop`, `handleBackdrop`) WITHOUT `exclude` first, to check whether `.wrangler/` is still scanned.
 6. `find_references` (`handleBackdrop`, context=1).
 7. `search_code`: word + files_only; flexible; literal; count_only; pagination; check warning noise (binary-skip spam).
