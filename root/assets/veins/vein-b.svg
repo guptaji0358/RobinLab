@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 490" preserveAspectRatio="none" fill="none" stroke-linecap="round">
+<defs><linearGradient id="g" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b48cff" stop-opacity=".55"/><stop offset="1" stop-color="#8cafff" stop-opacity=".30"/></linearGradient></defs>
+<g stroke="url(#g)" vector-effect="non-scaling-stroke">
+<path stroke-width="1.5" d="M110 300C84 318 62 344 52 376C46 396 30 408 24 440"/>
+<path stroke-width=".9" d="M52 376C40 372 26 378 10 366"/>
+<path stroke-width=".6" d="M72 336C58 330 50 318 40 300"/>
+<path stroke-width="1.4" d="M330 150C372 128 396 98 424 92C440 88 452 72 458 44"/>
+<path stroke-width=".9" d="M424 92C440 104 458 110 472 132"/>
+<path stroke-width=".6" d="M396 112C400 94 394 76 402 56"/>
+<path stroke-width="1.3" d="M240 96C226 70 244 44 228 14"/>
+<path stroke-width=".8" d="M236 62C254 56 270 44 276 26"/>
+<path stroke-width="1.2" d="M270 380C284 404 322 410 340 436C350 452 366 462 372 484"/>
+<path stroke-width=".7" d="M340 436C326 440 312 452 308 472"/>
+<path stroke-width=".6" d="M372 484C380 478 392 478 402 470"/>
+<path stroke-width=".5" d="M120 462C140 452 160 460 182 448"/>
+<path stroke-width=".5" d="M440 300C452 290 466 294 476 280"/>
+<path stroke-width=".5" d="M6 200C20 192 34 200 50 188"/>
+</g>
+<g fill="#b8a2ff" fill-opacity=".5"><circle cx="52" cy="376" r="2.2"/><circle cx="424" cy="92" r="2.4"/><circle cx="236" cy="62" r="1.8"/><circle cx="340" cy="436" r="2"/><circle cx="72" cy="336" r="1.6"/><circle cx="372" cy="484" r="1.8"/></g>
+</svg>

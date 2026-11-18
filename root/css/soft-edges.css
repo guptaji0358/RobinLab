@@ -1,0 +1,298 @@
+/* Soft edges — replaces hard 1px outlines with fog-like diffused edges.
+   Loaded LAST on every page. Remove its <link> to restore the outlined look.
+   Layout is untouched: every component keeps its 1px border box, the border
+   is just made transparent and the edge is drawn with shadows instead.
+   Text/icons are never filtered or blurred. */
+
+:root {
+  --edge-rgb: 140, 175, 255;
+  /* default: faint inner highlight + hairline halo + soft ambient fog */
+  --edge:
+    inset 0 3px 8px -3px rgba(255, 255, 255, 0.05),
+    inset 0 0 7px 0 rgba(var(--edge-rgb), 0.075),
+    0 0 12px 3px rgba(var(--edge-rgb), 0.035),
+    0 6px 22px -10px rgba(0, 0, 0, 0.6),
+    0 0 26px -8px rgba(var(--edge-rgb), 0.09);
+  --edge-hover:
+    inset 0 3px 8px -3px rgba(255, 255, 255, 0.07),
+    inset 0 0 7px 0 rgba(var(--edge-rgb), 0.15),
+    0 0 12px 3px rgba(var(--edge-rgb), 0.06),
+    0 10px 28px -10px rgba(0, 0, 0, 0.6),
+    0 0 34px -6px rgba(var(--edge-rgb), 0.2);
+  --edge-focus:
+    inset 0 0 7px 0 rgba(var(--edge-rgb), 0.28),
+    0 0 0 3px rgba(var(--edge-rgb), 0.1),
+    0 0 30px -4px rgba(var(--edge-rgb), 0.3);
+  --edge-active:
+    inset 0 2px 8px rgba(0, 0, 0, 0.35),
+    inset 0 0 7px 0 rgba(var(--edge-rgb), 0.12),
+    0 0 18px -6px rgba(var(--edge-rgb), 0.18);
+  --edge-selected:
+    inset 0 0 7px 0 rgba(var(--edge-rgb), 0.24),
+    0 0 12px 3px rgba(var(--edge-rgb), 0.07),
+    0 0 24px -6px rgba(var(--edge-rgb), 0.28);
+  --edge-disabled: inset 0 0 7px 0 rgba(var(--edge-rgb), 0.04);
+  --edge-accent:
+    inset 0 0 7px 0 rgba(var(--edge-rgb), 0.22),
+    0 0 22px -6px rgba(var(--edge-rgb), 0.28);
+  --edge-fade-x: linear-gradient(90deg, transparent, rgba(var(--edge-rgb), 0.035) 30%, rgba(var(--edge-rgb), 0.035) 70%, transparent);
+  --edge-fade-y: linear-gradient(180deg, transparent, rgba(var(--edge-rgb), 0.035) 30%, rgba(var(--edge-rgb), 0.035) 70%, transparent);
+  --glow: var(--edge-hover);
+}
+
+/* ---------- 1. Boxed components: transparent border + soft edge ---------- */
+.brand-mark, .project-card, .contact-link, .about-block, .about-signoff,
+.footer-tm, .col-notice, .col-pitch, .col-search input, .col-sort select,
+.col-view, .col-crumb-back, .col-packcard, .col-chip, .col-watch,
+.col-jump-link, .col-card, .col-state, .col-card-ext, .fx-scene-btn,
+.lb-zoom, .lb-nav, .lb-close, .lb-bar, .lb-download, .lb-infobtn,
+.lb-details, .toast, .pr-card, .pr-note, a.deck-open, .deck-close,
+.sk-card, .sk-name, .sk-chips li, .sk-copy, .sk-steps li, .sk-asks li,
+.pf-hero, .pf-status, .pf-chips li, .pf-tile, .pf-skills span,
+.lg-card, .lg-download, .lg-panel, .lg-close, .lg-canvas, .lg-nav, .lg-bg,
+.mu-big, .mu-embed, .mu-btn, .btn-ghost,
+.project-card:not(.project-card-placeholder) .project-tag,
+.pr-card-open {
+  border-color: transparent;
+  box-shadow: var(--edge);
+}
+
+/* accent-outlined buttons keep a hint of colour, no line */
+.lb-share, .deck-download {
+  border-color: transparent;
+  box-shadow: var(--edge-accent);
+}
+.lb-share:hover, .deck-download:hover { box-shadow: var(--edge-hover), 0 0 28px -6px rgba(var(--edge-rgb), 0.35); }
+
+/* dashed placeholders become a plain soft-edged box */
+.col-state, .project-card-placeholder, .fx-orbit { border-style: solid; }
+.fx-orbit { border-color: rgba(var(--edge-rgb), 0.12); }
+.project-card-placeholder { box-shadow: var(--edge-disabled); }
+
+/* ---------- 2. Hover ---------- */
+.project-card:not(.project-card-placeholder):hover, .contact-link:hover,
+.about-block:hover, .col-crumb-back:hover, .col-packcard:hover,
+.col-chip:hover, .col-watch:hover, .col-jump-link:hover, .col-card:hover,
+.fx-scene-btn:hover, .lb-nav:hover, .lb-close:hover, .lb-download:hover:not(:disabled),
+.lb-infobtn:hover, a.deck-open:hover, .deck-close:hover, .pr-card:hover,
+.sk-copy:hover:not(:disabled), .lg-card:hover, .lg-download:hover:not(:disabled),
+.lg-close:hover, .lg-nav:hover:not(:disabled), .mu-btn:hover, .btn-ghost:hover,
+.col-search input:hover, .col-sort select:hover {
+  border-color: transparent;
+  box-shadow: var(--edge-hover);
+}
+
+/* ---------- 3. Focus (keyboard outline from :focus-visible is kept, softened) ---------- */
+.col-search input:focus, .col-sort select:focus,
+.col-search input:focus-visible, .col-sort select:focus-visible,
+.col-watch:focus-visible, .btn-ghost:focus-visible, .sk-copy:focus-visible,
+.lb-nav:focus-visible, .lb-close:focus-visible, .mu-btn:focus-visible {
+  border-color: transparent;
+  box-shadow: var(--edge-focus);
+}
+:focus-visible { outline-color: rgba(79, 227, 193, 0.55); }
+
+/* ---------- 4. Active (pressed) ---------- */
+.btn-ghost:active, .col-chip:active, .col-watch:active, .lb-nav:active,
+.lb-close:active, .lb-download:active:not(:disabled), .lb-infobtn:active,
+.sk-copy:active, .lg-download:active:not(:disabled), .lg-close:active,
+.mu-btn:active, a.deck-open:active, .deck-close:active, .fx-scene-btn:active {
+  box-shadow: var(--edge-active);
+}
+
+/* ---------- 5. Selected ---------- */
+.col-chip[aria-pressed="true"], .col-view-btn[aria-pressed="true"],
+.col-tab[aria-selected="true"], .lg-bg button[aria-pressed="true"] {
+  border-color: transparent;
+}
+.col-chip[aria-pressed="true"] { box-shadow: var(--edge-selected); }
+
+/* ---------- 6. Disabled ---------- */
+.lb-download:disabled, .lb-share:disabled, .lg-download:disabled,
+.lg-nav:disabled, .sk-copy:disabled, .mu-btn:disabled {
+  box-shadow: var(--edge-disabled);
+}
+
+/* ---------- 7. Dividers: fade out at the ends instead of a hard line ---------- */
+.site-header, .deck-bar, .col-tabs, .col-pack-head, .col-title-head,
+.pr-card-art, .lg-head {
+  border-bottom-color: transparent;
+  border-image: var(--edge-fade-x) 1;
+}
+.projects, .about, .contact, .about-block-note, .col-body, .col-card-foot,
+.pr-body, .deck-foot, .lg-foot, .site-footer {
+  border-top-color: transparent;
+  border-image: var(--edge-fade-x) 1;
+}
+.col-view-btn + .col-view-btn, .lg-bg button + button {
+  border-left-color: transparent;
+  border-image: var(--edge-fade-y) 1;
+}
+.pf-timeline {
+  border-left-color: transparent;
+  border-image: var(--edge-fade-y) 1;
+}
+.fx-loader-panel.top { border-bottom-color: rgba(var(--edge-rgb), 0.18); }
+.pf-hero::after, .col-hero::after, .pr-hero::after { border-bottom-color: transparent; border-image: var(--edge-fade-x) 1; }
+.fx-orbit { border-color: rgba(var(--edge-rgb), 0.06) !important; filter: blur(0.5px); }
+
+/* The header's aurora rule: let it dissolve rather than cut */
+.site-header::after { opacity: 0.16; filter: blur(2px); }
+
+/* ---------- 8. Aurora ring on hovered cards: diffuse it into a glow ---------- */
+.project-card::before, .pr-card::before {
+  padding: 2px;
+  filter: blur(5px);
+}
+.project-card:hover::before, .pr-card:hover::before { opacity: 0.45; }
+
+/* ---------- 9. Layout-bearing accent bars: kept as-is (they are accents, not outlines) ---------- */
+
+/* ---------- 10. Fog edge for cards: a visible mist hugging the border ----------
+   Inner mist (inset blur) + two wide outer haze layers. Tune --fog-a. */
+:root {
+  --fog-a: 1;
+  --fog:
+    inset 0 0 22px -2px rgba(var(--edge-rgb), calc(0.16 * var(--fog-a))),
+    0 0 12px 3px rgba(var(--edge-rgb), calc(0.06 * var(--fog-a))),
+    0 0 14px 1px rgba(var(--edge-rgb), calc(0.20 * var(--fog-a))),
+    0 0 42px 4px rgba(150, 120, 255, calc(0.14 * var(--fog-a))),
+    0 0 90px 10px rgba(var(--edge-rgb), calc(0.08 * var(--fog-a)));
+  --fog-hover:
+    inset 0 0 30px -2px rgba(var(--edge-rgb), calc(0.24 * var(--fog-a))),
+    0 0 12px 3px rgba(var(--edge-rgb), calc(0.10 * var(--fog-a))),
+    0 0 18px 2px rgba(var(--edge-rgb), calc(0.32 * var(--fog-a))),
+    0 0 56px 6px rgba(150, 120, 255, calc(0.22 * var(--fog-a))),
+    0 0 110px 14px rgba(var(--edge-rgb), calc(0.12 * var(--fog-a)));
+}
+.project-card, .about-block, .col-card, .pr-card, .col-packcard,
+.sk-card, .sk-steps li, .pf-hero, .pf-tile, .lg-card, .lg-panel,
+.lb-bar, .lb-details, .col-pitch, .mu-big, .mu-embed {
+  box-shadow: var(--fog);
+}
+.project-card:not(.project-card-placeholder):hover, .about-block:hover,
+.col-card:hover, .pr-card:hover, .col-packcard:hover, .lg-card:hover {
+  box-shadow: var(--fog-hover);
+}
+.project-card-placeholder { box-shadow: var(--edge-disabled); }
+
+/* ---------- 11. Restrained fog for buttons, inputs and small controls ---------- */
+:root {
+  --fog-soft:
+    inset 0 0 12px -2px rgba(var(--edge-rgb), calc(0.10 * var(--fog-a))),
+    0 0 12px 3px rgba(var(--edge-rgb), calc(0.05 * var(--fog-a))),
+    0 0 10px 0 rgba(var(--edge-rgb), calc(0.12 * var(--fog-a))),
+    0 0 26px 2px rgba(150, 120, 255, calc(0.06 * var(--fog-a)));
+}
+.btn-ghost, .contact-link, .col-chip, .col-watch, .col-jump-link,
+.col-crumb-back, .col-view, .col-search input, .col-sort select, .lb-zoom,
+.lb-nav, .lb-close, .lb-download, .lb-infobtn, a.deck-open, .deck-close,
+.sk-copy, .sk-name, .lg-download, .lg-close, .lg-nav, .lg-bg, .mu-btn,
+.fx-scene-btn, .footer-tm, .pf-chips li, .pf-skills span, .sk-chips li {
+  box-shadow: var(--fog-soft);
+}
+
+/* Projects page search box (styled inline in projects.html) */
+#projSearch input { border-color: transparent; box-shadow: var(--fog-soft); }
+#projSearch input:hover { box-shadow: var(--edge-hover); }
+#projSearch input:focus, #projSearch input:focus-visible { box-shadow: var(--edge-focus); outline-color: rgba(110, 168, 255, 0.5); }
+
+/* ---------- 12. Full-page terminal frame (fx.css body::after): fog instead of a cyan line ---------- */
+body:not(.col-page)::after {
+  border-color: transparent;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, .55), inset 0 0 40px -2px rgba(94, 242, 255, .07),
+              0 0 30px 2px rgba(94, 242, 255, .07), 0 0 80px 6px rgba(150, 120, 255, .05);
+}
+
+/* ---------- 13. Final pass: no line under the header, quieter HUD corner brackets ---------- */
+.site-header { border-bottom-color: transparent; border-image: none; box-shadow: 0 10px 28px -12px rgba(0, 0, 0, .6), 0 6px 22px -10px rgba(var(--edge-rgb), .10); }
+.site-header::after { opacity: 0.1; filter: blur(3px); }
+.pf-hero::before, .col-hero::before, .pr-hero::before { opacity: .45; }
+
+/* ---------- 14. Fully foggy cards: the card surface itself dissolves into the page ----------
+   The edge is feathered with a mask (padding is wider than the feather, so text,
+   icons and buttons stay fully sharp). Only text cards are masked — cards whose
+   image runs to the edge (.col-card, .pr-card, .lg-card) keep the shadow fog. */
+:root { --feather: 18px; }
+.project-card, .about-block, .about-signoff, .col-pitch, .sk-card,
+.sk-steps li, .pf-hero, .pf-tile, .pf-status {
+  border-color: transparent;
+  box-shadow: none;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
+  mask-image:
+    linear-gradient(to right, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+.project-card:not(.project-card-placeholder):hover, .about-block:hover { box-shadow: none; filter: brightness(1.12); }
+.project-card::before, .pr-card::before { display: none; }
+.pf-hero { --feather: 26px; }
+
+/* ---------- 15. Organic haze instead of a feathered rectangle (supersedes section 14) ----------
+   No mask, no uniform ring. The card surface is a few overlapping soft blobs of different
+   size/position that each fade out BEFORE the box edge, so the margins differ per side and
+   no rectangular outline exists. A huge, offset (asymmetric) shadow adds ambient depth.
+   Backdrop blur is removed because its rectangular edge was itself a visible outline. */
+:root {
+  --mist: 15, 21, 40;           /* surface tint */
+  --mist-a: .80;                /* surface density */
+}
+.project-card, .about-block, .about-signoff, .col-pitch, .sk-card,
+.sk-steps li, .pf-hero, .pf-tile, .pf-status {
+  -webkit-mask-image: none; mask-image: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-color: transparent;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(ellipse 40% 34% at 45% 40%, rgba(var(--mist), var(--mist-a)) 0%, rgba(var(--mist), calc(var(--mist-a) * .75)) 55%, transparent 100%),
+    radial-gradient(ellipse 36% 33% at 60% 62%, rgba(var(--mist), calc(var(--mist-a) * .85)) 0%, rgba(var(--mist), calc(var(--mist-a) * .55)) 55%, transparent 100%),
+    radial-gradient(ellipse 27% 25% at 30% 70%, rgba(var(--mist), calc(var(--mist-a) * .75)) 0%, transparent 100%),
+    radial-gradient(ellipse 25% 21% at 70% 25%, rgba(var(--mist), calc(var(--mist-a) * .7)) 0%, transparent 100%),
+    radial-gradient(ellipse 30% 22% at 52% 90%, rgba(var(--edge-rgb), .06) 0%, transparent 100%);
+  box-shadow:
+    -14px 18px 70px -22px rgba(var(--edge-rgb), .14),
+    12px -10px 110px -30px rgba(150, 120, 255, .10);
+}
+/* every other card is cut differently so neighbours never line up */
+.project-card:nth-child(even), .about-block:nth-child(even), .sk-card:nth-child(even),
+.sk-steps li:nth-child(even), .pf-tile:nth-child(even) {
+  background-image:
+    radial-gradient(ellipse 38% 36% at 55% 44%, rgba(var(--mist), var(--mist-a)) 0%, rgba(var(--mist), calc(var(--mist-a) * .75)) 55%, transparent 100%),
+    radial-gradient(ellipse 33% 30% at 36% 60%, rgba(var(--mist), calc(var(--mist-a) * .85)) 0%, rgba(var(--mist), calc(var(--mist-a) * .55)) 55%, transparent 100%),
+    radial-gradient(ellipse 28% 22% at 72% 74%, rgba(var(--mist), calc(var(--mist-a) * .75)) 0%, transparent 100%),
+    radial-gradient(ellipse 22% 24% at 26% 24%, rgba(var(--mist), calc(var(--mist-a) * .7)) 0%, transparent 100%),
+    radial-gradient(ellipse 26% 20% at 48% 12%, rgba(150, 120, 255, .05) 0%, transparent 100%);
+  box-shadow:
+    16px 14px 80px -24px rgba(var(--edge-rgb), .12),
+    -10px -12px 100px -30px rgba(150, 120, 255, .09);
+}
+.project-card:not(.project-card-placeholder):hover, .about-block:hover {
+  filter: brightness(1.12);
+  box-shadow:
+    -16px 22px 84px -20px rgba(var(--edge-rgb), .22),
+    14px -12px 120px -26px rgba(150, 120, 255, .15);
+}
+.project-card-placeholder { opacity: .6; }
+
+/* theme.css gives project cards a rectangular per-project tint over --glass, which
+   re-created a hard-edged surface. Re-tint with an interior blob that fades before the edge. */
+.project-card:not(.project-card-placeholder) {
+  background-color: transparent;
+  background-image:
+    radial-gradient(ellipse 30% 26% at 74% 24%, color-mix(in srgb, var(--c) 24%, transparent), transparent 100%),
+    radial-gradient(ellipse 40% 34% at 45% 40%, rgba(var(--mist), var(--mist-a)) 0%, rgba(var(--mist), calc(var(--mist-a) * .75)) 55%, transparent 100%),
+    radial-gradient(ellipse 36% 33% at 60% 62%, rgba(var(--mist), calc(var(--mist-a) * .85)) 0%, rgba(var(--mist), calc(var(--mist-a) * .55)) 55%, transparent 100%),
+    radial-gradient(ellipse 27% 25% at 30% 70%, rgba(var(--mist), calc(var(--mist-a) * .75)) 0%, transparent 100%),
+    radial-gradient(ellipse 25% 21% at 70% 25%, rgba(var(--mist), calc(var(--mist-a) * .7)) 0%, transparent 100%);
+}
+.project-card:not(.project-card-placeholder):nth-child(even) {
+  background-image:
+    radial-gradient(ellipse 28% 28% at 26% 26%, color-mix(in srgb, var(--c) 22%, transparent), transparent 100%),
+    radial-gradient(ellipse 38% 36% at 55% 44%, rgba(var(--mist), var(--mist-a)) 0%, rgba(var(--mist), calc(var(--mist-a) * .75)) 55%, transparent 100%),
+    radial-gradient(ellipse 33% 30% at 36% 60%, rgba(var(--mist), calc(var(--mist-a) * .85)) 0%, rgba(var(--mist), calc(var(--mist-a) * .55)) 55%, transparent 100%),
+    radial-gradient(ellipse 28% 22% at 72% 74%, rgba(var(--mist), calc(var(--mist-a) * .75)) 0%, transparent 100%);
+}

@@ -28,3 +28,6 @@ node_modules/
 # Local dev server (tools/devctl.py)
 .dev_server.pid
 .dev_server.log
+
+# Private evaluation data (ratings, reviews) - never commit
+.private/
