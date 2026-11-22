@@ -12,7 +12,7 @@
    Hash URLs ("/#about") work from every page.
 ------------------------------------------------------------------- */
 window.RL_LINKS = {
-  site: { url: 'https://robinlab.pages.dev' },
+  site: { url: 'https://roveuth.com' },
 
   pages: {
     home:          '/',
@@ -61,12 +61,12 @@ window.RL_LINKS = {
     { label: 'LinkedIn', url: 'social.linkedin',               title: 'linkedin.com/in/robin-gupta',    img: 'assets/icons/brands/linkedin-brand.svg' }
   ],
 
-  /* Project pages (relative to the site root; spaces URL-encoded). */
+  /* Project pages (canonical, with trailing slash; spaces URL-encoded). */
   projects: {
-    pywix:       'projects/Pywix/index.html',
-    codelens:    'projects/CodeLens/index.html',
-    contactbook: 'projects/Contact%20Book/index.html',
-    motiva:      'projects/Motiva/index.html'
+    pywix:       '/projects/Pywix/',
+    codelens:    '/projects/CodeLens/',
+    contactbook: '/projects/Contact%20Book/',
+    motiva:      '/projects/Motiva/'
   },
 
   /* "Email Robin" links; HTML uses data-mail="presentation" etc. */

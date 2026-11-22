@@ -889,6 +889,11 @@
     transition: color 0.15s ease;
   }
   .topnav-links a:hover { color: var(--accent); }
+  .topnav-links .back-link { white-space: nowrap; }
+  @media (max-width: 560px) {
+    .topnav { flex-wrap: wrap; row-gap: 8px; }
+    .topnav-links { width: 100%; flex-wrap: wrap; gap: 8px 18px; }
+  }
 
   /* ---- downloads: installers / source-code tab toggle ---- */
   .dl-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 100px;

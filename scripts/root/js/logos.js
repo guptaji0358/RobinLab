@@ -3,7 +3,7 @@
  *
  * The manifest (`GET /api/collection/files`) is the same one the Collection
  * page uses; this page keeps only images whose folder is `LOGO` (or a
- * subfolder below it) and renders each one on both a dark and a light stage.
+ * subfolder below it) and renders each one as a single preview.
  *
  * Downloads fetch the proxied original and save it through a Blob URL, so the
  * file keeps its real format and name (SVG stays vector, transparency stays
@@ -28,19 +28,36 @@
     close: document.getElementById("lg-close"),
     prev: document.getElementById("lg-prev"),
     next: document.getElementById("lg-next"),
-    canvas: document.getElementById("lg-canvas"),
-    img: document.getElementById("lg-img"),
+    art: document.getElementById("lg-art"),
     name: document.getElementById("lg-v-name"),
     meta: document.getElementById("lg-v-meta"),
-    dim: document.getElementById("lg-v-dim"),
     counter: document.getElementById("lg-v-counter"),
     download: document.getElementById("lg-v-download"),
-    bgButtons: document.querySelectorAll("#lg-bg [data-bg]"),
+    copy: document.getElementById("lg-v-copy"),
   };
 
   if (!el.grid || !el.lightbox) return;
 
   if (el.year) el.year.textContent = new Date().getFullYear();
+
+  // Preview background switch: transparent (checkerboard) or white.
+  (function initBgSwitch() {
+    const box = document.getElementById("lg-bgsw");
+    if (!box) return;
+    const apply = (bg) => {
+      el.grid.dataset.bg = bg;
+      box.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.bg === bg)));
+    };
+    let saved = "transparent";
+    try { saved = localStorage.getItem("lg-bg") === "white" ? "white" : "transparent"; } catch (e) {}
+    apply(saved);
+    box.addEventListener("click", (ev) => {
+      const b = ev.target.closest("button[data-bg]");
+      if (!b) return;
+      apply(b.dataset.bg);
+      try { localStorage.setItem("lg-bg", b.dataset.bg); } catch (e) {}
+    });
+  })();
 
   let allLogos = [];
   let shown = [];
@@ -48,7 +65,8 @@
   let openAt = -1;
   let lastFocus = null;
   let toastTimer = 0;
-  let dimToken = 0;
+  let artImg = null;
+  let artToken = 0;
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                             */
@@ -135,8 +153,8 @@
   /* Grid                                                                */
   /* ------------------------------------------------------------------ */
 
-  function buildStage(file, mode) {
-    const stage = node("span", `lg-stage lg-stage-${mode}`);
+  function buildStage(file) {
+    const stage = node("span", "lg-stage");
     const img = node("img", null, { alt: "", loading: "lazy", decoding: "async", draggable: "false" });
     img.src = file.url;
     stage.appendChild(img);
@@ -152,7 +170,7 @@
       type: "button",
       "aria-label": `View ${name} at full size`,
     });
-    open.append(buildStage(file, "dark"), buildStage(file, "light"));
+    open.append(buildStage(file));
     open.addEventListener("click", () => openViewer(index));
 
     const firstImg = open.querySelector("img");
@@ -189,7 +207,19 @@
     dlLabel.textContent = "Download";
     download.append(node("span", "ic ic-download icon icon-sm"), dlLabel);
     download.addEventListener("click", () => downloadFile(file, download, dlLabel));
-    actions.appendChild(download);
+    const editBtn = node("button", "lg-download lg-edit", {
+      type: "button",
+      "aria-label": `Edit ${name}`,
+    });
+    editBtn.textContent = "Edit in Canva";
+    editBtn.addEventListener("click", () => editInCanva(file, editBtn));
+    const copyBtn = node("button", "lg-download lg-copy", {
+      type: "button",
+      "aria-label": `Copy ${name}`,
+    });
+    copyBtn.textContent = "Copy";
+    copyBtn.addEventListener("click", () => copyImage(file, copyBtn));
+    actions.append(editBtn, copyBtn, download);
 
     card.append(open, info, actions);
     return card;
@@ -230,6 +260,18 @@
   /* Viewer                                                              */
   /* ------------------------------------------------------------------ */
 
+  function draw() {
+    const img = artImg;
+    if (!img || !img.naturalWidth) return;
+    const cv = el.art;
+    cv.width = img.naturalWidth;
+    cv.height = img.naturalHeight;
+    const ctx = cv.getContext("2d");
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0);
+  }
+
+
   function openViewer(index) {
     if (!shown[index]) return;
     openAt = index;
@@ -244,26 +286,25 @@
     const file = shown[openAt];
     if (!file) return;
 
-    const token = ++dimToken;
-    el.canvas.classList.remove("is-broken");
-    el.img.alt = `${pretty(file.name)} logo`;
-
-    el.img.onload = () => {
-      if (token !== dimToken || !el.img.naturalWidth || !el.img.naturalHeight) return;
-      file.w = el.img.naturalWidth;
-      file.h = el.img.naturalHeight;
-      el.dim.textContent = `${file.w} × ${file.h}`;
+    const token = ++artToken;
+    el.lightbox.classList.remove("is-broken");
+    const img = new Image();
+    img.onload = () => {
+      if (token !== artToken) return;
+      artImg = img;
+      file.w = img.naturalWidth;
+      file.h = img.naturalHeight;
       el.meta.textContent = metaText(file);
+      draw();
     };
-    el.img.onerror = () => {
-      if (token === dimToken) el.canvas.classList.add("is-broken");
+    img.onerror = () => {
+      if (token === artToken) el.lightbox.classList.add("is-broken");
     };
-    el.img.src = file.url;
+    img.src = file.url;
 
     el.name.textContent = pretty(file.name);
     el.meta.textContent = metaText(file);
     el.counter.textContent = `${openAt + 1} / ${shown.length}`;
-    el.dim.textContent = file.w && file.h ? `${file.w} × ${file.h}` : "…";
     el.prev.disabled = shown.length < 2;
     el.next.disabled = shown.length < 2;
   }
@@ -278,21 +319,10 @@
     if (el.lightbox.hidden) return;
     el.lightbox.hidden = true;
     document.body.classList.remove("lg-lock");
-    el.img.onload = null;
-    el.img.onerror = null;
-    el.img.removeAttribute("src");
-    el.img.alt = "";
-    el.canvas.classList.remove("is-broken");
-    dimToken += 1;
+    artToken += 1;
+    artImg = null;
     openAt = -1;
     if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
-  }
-
-  function setBackground(bg) {
-    el.canvas.dataset.bg = bg;
-    for (const button of el.bgButtons) {
-      button.setAttribute("aria-pressed", String(button.dataset.bg === bg));
-    }
   }
 
   el.close.addEventListener("click", closeViewer);
@@ -300,14 +330,26 @@
   el.next.addEventListener("click", () => step(1));
   el.lightbox.querySelector("[data-close]").addEventListener("click", closeViewer);
 
-  for (const button of el.bgButtons) {
-    button.addEventListener("click", () => setBackground(button.dataset.bg));
-  }
-
   el.download.addEventListener("click", () => {
     const file = shown[openAt];
     if (file) downloadFile(file, el.download, el.download.querySelector(".lg-dl-label"));
   });
+
+  if (el.copy) {
+    el.copy.addEventListener("click", () => {
+      const file = shown[openAt];
+      if (file) copyImage(file, el.copy, el.copy.querySelector(".lg-dl-label"));
+    });
+  }
+
+  const viewerEdit = el.lightbox.querySelector(".lg-link");
+  if (viewerEdit) {
+    viewerEdit.addEventListener("click", (event) => {
+      event.preventDefault(); // href stays as the no-JS fallback
+      const file = shown[openAt];
+      if (file) editInCanva(file, viewerEdit);
+    });
+  }
 
   document.addEventListener("keydown", (event) => {
     if (el.lightbox.hidden) return;
@@ -317,19 +359,20 @@
       closeViewer();
       return;
     }
-    if (event.key === "ArrowLeft") {
+    const inField = /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName);
+    if (event.key === "ArrowLeft" && !inField) {
       event.preventDefault();
       step(-1);
       return;
     }
-    if (event.key === "ArrowRight") {
+    if (event.key === "ArrowRight" && !inField) {
       event.preventDefault();
       step(1);
       return;
     }
     if (event.key === "Tab" && el.panel) {
       const focusable = el.panel.querySelectorAll(
-        'button:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
+        'button:not(:disabled), input, a[href], [tabindex]:not([tabindex="-1"])',
       );
       if (!focusable.length) return;
       const first = focusable[0];
@@ -379,6 +422,107 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* Copy image to clipboard                                             */
+  /* ------------------------------------------------------------------ */
+
+  // Clipboards reliably accept PNG only, so the original is re-drawn to a
+  // canvas at its natural size (transparency kept). Download stays untouched.
+  async function copyImage(file, button, labelNode) {
+    if (button.dataset.busy) return;
+    const target = labelNode || button;
+    const label = target.textContent;
+    button.dataset.busy = "1";
+    button.disabled = true;
+    target.textContent = "Copying…";
+
+    try {
+      if (!navigator.clipboard || !window.ClipboardItem) {
+        throw new Error("clipboard not supported in this browser");
+      }
+      const pngPromise = (async () => {
+        const res = await fetch(file.url, { headers: { Accept: "image/*" } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (blob.type === "image/png") return blob;
+        const bmp = await createImageBitmap(blob);
+        const canvas = document.createElement("canvas");
+        canvas.width = bmp.width;
+        canvas.height = bmp.height;
+        canvas.getContext("2d").drawImage(bmp, 0, 0);
+        return await new Promise((resolve, reject) =>
+          canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/png"),
+        );
+      })();
+      // Passing the promise keeps the user-gesture valid (needed by Safari).
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": pngPromise })]);
+      toast(`Copied ${file.name}`, "ok");
+    } catch (err) {
+      toast(`Couldn’t copy ${file.name}: ${err.message}`, "warn");
+    } finally {
+      delete button.dataset.busy;
+      button.disabled = false;
+      target.textContent = label;
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Edit in Canva                                                    */
+  /* ------------------------------------------------------------------ */
+
+  const CANVA_PENDING = "rl-canva-pending";
+
+  // Uploads the logo to the visitor's Canva account and opens a design that
+  // already contains it, titled with the logo's name. First use sends the
+  // visitor through Canva sign-in; we resume the same logo when they return.
+  async function editInCanva(file, button) {
+    if (button.dataset.busy) return;
+    const label = button.textContent;
+    button.dataset.busy = "1";
+    button.disabled = true;
+    button.textContent = "Opening Canva…";
+    try {
+      const res = await fetch("/api/canva/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: file.path, title: pretty(file.name), w: file.w, h: file.h }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 && data.error === "auth_required") {
+        try { sessionStorage.setItem(CANVA_PENDING, file.path); } catch (e) { /* private mode */ }
+        toast("Sign in to Canva to continue…", "ok");
+        window.location.assign("/api/canva/login?return=/logos");
+        return;
+      }
+      if (!res.ok || !data.editUrl) throw new Error(data.message || `HTTP ${res.status}`);
+      window.location.assign(data.editUrl);
+    } catch (err) {
+      toast(`Couldn’t open ${file.name} in Canva: ${err.message}`, "warn");
+      button.disabled = false;
+      button.textContent = label;
+      delete button.dataset.busy;
+    }
+  }
+
+  // Back from Canva sign-in: resume the logo the visitor clicked.
+  function resumeCanva() {
+    const flag = new URLSearchParams(window.location.search).get("canva");
+    if (!flag) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    let path = null;
+    try { path = sessionStorage.getItem(CANVA_PENDING); sessionStorage.removeItem(CANVA_PENDING); } catch (e) { /* ignore */ }
+    if (flag !== "connected") {
+      toast("Canva sign-in didn’t complete. Try Edit in Canva again.", "warn");
+      return;
+    }
+    const file = allLogos.find((f) => f.path === path);
+    if (!file) return;
+    const btn = Array.from(el.grid.querySelectorAll(".lg-edit")).find(
+      (b) => b.getAttribute("aria-label") === `Edit ${file.name}`,
+    );
+    if (btn) editInCanva(file, btn);
+  }
+
+  /* ------------------------------------------------------------------ */
   /* Boot                                                                */
   /* ------------------------------------------------------------------ */
 
@@ -398,6 +542,7 @@
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
 
       render();
+      resumeCanva();
     } catch (err) {
       el.stats.textContent = "";
       showState("error", "Couldn’t load the logos.", err.message);

@@ -25,7 +25,9 @@ body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-
   display: block;
   content: "";
   position: absolute;
-  inset: -70px;
+  /* bleed 70px top/bottom, but never past the page gutter sideways — a wider bleed
+     widens the document (horizontal scroll / zoomed-out phones) */
+  inset: -70px calc(-1 * min(70px, var(--gutter, 0px)));
   z-index: -1;
   padding: 0;
   border-radius: 0;
@@ -43,3 +45,8 @@ body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-
 body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder):nth-child(3n)::before { transform: scaleX(-1); }
 body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder):nth-child(4n)::before { transform: scaleY(-1); }
 body :is(.project-card, .about-block, .about-signoff, .col-pitch, .sk-card, .sk-steps li, .pf-hero, .pf-tile, .pf-status):not(.project-card-placeholder):hover::before { opacity: 1; }
+
+/* .sk-card and .sk-steps li are position: static, so their ::before (absolute) was sized
+   against the page container instead of the card — wider than the viewport on /skills.
+   Make them the containing block for their own vein layer. */
+body :is(.sk-card, .sk-steps li) { position: relative; }

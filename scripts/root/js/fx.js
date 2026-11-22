@@ -184,15 +184,27 @@
     label(); d.body.appendChild(btn);
     size(); addEventListener('resize', size);
     var timer = reduce ? 0 : setInterval(next, 20000);
-    function loop(t) {
-      var dt = Math.min(40, t - last) / 16.67 * cfg.speed; last = t;
-      if (!d.hidden) { scenes[cur](dt, t); requestAnimationFrame(loop); }
-    }
-    function start() { requestAnimationFrame(function (t) { last = t; loop(t); }); }
+    var gl = guardedLoop(function (dt, t) { scenes[cur](dt * cfg.speed, t); });
     if (reduce) { scenes.sakura(1, 0); return; }
-    start();
+    gl.start();
     fetchCfg().then(apply); // random scene from the very first paint
-    d.addEventListener('visibilitychange', function () { if (!d.hidden) start(); });
+  }
+
+  /* One rAF chain per animation. start() is a no-op while a chain is alive, so
+     visibilitychange can never stack duplicate loops (each one used to advance the scene again). */
+  function guardedLoop(step, canRun) {
+    var id = 0, last = 0;
+    function frame(t) {
+      id = 0;
+      if (d.hidden || (canRun && !canRun())) return;
+      var dt = Math.min(40, t - last) / 16.67; last = t;
+      step(dt, t);
+      id = requestAnimationFrame(frame);
+    }
+    function start() { if (id || d.hidden) return; id = requestAnimationFrame(function (t) { last = t; frame(t); }); }
+    function stop() { if (id) cancelAnimationFrame(id); id = 0; }
+    d.addEventListener('visibilitychange', function () { if (d.hidden) stop(); else start(); });
+    return { start: start, stop: stop };
   }
 
   function background() {
@@ -228,16 +240,10 @@
         if (y > H && Math.random() > .96) { col.y = Math.random() * -20; col.s = .5 + Math.random() * .9; }
       }
     }
-    function loop(t) {
-      var dt = Math.min(40, t - last) / 16.67; last = t;
-      if (!d.hidden) { draw(dt); requestAnimationFrame(loop); }
-    }
     size();
     addEventListener('resize', size);
     if (reduce) { for (var k = 0; k < 90; k++) draw(1); return; }
-    function start() { requestAnimationFrame(function (t) { last = t; loop(t); }); }
-    start();
-    d.addEventListener('visibilitychange', function () { if (!d.hidden) start(); });
+    guardedLoop(draw).start();
   }
 
   /* --------------------------------------------------------- split words */
@@ -264,9 +270,26 @@
   /* ---------------------------------------------------------- name scramble */
   var GLYPHS = '!<>-_\\/[]{}=+*^?#0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   function scramble(el, text, dur, then) {
-    var start = performance.now(), len = text.length;
+    // The real text is always the fallback: aria-label carries the accessible name,
+    // and a timer + visibilitychange settle the heading even when rAF is paused
+    // (background tab), so it can never be left showing random glyphs.
+    if (el._scrSettle) el._scrSettle(true);
+    var start = performance.now(), len = text.length, done = false, timer;
     el.classList.add('scrambling');
+    function settle(silent) {
+      if (done) return; done = true;
+      clearTimeout(timer); d.removeEventListener('visibilitychange', onVis);
+      el._scrSettle = null;
+      el.textContent = text; el.classList.remove('scrambling');
+      if (!silent && then) then();
+    }
+    function onVis() { if (d.hidden) settle(); }
+    el._scrSettle = settle;
+    d.addEventListener('visibilitychange', onVis);
+    timer = setTimeout(settle, dur + 400);
+    if (d.hidden) return settle();
     (function frame(now) {
+      if (done) return;
       var p = (now - start) / dur, out = '';
       for (var i = 0; i < len; i++) {
         var ch = text.charAt(i);
@@ -276,7 +299,7 @@
       }
       el.textContent = out;
       if (p < 1) requestAnimationFrame(frame);
-      else { el.textContent = text; el.classList.remove('scrambling'); if (then) then(); }
+      else settle();
     })(start);
   }
 
@@ -335,25 +358,6 @@
       });
     }
 
-    // little live HUD (local time + pointer coordinates)
-    var hud = d.createElement('div');
-    hud.className = 'fx-hud';
-    h.appendChild(hud);
-    (function loadGlobe() {
-      var go = function () {
-        var srcs = ['globe-data.js', 'globe.js', 'globe-scene.js'], i = 0, base = (d.querySelector('script[src$="fx.js"]') || {}).src || '';
-        base = base.replace(/fx\.js.*$/, '');
-        (function next() {
-          if (i >= srcs.length) return window.RLGlobe && window.RLGlobe.start && window.RLGlobe.start(hud);
-          var s = d.createElement('script'); s.src = base + srcs[i++]; s.onload = next; d.head.appendChild(s);
-        })();
-      };
-      if ('IntersectionObserver' in window) {
-        var io = new IntersectionObserver(function (e) { if (e[0].isIntersecting) { io.disconnect(); go(); } }, { rootMargin: '200px' });
-        io.observe(hud);
-      } else go();
-    })();
-
     // avatar follows the pointer a little
     if (fine && !reduce && av) {
       h.addEventListener('pointermove', function (e) {
@@ -361,9 +365,31 @@
         av.style.setProperty('--ax', ((e.clientX - r.left) / r.width - .35) * 26 + 'px');
         av.style.setProperty('--ay', ((e.clientY - r.top) / r.height - .5) * 26 + 'px');
       });
-    // replaced the old clock/XY readout: an Earth that reveals local time + location on hover
       h.addEventListener('pointerleave', function () { av.style.setProperty('--ax', '0px'); av.style.setProperty('--ay', '0px'); });
     }
+  }
+
+  /* ------------------------------------------------------------------ globe */
+  /* Mounted in the page hero, or in any element marked data-fx-globe (pages with no hero).
+     One globe per page; globe code + three.js load once, lazily, from this script's own folder. */
+  function globe() {
+    var h = $('.pf-hero, .col-hero, .pr-hero') || $('[data-fx-globe]');
+    if (!h || $('.fx-hud', h)) return;
+    var hud = d.createElement('div');
+    hud.className = 'fx-hud';
+    h.appendChild(hud);
+    var go = function () {
+      var srcs = ['globe-data.js', 'globe.js', 'globe-scene.js'], i = 0, base = (d.querySelector('script[src*="fx.js"]') || {}).src || '';
+      base = base.replace(/fx\.js.*$/, '');
+      (function next() {
+        if (i >= srcs.length) return window.RLGlobe && window.RLGlobe.start && window.RLGlobe.start(hud);
+        var s = d.createElement('script'); s.src = base + srcs[i++]; s.onload = next; d.head.appendChild(s);
+      })();
+    };
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (e) { if (e[0].isIntersecting) { io.disconnect(); go(); } }, { rootMargin: '200px' });
+      io.observe(hud);
+    } else go();
   }
 
   /* ------------------------------------------------------------------ marquee */
@@ -401,7 +427,8 @@
   }
 
   function mainLoop() {
-    function frame() {
+    if (reduce || (!fine && !marquees.length)) return; // nothing to animate: no loop at all
+    guardedLoop(function () {
       // cursor
       if (dot) {
         cur.x = mouse.x; cur.y = mouse.y;
@@ -419,10 +446,7 @@
         m.el.style.transform = 'translate3d(' + m.x + 'px,0,0)';
       }
       scroll.vel *= .9;
-      requestAnimationFrame(frame);
-    }
-    if (reduce) return;
-    requestAnimationFrame(frame);
+    }).start();
   }
 
   /* ----------------------------------------------- tilt + magnetic + spotlight */
@@ -567,7 +591,8 @@
   var hs = null;
   function hscroll() {
     var sec = $('#projects'), grid = sec && $('.project-grid', sec);
-    if (!grid || reduce) return;
+    // The full Projects page (has the search box) shows a plain grid; only the home page scrolls sideways.
+    if (!grid || reduce || $('#projSearch')) return;
     var mq = matchMedia('(min-width: 1000px) and (min-height: 600px)');
     var pin, bar, maxX = 0, headH = 64, on = false;
 
@@ -676,5 +701,5 @@
   safe(scrollFx);
   safe(interactions);
   // Hero + reveals wait for the boot curtain.
-  boot(function () { safe(hero); safe(reveal); });
+  boot(function () { safe(hero); safe(globe); safe(reveal); });
 })();

@@ -245,7 +245,7 @@ a { color: inherit; text-decoration: none; }
 
 .section-heading { margin-bottom: 32px; }
 
-.section-heading h2 {
+.section-heading :is(h1, h2) {
   font-size: 24px;
   letter-spacing: -0.01em;
   margin: 0 0 8px;

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Logos — RobinLab</title>
-<meta name="description" content="Brand marks and app icons from the RobinLab vault, shown on dark and light backgrounds and downloadable as the original files.">
+<meta name="description" content="Brand marks and app icons from the RobinLab vault.">
 <meta name="author" content="Robin Gupta">
 <meta name="publisher" content="Robin Gupta Studios">
 <meta name="copyright" content="Copyright &copy; Robin Gupta">
@@ -33,6 +33,26 @@
 </script>
 <link rel="stylesheet" href="css/soft-edges.css">
 <link rel="stylesheet" href="css/veins.css">
+<!-- seo:start -->
+<link rel="canonical" href="https://roveuth.com/logos">
+<meta name="robots" content="noindex, follow">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RobinLab">
+<meta property="og:title" content="Logos — RobinLab">
+<meta property="og:description" content="Brand marks and app icons from the RobinLab vault.">
+<meta property="og:url" content="https://roveuth.com/logos">
+<meta property="og:image" content="https://roveuth.com/assets/og/robinlab-og.jpg">
+<meta property="og:image:secure_url" content="https://roveuth.com/assets/og/robinlab-og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="RobinLab — software built and maintained by Robin Gupta Studios">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Logos — RobinLab">
+<meta name="twitter:description" content="Brand marks and app icons from the RobinLab vault.">
+<meta name="twitter:image" content="https://roveuth.com/assets/og/robinlab-og.jpg">
+<meta name="twitter:image:alt" content="RobinLab — software built and maintained by Robin Gupta Studios">
+<!-- seo:end -->
 </head>
 <body class="col-page lg-page">
 
@@ -53,8 +73,7 @@
       <span class="brand-mark">RL</span>
       <span class="brand-name">RobinLab</span>
     </a>
-    <nav class="site-nav">
-    </nav>
+    <nav class="site-nav" aria-label="Main"><a class="nav-link" href="/projects">Projects</a><a class="nav-link" href="/collection">Collection</a><a class="nav-link" href="/logos">Logos</a><a class="nav-link" href="/certificates">Certificates</a><a class="nav-link" href="/presentations">Presentations</a><a class="nav-link" href="/music">Music</a><a class="nav-link" href="/skills">Claude Skills</a><a class="nav-link" href="/#about">About</a><a class="nav-link" href="/#contact">Contact</a></nav>
   </div>
 </header>
 
@@ -64,9 +83,7 @@
     <p class="eyebrow">robinvault</p>
     <h1>Logos</h1>
     <p class="hero-sub">
-      Brand marks and app icons from the vault. Every one is shown on dark and
-      light so you can see how it holds up, and opens full size when you need a
-      closer look.
+      Brand marks and app icons from the vault. Click any mark to open it full size.
     </p>
     <div class="col-notice">
       <span class="ic ic-download-tray icon icon-sm" aria-hidden="true"></span>
@@ -81,6 +98,11 @@
       <div class="col-search">
         <span class="ic ic-search icon" aria-hidden="true"></span>
         <input id="lg-search" type="search" placeholder="Search logos…" autocomplete="off" spellcheck="false" aria-label="Search logos">
+      </div>
+      <div class="lg-bgsw" id="lg-bgsw" role="group" aria-label="Preview background">
+        <span class="lg-bgsw-label">Background</span>
+        <button type="button" data-bg="transparent" aria-pressed="true">Transparent</button>
+        <button type="button" data-bg="white" aria-pressed="false">White</button>
       </div>
       <p class="col-stats lg-stats" id="lg-stats" aria-live="polite"></p>
     </div>
@@ -109,7 +131,7 @@
   </div>
 </footer>
 
-<!-- Logo viewer (click any mark) -->
+<!-- Logo editor (click any card) -->
 <div class="lg-lightbox" id="lg-lightbox" hidden>
   <div class="lg-backdrop" data-close></div>
 
@@ -119,37 +141,35 @@
         <span class="lg-v-name" id="lg-v-name"></span>
         <span class="lg-v-meta" id="lg-v-meta"></span>
       </div>
-      <button class="lg-close" id="lg-close" type="button" aria-label="Close viewer">
+      <span class="lg-counter" id="lg-v-counter"></span>
+      <button class="lg-close" id="lg-close" type="button" aria-label="Close editor">
         <span class="ic ic-close icon" aria-hidden="true"></span>
       </button>
     </div>
 
-    <div class="lg-viewport">
-      <button class="lg-nav lg-prev" id="lg-prev" type="button" aria-label="Previous logo">
-        <span class="ic ic-chevron-left icon" aria-hidden="true"></span>
-      </button>
-
-      <div class="lg-canvas" id="lg-canvas" data-bg="checker">
-        <img id="lg-img" alt="" draggable="false">
+    <div class="lg-body">
+      <div class="lg-viewport">
+        <button class="lg-nav lg-prev" id="lg-prev" type="button" aria-label="Previous logo">
+          <span class="ic ic-chevron-left icon" aria-hidden="true"></span>
+        </button>
+        <div class="lg-canvas" id="lg-canvas">
+          <canvas id="lg-art" aria-label="Logo preview"></canvas>
+        </div>
+        <button class="lg-nav lg-next" id="lg-next" type="button" aria-label="Next logo">
+          <span class="ic ic-chevron-right icon" aria-hidden="true"></span>
+        </button>
       </div>
 
-      <button class="lg-nav lg-next" id="lg-next" type="button" aria-label="Next logo">
-        <span class="ic ic-chevron-right icon" aria-hidden="true"></span>
-      </button>
-    </div>
-
-    <div class="lg-foot">
-      <div class="lg-bg" id="lg-bg" role="group" aria-label="Preview background">
-        <button type="button" data-bg="dark" aria-pressed="false">Dark</button>
-        <button type="button" data-bg="light" aria-pressed="false">Light</button>
-        <button type="button" data-bg="checker" aria-pressed="true">Checker</button>
+      <div class="lg-actions-col">
+        <button class="lg-download lg-v-download" id="lg-v-download" type="button">
+          <span class="ic ic-download icon icon-sm" aria-hidden="true"></span>
+          <span class="lg-dl-label">Download original</span>
+        </button>
+        <button class="lg-download lg-v-download" id="lg-v-copy" type="button">
+          <span class="lg-dl-label">Copy image</span>
+        </button>
+        <a class="lg-link" href="https://www.canva.com/create/logos/" target="_blank" rel="noopener">Edit in Canva</a>
       </div>
-      <span class="lg-dim" id="lg-v-dim"></span>
-      <span class="lg-counter" id="lg-v-counter"></span>
-      <button class="lg-download lg-v-download" id="lg-v-download" type="button" aria-label="Download original file">
-        <span class="ic ic-download icon icon-sm" aria-hidden="true"></span>
-        <span class="lg-dl-label">Download original</span>
-      </button>
     </div>
   </div>
 </div>

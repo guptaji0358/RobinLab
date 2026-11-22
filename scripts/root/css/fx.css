@@ -346,23 +346,23 @@ html.fx-js .fx-tilt:hover {
 
 /* ---------- section headings ---------- */
 main { counter-reset: fxsec; }
-.section-heading h2 { position: relative; display: inline-block; }
-.projects .section-heading h2::before,
-.about .section-heading h2::before,
-.contact .section-heading h2::before {
+.section-heading :is(h1, h2) { position: relative; display: inline-block; }
+.projects .section-heading :is(h1, h2)::before,
+.about .section-heading :is(h1, h2)::before,
+.contact .section-heading :is(h1, h2)::before {
   counter-increment: fxsec;
   content: "0" counter(fxsec) " / ";
   font-family: var(--fx-mono); font-size: 0.55em; font-weight: 500;
   letter-spacing: 0.1em; vertical-align: 0.3em; margin-right: 6px;
 }
-.section-heading h2::after {
+.section-heading :is(h1, h2)::after {
   content: "";
   display: block; height: 2px; margin-top: 8px;
   width: 100%; transform-origin: 0 50%; transform: scaleX(0);
   background: var(--aurora);
   transition: transform 1.1s var(--fx-ease) 0.2s;
 }
-.section-heading.in h2::after, html:not(.fx-js) .section-heading h2::after { transform: scaleX(1); }
+.section-heading.in h2::after, html:not(.fx-js) .section-heading :is(h1, h2)::after { transform: scaleX(1); }
 
 /* ---------- horizontal-scroll project showcase (desktop) ---------- */
 .projects.fx-h { max-width: none; padding: 0; border-top: 0; }
@@ -412,14 +412,13 @@ main { counter-reset: fxsec; }
   .fx-scrub .w { color: var(--text); }
   .fx-orbs i, .fx-grain, .fx-orbit, .pf-hero::before, .pf-hero::after, .pf-avatar, .fx-caret { animation: none; }
   .pf-hero::after, .col-hero::after, .pr-hero::after { display: none; }
-  .section-heading h2::after { transform: scaleX(1); transition: none; }
+  .section-heading :is(h1, h2)::after { transform: scaleX(1); transition: none; }
   .fx-grain { display: none; }
 }
 
 /* ---------- inner pages: hero + cards ---------- */
 .col-hero, .pr-hero { padding-bottom: 48px; }
-.col-hero .fx-hud, .pr-hero .fx-hud { display: none; }
-@media (min-width: 760px) { .col-hero .fx-hud, .pr-hero .fx-hud { display: block; } }
+.col-hero .fx-hud, .pr-hero .fx-hud { display: block; } /* all widths: the <=720px block below only resizes it */
 .pr-card::after, .col-packcard::after {
   content: "";
   position: absolute; inset: 0; pointer-events: none;
@@ -525,6 +524,9 @@ body.col-page { background: radial-gradient(120% 90% at 50% 0%, #0d1530 0%, #040
 /* ---------- Earth globe (replaces the old clock/XY readout) ---------- */
 .fx-hud { width: 168px; height: 168px; right: 22px; top: 14px; pointer-events: auto; font-family: inherit; letter-spacing: 0; line-height: 1.4; text-align: left; z-index: 3; }
 .col-hero .fx-hud, .pr-hero .fx-hud { width: 132px; height: 132px; }
+/* pages with no hero opt in with data-fx-globe on a section; it only needs to be a positioning context */
+[data-fx-globe] { position: relative; }
+[data-fx-globe] .fx-hud { width: 132px; height: 132px; top: 6px; }
 .rl-globe { touch-action: none; cursor: grab; -webkit-tap-highlight-color: transparent; user-select: none; }
 .rl-globe.is-drag { cursor: grabbing; }
 .rl-globe-canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.2s ease; display: block; }
@@ -546,7 +548,9 @@ body.col-page { background: radial-gradient(120% 90% at 50% 0%, #0d1530 0%, #040
 .rl-g-btn:disabled { opacity: .5; cursor: progress; }
 .rl-g-btn:hover { background: rgba(118, 168, 255, 0.3); }
 @media (max-width: 720px) {
-  .fx-hud, .col-hero .fx-hud, .pr-hero .fx-hud { display: block; width: 96px; height: 96px; right: 12px; top: 10px; }
+  .fx-hud, .col-hero .fx-hud, .pr-hero .fx-hud, [data-fx-globe] .fx-hud { display: block; width: 96px; height: 96px; right: 12px; top: 10px; }
+  /* keep headings and intro text clear of the globe */
+  .col-hero > *:not(.fx-hud), .pr-hero > *:not(.fx-hud), [data-fx-globe] .section-heading { max-width: calc(100% - 108px); }
   .rl-globe-panel { right: 0; top: calc(100% + 8px); transform: translate(0, 8px); width: min(236px, 80vw); }
   .rl-globe.is-hover .rl-globe-panel { transform: none; }
   .rl-globe-hint { white-space: nowrap; font-size: 0.54rem; letter-spacing: 0.16em; bottom: -16px; }

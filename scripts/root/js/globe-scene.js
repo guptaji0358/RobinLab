@@ -6,25 +6,27 @@
 
   G.start = function (host) {
     if (host.__rlGlobe) return; // never initialise (or bind listeners) twice
-    host.__rlGlobe = true;
+    var stats = { frames: 0, maxDt: 0, loops: 0 }; // read by tests: frames drawn, worst frame gap, live rAF chains
+    host.__rlGlobe = { stats: stats };
     var ui = G.mount(host), info = new G.Info();
-    var state = { hover: false, paused: false, expanded: false, visible: true, speed: G.reduce ? 0 : 1, glow: 0.6, mark: 0, drag: null, moved: false, raf: 0, goal: null, clock: 0 };
+    var state = { hover: false, paused: false, expanded: false, visible: true, speed: G.reduce ? 0 : 1, glow: 0.6, mark: 0, drag: null, moved: false, raf: 0, goal: null, clock: 0, dead: false };
     var rad = Math.PI / 180;
 
     import(G.base + 'three.module.min.js').then(function (T) {
       var renderer;
       try { renderer = new T.WebGLRenderer({ canvas: ui.canvas, antialias: true, alpha: true, powerPreference: 'low-power' }); }
       catch (e) { host.classList.add('rl-globe-off'); return; }
-      renderer.setPixelRatio(Math.min(w.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(w.devicePixelRatio || 1, 1.5)); // a ~150px canvas gains nothing from more
       var scene = new T.Scene(), cam = new T.PerspectiveCamera(30, 1, 0.1, 50);
       cam.position.z = 6.2;
       // "ready" (fade-in) only once every texture is in; a failed texture hides the globe instead of showing a half-lit sphere
-      var lm = new T.LoadingManager(function () { host.classList.add('rl-globe-ready'); }, function () {}, function () { host.classList.add('rl-globe-off'); });
+      var lm = new T.LoadingManager(function () { prewarm(); host.classList.add('rl-globe-ready'); }, function () {}, function () { host.classList.add('rl-globe-off'); });
       var tl = new T.TextureLoader(lm), max = renderer.capabilities.getMaxAnisotropy();
       var tex = function (n, srgb) {
         var t = tl.load(G.base + n);
-        if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = Math.min(8, max); return t;
+        if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = Math.min(8, max); texes.push(t); return t;
       };
+      var texes = [];
       var sun = new T.Vector3(-1, 0.35, 0.9).normalize();
       var earth = new T.Mesh(new T.SphereGeometry(1, 96, 64), new T.ShaderMaterial({
         uniforms: { day: { value: tex('earth_atmos_2048.jpg') }, night: { value: tex('earth_lights_2048.png') }, spec: { value: tex('earth_specular_2048.jpg') }, sun: { value: sun } },
@@ -63,6 +65,7 @@
       var faceAngle = function (L) { return -(L.lon * rad) - 1.57; }; // Y-rotation that turns longitude L toward the camera
       spin.rotation.y = info.loc ? faceAngle(info.loc) : 0;
 
+      function prewarm() { if (renderer.initTexture) texes.forEach(function (t) { try { renderer.initTexture(t); } catch (e) {} }); }
       var off = { x: 0, y: 0, w: 1, h: 1 }; // canvas box inside the host, cached so frames never force layout
       function size() {
         var r = host.getBoundingClientRect(), s = Math.max(120, Math.round(Math.min(r.width, r.height)));
@@ -73,21 +76,25 @@
       var ro = w.ResizeObserver ? new ResizeObserver(size) : null;
       if (ro) ro.observe(host); else w.addEventListener('resize', size);
 
-      // exponential ease that snaps once close, so a settled scene really stops requesting frames
-      function ease(v, t, k) { v += (t - v) * Math.min(1, k); return Math.abs(t - v) < 0.01 ? t : v; }
+      // exponential ease, exact for any frame time (k = rate per second); snaps once close so a settled scene stops requesting frames
+      function ease(v, t, k, dt) { v += (t - v) * (1 - Math.exp(-k * dt)); return Math.abs(t - v) < 0.002 ? t : v; }
       var wp = new T.Vector3(), cd = new T.Vector3(), last = performance.now();
       var fine = w.matchMedia('(hover: hover)').matches;
+      var rm = w.matchMedia('(prefers-reduced-motion: reduce)'), onRm = function () { G.reduce = rm.matches; run(); };
+      if (rm.addEventListener) rm.addEventListener('change', onRm);
       function frame(now) {
         state.raf = 0;
-        var dt = Math.min(0.05, (now - last) / 1000); last = now;
+        if (state.dead) return;
+        var gap = (now - last) / 1000, dt = Math.min(0.1, Math.max(0, gap)); last = now;
+        stats.frames++; if (gap < 1 && gap > stats.maxDt) stats.maxDt = gap;
         var live = !G.reduce; // reduced motion: no ambient spin or cloud drift, only user-driven movement
         var target = state.paused || !live ? 0 : (state.hover || state.drag ? 0.18 : 1);
         var gt = state.hover ? 1 : 0.6, mt = state.hover || state.expanded ? 1 : 0;
-        state.speed = ease(state.speed, target, dt * 4); state.glow = ease(state.glow, gt, dt * 4); state.mark = ease(state.mark, mt, dt * 6);
+        state.speed = ease(state.speed, target, 4, dt); state.glow = ease(state.glow, gt, 4, dt); state.mark = ease(state.mark, mt, 6, dt);
         glow.uniforms.g.value = state.glow;
         if (state.goal !== null && !state.drag) { // ease toward a new location (after a precise fix)
           var df = Math.atan2(Math.sin(state.goal - spin.rotation.y), Math.cos(state.goal - spin.rotation.y));
-          spin.rotation.y += df * Math.min(1, dt * 3);
+          spin.rotation.y += df * (1 - Math.exp(-3 * dt));
           if (Math.abs(df) < 0.01) state.goal = null;
         } else if (!state.drag) spin.rotation.y += dt * 0.12 * state.speed;
         if (live && !state.paused) cloud.rotation.y += dt * 0.012;
@@ -108,9 +115,9 @@
         // keep rendering only while something is moving; otherwise the GPU idles
         var busy = state.drag || state.goal !== null || (live && !state.paused) || state.speed !== target ||
           state.glow !== gt || state.mark !== mt;
-        if (busy && state.visible && !d.hidden) state.raf = requestAnimationFrame(frame);
+        if (busy && state.visible && !d.hidden) { state.raf = requestAnimationFrame(frame); stats.loops = 1; } else stats.loops = 0;
       }
-      function run() { if (!state.raf && state.visible && !d.hidden) { last = performance.now(); state.raf = requestAnimationFrame(frame); } }
+      function run() { if (!state.raf && !state.dead && state.visible && !d.hidden) { last = performance.now(); state.raf = requestAnimationFrame(frame); } }
 
       // ---- panel: rebuild markup only when its structure changes, so buttons survive the clock tick
       var lastKey = '', TIME = /<div class="rl-g-time">(.*?)<\/div>/;
@@ -174,14 +181,26 @@
       host.addEventListener('keydown', function (e) { if (e.key === 'Escape') setHover(false); });
       ui.marker.addEventListener('focus', function () { setHover(true); });
       // touch: tapping anywhere outside the globe closes the panel
-      d.addEventListener('pointerdown', function (e) { if (!fine && state.hover && !host.contains(e.target)) setHover(false); });
+      var outside = function (e) { if (!fine && state.hover && !host.contains(e.target)) setHover(false); };
+      d.addEventListener('pointerdown', outside);
       ui.canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); host.classList.add('rl-globe-off'); clock(false); });
 
       // pause when off-screen / tab hidden
-      new IntersectionObserver(function (en) {
+      var io = new IntersectionObserver(function (en) {
         state.visible = en[0].isIntersecting; clock(state.hover && state.visible); if (state.visible) run();
-      }, { rootMargin: '80px' }).observe(host);
-      d.addEventListener('visibilitychange', function () { clock(state.hover && !d.hidden); if (!d.hidden) run(); });
+      }, { rootMargin: '80px' });
+      io.observe(host);
+      var onVis = function () { clock(state.hover && !d.hidden); if (!d.hidden) run(); };
+      d.addEventListener('visibilitychange', onVis);
+      // full teardown: no rAF, timers, observers or document/media listeners survive
+      host.__rlGlobe.destroy = function () {
+        state.dead = true; if (state.raf) cancelAnimationFrame(state.raf); state.raf = 0; clock(false);
+        io.disconnect(); if (ro) ro.disconnect(); else w.removeEventListener('resize', size);
+        d.removeEventListener('pointerdown', outside); d.removeEventListener('visibilitychange', onVis);
+        if (rm.removeEventListener) rm.removeEventListener('change', onRm);
+        renderer.dispose(); host.__rlGlobe = null;
+      };
+      host.__rlGlobe.state = state;
       size();
     }).catch(function () { host.classList.add('rl-globe-off'); });
   };

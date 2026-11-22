@@ -63,7 +63,7 @@ a:hover { text-decoration: underline; }
 .nav-links a:hover { color: var(--text); text-decoration: none; }
 
 @media (max-width: 860px) {
-  .nav-links { display: none; }
+  .nav-links a:not(.back-link) { display: none; }
 }
 @media (max-width: 520px) {
   .hero h1 { font-size: 38px; }

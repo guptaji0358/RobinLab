@@ -75,14 +75,14 @@ applyTheme("Dark");
 // ---------- Installer demo (auto-advancing) ----------
 const STEPS = ["Welcome", "Location", "Options", "Install", "Finish"];
 const STEP_CONTENT = {
-  Welcome: `<div class="installer-badge">SETUP WIZARD</div><div class="installer-title">Welcome to Pywix</div><p style="color:var(--subtext)">This wizard installs everything you need — no PyInstaller command line required.</p>`,
-  Location: `<div class="installer-badge">STEP 2 OF 4</div><div class="installer-title">Choose Install Location</div><p style="color:var(--subtext)">C:\\Program Files\\Pywix</p>`,
+  Welcome: `<div class="installer-badge">SETUP WIZARD</div><div class="installer-title">Welcome to PyWix</div><p style="color:var(--subtext)">This wizard installs everything you need — no PyInstaller command line required.</p>`,
+  Location: `<div class="installer-badge">STEP 2 OF 4</div><div class="installer-title">Choose Install Location</div><p style="color:var(--subtext)">C:\\Program Files\\PyWix</p>`,
   Options: `<div class="installer-badge">STEP 3 OF 4</div><div class="installer-title">Additional Options</div><p style="color:var(--subtext)"><span class="ic ic-check" aria-hidden="true"></span> Create a Start Menu shortcut</p>`,
   Install: `<div class="installer-badge">STEP 4 OF 4</div><div class="installer-title">Installing</div>
     <div class="installer-percent" id="demo-percent">0%</div>
     <div class="installer-progress-wrap"><div class="installer-progress-bar"><div class="installer-progress-fill" id="demo-fill"></div></div></div>
     <div class="installer-status" id="demo-status">Copying files…</div>`,
-  Finish: `<div class="installer-badge">ALL DONE</div><div class="installer-title">Pywix is ready</div><p style="color:var(--subtext)"><span class="ic ic-check" aria-hidden="true"></span> Launch Pywix</p>`,
+  Finish: `<div class="installer-badge">ALL DONE</div><div class="installer-title">PyWix is ready</div><p style="color:var(--subtext)"><span class="ic ic-check" aria-hidden="true"></span> Launch PyWix</p>`,
 };
 
 const stepsEl = document.getElementById("installer-steps");

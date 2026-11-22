@@ -203,7 +203,7 @@
     if (!liq.svg) return false;
     var hit = null, i, r;
     if (P.seen) {
-      if (!liq.list.length) liq.list = Array.prototype.slice.call(d.querySelectorAll('.section-heading h2'));
+      if (!liq.list.length) liq.list = Array.prototype.slice.call(d.querySelectorAll('.section-heading h1, .section-heading h2'));
       for (i = 0; i < liq.list.length; i++) {
         r = liq.list[i].getBoundingClientRect();
         if (P.x > r.left - 40 && P.x < r.right + 40 && P.y > r.top - 40 && P.y < r.bottom + 40) { hit = liq.list[i]; break; }

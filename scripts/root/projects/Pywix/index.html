@@ -3,17 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pywix — Turn Python scripts into Windows apps</title>
-<meta name="description" content="Pywix is a PySide6 desktop tool that wraps PyInstaller in a clean, guided UI so you never have to hand-write a build command again.">
+<title>PyWix — Turn Python scripts into Windows apps</title>
+<meta name="description" content="PyWix is a PySide6 desktop tool that wraps PyInstaller in a clean, guided UI so you never have to hand-write a build command again.">
 <link rel="icon" href="assets/APP_BUILDER_ICON.ico">
 <link rel="stylesheet" href="css/style.css">
+<!-- seo:start -->
+<link rel="canonical" href="https://roveuth.com/projects/Pywix/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RobinLab">
+<meta property="og:title" content="PyWix — Turn Python scripts into Windows apps">
+<meta property="og:description" content="PyWix is a PySide6 desktop tool that wraps PyInstaller in a clean, guided UI so you never have to hand-write a build command again.">
+<meta property="og:url" content="https://roveuth.com/projects/Pywix/">
+<meta property="og:image" content="https://roveuth.com/projects/Pywix/assets/og-image.jpg">
+<meta property="og:image:secure_url" content="https://roveuth.com/projects/Pywix/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="PyWix — turn Python scripts into Windows apps">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PyWix — Turn Python scripts into Windows apps">
+<meta name="twitter:description" content="PyWix is a PySide6 desktop tool that wraps PyInstaller in a clean, guided UI so you never have to hand-write a build command again.">
+<meta name="twitter:image" content="https://roveuth.com/projects/Pywix/assets/og-image.jpg">
+<meta name="twitter:image:alt" content="PyWix — turn Python scripts into Windows apps">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "PyWix",
+  "description": "PyWix is a PySide6 desktop tool that wraps PyInstaller in a clean, guided UI so you never have to hand-write a build command again.",
+  "url": "https://roveuth.com/projects/Pywix/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Windows",
+  "author": {
+    "@type": "Person",
+    "name": "Robin Gupta"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "@id": "https://roveuth.com/#organization",
+    "name": "Robin Gupta Studios",
+    "url": "https://roveuth.com/",
+    "logo": "https://roveuth.com/assets/robinlab-logo.png"
+  },
+  "softwareVersion": "1.0.2",
+  "isAccessibleForFree": true,
+  "downloadUrl": "https://github.com/guptaji0358/Pywix/releases/download/v1.0.2/PywixInstaller.exe",
+  "sameAs": "https://github.com/guptaji0358/Pywix"
+}
+</script>
+<!-- seo:end -->
 </head>
 <body>
 
 <nav class="nav">
   <div class="nav-inner">
-    <div class="brand"><img src="assets/package.svg" alt=""> Pywix</div>
+    <div class="brand"><img src="assets/package.svg" alt=""> PyWix</div>
     <div class="nav-links">
+      <a href="/projects" class="back-link">&larr; All Projects</a>
       <a href="#features">Features</a>
       <a href="#theming">Theming</a>
       <a href="#installer">Installer</a>
@@ -34,7 +80,7 @@
   <div class="container">
     <span class="eyebrow">FREE &amp; OPEN SOURCE · WINDOWS</span>
     <h1>Turn Python scripts into<br><span>Windows apps</span>, visually.</h1>
-    <p>Pywix wraps PyInstaller in a clean, guided desktop UI — pick a file, set your options, and build a real <code>.exe</code>. No terminal, no memorized flags.</p>
+    <p>PyWix wraps PyInstaller in a clean, guided desktop UI — pick a file, set your options, and build a real <code>.exe</code>. No terminal, no memorized flags.</p>
     <div class="hero-ctas">
       <a class="btn btn-primary" href="https://github.com/guptaji0358/Pywix/releases/download/v1.0.2/PywixInstaller.exe" target="_blank" rel="noopener">
         <img src="assets/download.svg" width="16" alt=""> Download for Windows
@@ -99,11 +145,11 @@
     <div class="section-head reveal">
       <span class="eyebrow">INSTALLER</span>
       <h2>A real installer, not a bare .exe</h2>
-      <p>Pywix ships its own step-by-step wizard — this is a live preview of it, auto-advancing so you can see the whole flow.</p>
+      <p>PyWix ships its own step-by-step wizard — this is a live preview of it, auto-advancing so you can see the whole flow.</p>
     </div>
     <div class="installer-demo reveal">
       <div class="installer-sidebar">
-        <div class="brand-mini">Pywix</div>
+        <div class="brand-mini">PyWix</div>
         <div id="installer-steps"></div>
       </div>
       <div class="installer-content" id="installer-content"></div>
@@ -121,7 +167,7 @@
     <div class="fireworks-demo reveal" id="fireworks-demo">
       <canvas id="fireworks-canvas"></canvas>
       <div class="fireworks-caption" id="fireworks-caption">
-        <h3>Thank you for installing Pywix!</h3>
+        <h3>Thank you for installing PyWix!</h3>
         <p>Enjoy building your apps.</p>
         <button class="btn btn-primary" id="fireworks-play">
           <img src="assets/firework.svg" width="16" alt=""> Play the celebration
@@ -161,7 +207,7 @@
         <tr>
           <td><span class="tag-pill">v1.0.1</span></td>
           <td>2026-08-30</td>
-          <td>Renamed the app to <b>Pywix</b> (formerly Python App Builder) — window title, About screen, and installer wizard all updated to match.</td>
+          <td>Renamed the app to <b>PyWix</b> (formerly Python App Builder) — window title, About screen, and installer wizard all updated to match.</td>
           <td>
             <a class="dl-btn" href="https://github.com/guptaji0358/Pywix/releases/download/v1.0.1/PywixInstaller.exe"><img src="assets/download.svg" alt=""> Download</a>
             <div class="dl-label">116&nbsp;MB</div>
@@ -190,7 +236,7 @@
     <a href="https://github.com/guptaji0358/Pywix" target="_blank" rel="noopener">
       <img src="assets/github.svg" width="14" alt="" style="vertical-align:-2px;"> github.com/guptaji0358/Pywix
     </a>
-    <br>Created by Robin Gupta + Claude Code
+    <br>Created by Robin Gupta + Claude Code<br>More from RobinLab: <a href="/projects/CodeLens/">CodeLens</a> · <a href="/projects/Contact%20Book/">Contact Book</a> · <a href="/projects/Motiva/">Motiva</a> · <a href="/projects">All projects</a>
   </div>
 </footer>
 

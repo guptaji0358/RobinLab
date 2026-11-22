@@ -36,7 +36,7 @@
     toggle.addEventListener('click', (e)=> apply(theme === 'dark' ? 'light' : 'dark', e));
   })();
 
-  const links = document.querySelectorAll('.rail-tabs a');
+  const links = document.querySelectorAll('.rail-tabs a[href^="#"]');
   const targets = [...links].map(a => document.querySelector(a.getAttribute('href')));
   const io = new IntersectionObserver((entries)=>{
     entries.forEach(e=>{

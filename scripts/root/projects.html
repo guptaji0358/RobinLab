@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Projects — RobinLab</title>
-<meta name="description" content="Every app and tool built under the RobinLab name by Robin Gupta.">
+<meta name="description" content="Every app and tool built under the RobinLab name by Robin Gupta: PyWix, CodeLens, Contact Book and Motiva.">
 <meta name="author" content="Robin Gupta">
 <meta name="publisher" content="Robin Gupta Studios">
 <meta name="copyright" content="Copyright &copy; Robin Gupta">
@@ -32,10 +32,29 @@
 </script>
 <link rel="stylesheet" href="css/soft-edges.css">
 <link rel="stylesheet" href="css/veins.css">
+<!-- seo:start -->
+<link rel="canonical" href="https://roveuth.com/projects">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RobinLab">
+<meta property="og:title" content="Projects — RobinLab">
+<meta property="og:description" content="Every app and tool built under the RobinLab name by Robin Gupta: PyWix, CodeLens, Contact Book and Motiva.">
+<meta property="og:url" content="https://roveuth.com/projects">
+<meta property="og:image" content="https://roveuth.com/assets/og/robinlab-og.jpg">
+<meta property="og:image:secure_url" content="https://roveuth.com/assets/og/robinlab-og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="RobinLab — software built and maintained by Robin Gupta Studios">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Projects — RobinLab">
+<meta name="twitter:description" content="Every app and tool built under the RobinLab name by Robin Gupta: PyWix, CodeLens, Contact Book and Motiva.">
+<meta name="twitter:image" content="https://roveuth.com/assets/og/robinlab-og.jpg">
+<meta name="twitter:image:alt" content="RobinLab — software built and maintained by Robin Gupta Studios">
+<!-- seo:end -->
 </head>
 <body>
 
-<div class="fx-loader" aria-hidden="true">
+<div class="fx-loader" aria-hidden="true" data-nosnippet>
   <div class="fx-loader-panel top"></div>
   <div class="fx-loader-panel bot"></div>
   <div class="fx-boot">
@@ -52,20 +71,21 @@
       <span class="brand-mark">RL</span>
       <span class="brand-name">RobinLab</span>
     </a>
-    <nav class="site-nav">
-    </nav>
+    <nav class="site-nav" aria-label="Main"><a class="nav-link" href="/projects">Projects</a><a class="nav-link" href="/collection">Collection</a><a class="nav-link" href="/logos">Logos</a><a class="nav-link" href="/certificates">Certificates</a><a class="nav-link" href="/presentations">Presentations</a><a class="nav-link" href="/music">Music</a><a class="nav-link" href="/skills">Claude Skills</a><a class="nav-link" href="/#about">About</a><a class="nav-link" href="/#contact">Contact</a></nav>
   </div>
 </header>
 
 <main>
 
-  <section id="projects" class="projects container">
+  <section id="projects" class="projects container" data-fx-globe>
     <div class="section-heading">
-      <h2>Projects</h2>
+      <h1>Projects</h1>
       <p>A growing collection of applications built under the RobinLab name.</p>
     </div>
 
     <style>
+      #projects.container{max-width:100%}
+      #projects .project-grid{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
       .proj-search{position:relative;max-width:420px;margin:0 0 1.5rem}
       .proj-search input{width:100%;box-sizing:border-box;padding:.7rem 2.4rem .7rem 1rem;border-radius:999px;
         border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit}
@@ -99,14 +119,15 @@
           PyWix
         </h3>
         <p class="project-desc">
-          A desktop application, built and maintained as part of the RobinLab
-          project lineup.
+          A PySide6 desktop tool that wraps PyInstaller in a guided interface,
+          turning Python scripts into Windows apps without hand-written build
+          commands.
         </p>
         <span class="claude-badge">
           <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
           Built with Claude Code
         </span>
-        <a href="#" data-link="projects.pywix" class="project-link" target="_blank" rel="noopener">
+        <a href="/projects/Pywix/" data-link="projects.pywix" class="project-link" target="_blank" rel="noopener">
           Open PyWix
           <span class="ic ic-arrow-right icon icon-sm" aria-hidden="true"></span>
         </a>
@@ -127,14 +148,14 @@
           CodeLens
         </h3>
         <p class="project-desc">
-          A desktop application, built and maintained as part of the RobinLab
-          project lineup.
+          A precision line and symbol search tool for any text file, with a
+          terminal app and a desktop app sharing one search engine.
         </p>
         <span class="claude-badge">
           <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
           Built with Claude Code
         </span>
-        <a href="#" data-link="projects.codelens" class="project-link" target="_blank" rel="noopener">
+        <a href="/projects/CodeLens/" data-link="projects.codelens" class="project-link" target="_blank" rel="noopener">
           Open CodeLens
           <span class="ic ic-arrow-right icon icon-sm" aria-hidden="true"></span>
         </a>
@@ -155,14 +176,14 @@
           Contact Book
         </h3>
         <p class="project-desc">
-          A desktop application, built and maintained as part of the RobinLab
-          project lineup.
+          A private desktop address book built with Python and PySide6:
+          multiple contact books, VCF import and calling through Phone Link.
         </p>
         <span class="claude-badge">
           <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
           Built with Claude Code
         </span>
-        <a href="#" data-link="projects.contactbook" class="project-link" target="_blank" rel="noopener">
+        <a href="/projects/Contact%20Book/" data-link="projects.contactbook" class="project-link" target="_blank" rel="noopener">
           Open Contact Book
           <span class="ic ic-arrow-right icon icon-sm" aria-hidden="true"></span>
         </a>
@@ -190,7 +211,7 @@
           <img loading="lazy" decoding="async" class="icon icon-sm" src="assets/claude.png" alt="">
           Built with Claude Code
         </span>
-        <a href="#" data-link="projects.motiva" class="project-link" target="_blank" rel="noopener">
+        <a href="/projects/Motiva/" data-link="projects.motiva" class="project-link" target="_blank" rel="noopener">
           Open Motiva
           <span class="ic ic-arrow-right icon icon-sm" aria-hidden="true"></span>
         </a>

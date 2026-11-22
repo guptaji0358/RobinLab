@@ -1167,7 +1167,8 @@
   function paintDetails(file) {
     if (!el.lbDetails) return;
     el.lbDName.textContent = file.name;
-    el.lbDKind.textContent = "Detecting…";
+    // Known from the manifest (recorded once by make_thumbs.py) -> instant; else detected on load.
+    el.lbDKind.textContent = file.ow && file.oh ? imageKind(file.ow, file.oh) : "Detecting…";
     el.lbDSize.textContent = `${formatBytes(file.size)} (${Number(file.size || 0).toLocaleString()} bytes)`;
   }
 
