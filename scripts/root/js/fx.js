@@ -337,14 +337,22 @@
 
     // little live HUD (local time + pointer coordinates)
     var hud = d.createElement('div');
-    hud.className = 'fx-hud'; hud.setAttribute('aria-hidden', 'true');
+    hud.className = 'fx-hud';
     h.appendChild(hud);
-    function hudTick() {
-      var t = new Date();
-      hud.innerHTML = 'LOCAL <b>' + t.toLocaleTimeString([], { hour12: false }) + '</b><br>' +
-        'X <b>' + String(Math.round(mouse.x)).padStart(4, '0') + '</b> Y <b>' + String(Math.round(mouse.y)).padStart(4, '0') + '</b>';
-    }
-    hudTick(); setInterval(hudTick, 250);
+    (function loadGlobe() {
+      var go = function () {
+        var srcs = ['globe-data.js', 'globe.js', 'globe-scene.js'], i = 0, base = (d.querySelector('script[src$="fx.js"]') || {}).src || '';
+        base = base.replace(/fx\.js.*$/, '');
+        (function next() {
+          if (i >= srcs.length) return window.RLGlobe && window.RLGlobe.start && window.RLGlobe.start(hud);
+          var s = d.createElement('script'); s.src = base + srcs[i++]; s.onload = next; d.head.appendChild(s);
+        })();
+      };
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (e) { if (e[0].isIntersecting) { io.disconnect(); go(); } }, { rootMargin: '200px' });
+        io.observe(hud);
+      } else go();
+    })();
 
     // avatar follows the pointer a little
     if (fine && !reduce && av) {
@@ -353,6 +361,7 @@
         av.style.setProperty('--ax', ((e.clientX - r.left) / r.width - .35) * 26 + 'px');
         av.style.setProperty('--ay', ((e.clientY - r.top) / r.height - .5) * 26 + 'px');
       });
+    // replaced the old clock/XY readout: an Earth that reveals local time + location on hover
       h.addEventListener('pointerleave', function () { av.style.setProperty('--ax', '0px'); av.style.setProperty('--ay', '0px'); });
     }
   }
