@@ -38,6 +38,8 @@
     share: document.getElementById("deck-share"),
     stage: document.getElementById("deck-stage"),
     loading: document.getElementById("deck-loading"),
+    hint: document.getElementById("deck-nav-hint"),
+    hintText: document.getElementById("deck-nav-text"),
     close: document.getElementById("deck-close"),
   };
 
@@ -180,6 +182,62 @@
   /* Viewer                                                              */
   /* ------------------------------------------------------------------ */
 
+  /* ------------------------------------------------------------------ */
+  /* Navigation hint                                                     */
+  /* The slides run in Microsoft's cross-origin iframe, so this page      */
+  /* cannot drive it: the hint only teaches the gesture, and dismisses    */
+  /* once the visitor interacts (SPACE here, or a tap/click that moves    */
+  /* focus into the frame).                                               */
+  /* ------------------------------------------------------------------ */
+
+  const HINT_TEXT = { touch: "Tap to navigate slides", keyboard: "Press SPACE to navigate slides" };
+  const coarseQuery = window.matchMedia("(pointer: coarse)");
+  let inputMode = coarseQuery.matches ? "touch" : "keyboard";
+  let hintActive = false;
+  let hintTimer = null;
+
+  function paintHint() {
+    el.hint.dataset.mode = inputMode;
+    el.hintText.textContent = HINT_TEXT[inputMode];
+  }
+
+  function setInputMode(mode) {
+    if (mode === inputMode) return;
+    inputMode = mode;
+    if (hintActive) paintHint();
+  }
+
+  function showHint() {
+    hintActive = true;
+    paintHint();
+    el.hint.classList.remove("is-leaving");
+    el.hint.hidden = false;
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(dismissHint, 12000); // safety net: taps inside the frame can be invisible to us
+  }
+
+  function dismissHint() {
+    clearTimeout(hintTimer);
+    if (!hintActive) return;
+    hintActive = false;
+    el.hint.classList.add("is-leaving");
+    setTimeout(() => {
+      if (!hintActive) el.hint.hidden = true;
+    }, 350);
+  }
+
+  // Hybrid devices: follow whichever input was used last.
+  coarseQuery.addEventListener("change", (e) => setInputMode(e.matches ? "touch" : "keyboard"));
+  document.addEventListener(
+    "pointerdown",
+    (e) => setInputMode(e.pointerType === "touch" || e.pointerType === "pen" ? "touch" : "keyboard"),
+    { passive: true },
+  );
+  // A tap/click inside the cross-origin frame moves focus into it: that is the only signal we get.
+  window.addEventListener("blur", () => {
+    if (hintActive && document.activeElement && document.activeElement.classList.contains("deck-frame")) dismissHint();
+  });
+
   function openDeck(file) {
     currentDeck = file;
     lastFocused = document.activeElement;
@@ -197,6 +255,10 @@
     // gets an inline response.
     el.download.href = deckPath(file);
     el.download.setAttribute("download", file.name);
+
+    hintActive = false;
+    clearTimeout(hintTimer);
+    el.hint.hidden = true;
 
     // Drop any previous deck and restore the loading text.
     for (const old of el.stage.querySelectorAll("iframe")) old.remove();
@@ -219,6 +281,7 @@
       "load",
       () => {
         if (el.loading) el.loading.hidden = true;
+        showHint();
         if (slowTimer) {
           clearTimeout(slowTimer);
           slowTimer = null;
@@ -239,7 +302,10 @@
       }
     }, 15000);
 
-    el.close.focus({ preventScroll: true });
+    // Focus the panel, not a button: SPACE on a focused button would click it (e.g. close the deck).
+    const panel = el.viewer.querySelector(".deck-panel");
+    panel.tabIndex = -1;
+    panel.focus({ preventScroll: true });
   }
 
   function closeDeck() {
@@ -247,6 +313,9 @@
 
     el.viewer.hidden = true;
     document.body.classList.remove("deck-open");
+    hintActive = false;
+    clearTimeout(hintTimer);
+    el.hint.hidden = true;
 
     // Clearing src stops the viewer and releases its network activity.
     for (const frame of el.stage.querySelectorAll("iframe")) {
@@ -348,6 +417,17 @@
   document.addEventListener("keydown", (event) => {
     if (el.viewer.hidden) return;
     if (event.key === "Escape") closeDeck();
+    else if (event.key === " " || event.code === "Space") {
+      setInputMode("keyboard");
+      // Stop the page scrolling. Hand focus to the slides so the viewer's own
+      // SPACE handling takes over from the next press (we cannot forward it).
+      if (!event.target.closest("a, button, input, textarea, select")) {
+        event.preventDefault();
+        dismissHint();
+        const frame = el.stage.querySelector("iframe");
+        if (frame) frame.focus({ preventScroll: true });
+      }
+    }
   });
 
   /* ------------------------------------------------------------------ */
