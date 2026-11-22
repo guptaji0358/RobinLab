@@ -61,3 +61,11 @@ Hub icons: `scripts/root/assets/`. See `workflows.md` → Add a project.
 
 Robin Gupta Studios / RGS™ / Built & maintained by Robin Gupta / Copyright © year —
 plus `<meta name="author|publisher|copyright">` in every `<head>`; `index.html` also has JSON-LD.
+
+## Earth globe (replaces the old hero HUD clock + mouse X/Y)
+- `fx.js` hero(): creates `.fx-hud` host, lazy-loads (IntersectionObserver) `js/globe-data.js` → `globe.js` → `globe-scene.js`, then `RLGlobe.start(host)`.
+- `globe-data.js`: offline tz→city table + NOAA sunrise/sunset. `globe.js`: DOM + info panel. `globe-scene.js`: three.js scene + hover/drag/click.
+- Self-hosted in `assets/globe/`: three.module.min.js (r160) + NASA-derived textures from the three.js examples.
+- Location = browser timezone → approximate city; precise GPS only after clicking "Use precise location". No weather (would need sending location to a third party). Nothing is transmitted.
+- Styles: end of `css/fx.css`. Behaviour, geography checks, limitations: `docs/GLOBE.md`; tests: `scripts/tests/globe.test.mjs`.
+- Render loop stops when settled/off-screen/reduced-motion; panel rebuilds markup only when its structure changes (clock updates just the time node).
