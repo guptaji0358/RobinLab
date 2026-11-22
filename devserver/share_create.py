@@ -4,7 +4,8 @@ import json
 import time
 import urllib.parse
 
-from .config import SHARE_TTL_SECONDS
+from .config import DECK_SHARE_TTL_SECONDS, SHARE_TTL_SECONDS
+from .content_types import PPTX_TYPE
 from .listing import get_listing
 from .responses import send_json
 from .share_tokens import create_share_token
@@ -36,20 +37,23 @@ def create_share(h, secret: str) -> None:
     if entry is None:
         send_json(h, {"error": "not_found", "message": "No such file in this bucket."}, 404)
         return
-    if not entry["previewable"]:
-        send_json(h, {"error": "unsupported_type", "message": "Only images can be shared."}, 415)
+    is_deck = entry["contentType"] == PPTX_TYPE
+    if not entry["previewable"] and not is_deck:
+        send_json(h, {"error": "unsupported_type", "message": "Only images and presentations can be shared."}, 415)
         return
 
-    ttl_ms = SHARE_TTL_SECONDS * 1000
+    ttl_seconds = DECK_SHARE_TTL_SECONDS if is_deck else SHARE_TTL_SECONDS
+    ttl_ms = ttl_seconds * 1000
     token = create_share_token(secret, entry["path"], ttl_ms)
     host = h.headers.get("Host") or "127.0.0.1:5500"
+    page = "presentations" if is_deck else "collection"
 
     send_json(
         h,
         {
             "token": token,
-            "url": f"http://{host}/collection?share={urllib.parse.quote(token, safe='')}",
+            "url": f"http://{host}/{page}?share={urllib.parse.quote(token, safe='')}",
             "expiresAt": iso_ms(int(time.time() * 1000) + ttl_ms),
-            "ttlSeconds": SHARE_TTL_SECONDS,
+            "ttlSeconds": ttl_seconds,
         },
     )

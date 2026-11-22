@@ -35,6 +35,7 @@
     sub: document.getElementById("deck-sub"),
     open: document.getElementById("deck-open"),
     download: document.getElementById("deck-download"),
+    share: document.getElementById("deck-share"),
     stage: document.getElementById("deck-stage"),
     loading: document.getElementById("deck-loading"),
     close: document.getElementById("deck-close"),
@@ -180,6 +181,7 @@
   /* ------------------------------------------------------------------ */
 
   function openDeck(file) {
+    currentDeck = file;
     lastFocused = document.activeElement;
 
     el.viewer.hidden = false;
@@ -267,6 +269,77 @@
   /* Events                                                              */
   /* ------------------------------------------------------------------ */
 
+  /* ------------------------------------------------------------------ */
+  /* Share link (valid 90 days, signed on the server)                     */
+  /* ------------------------------------------------------------------ */
+
+  let currentDeck = null;
+  let shareLabelTimer = null;
+
+  function flashShare(text) {
+    el.share.textContent = text;
+    if (shareLabelTimer) clearTimeout(shareLabelTimer);
+    shareLabelTimer = setTimeout(() => {
+      el.share.textContent = "Share link";
+    }, 4000);
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      window.prompt("Copy this link:", text);
+      return false;
+    }
+  }
+
+  async function shareDeck() {
+    if (!currentDeck) return;
+    el.share.disabled = true;
+    try {
+      const response = await fetch("/api/collection/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ path: currentDeck.path }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.url) {
+        flashShare("Could not create link");
+        return;
+      }
+      const days = Math.round((payload.ttlSeconds || 0) / 86400);
+      const copied = await copyText(payload.url);
+      flashShare(copied ? `Link copied · valid ${days} days` : "Link ready");
+    } catch {
+      flashShare("Could not create link");
+    } finally {
+      el.share.disabled = false;
+    }
+  }
+
+  /** Open the deck named by `?share=<token>`, or tell the visitor the link is dead. */
+  async function openSharedDeck() {
+    const token = new URLSearchParams(window.location.search).get("share");
+    if (!token) return;
+    try {
+      const response = await fetch(`/api/collection/share?token=${encodeURIComponent(token)}`, {
+        headers: { Accept: "application/json" },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        showState("error", "This shared link can't be opened.", payload.message || "The link is not valid.");
+        return;
+      }
+      const file = decks.find((deck) => deck.path === payload.path);
+      if (file) openDeck(file);
+      else showState("error", "That presentation is no longer available.", "");
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  el.share.addEventListener("click", shareDeck);
   el.close.addEventListener("click", closeDeck);
   el.viewer.addEventListener("click", (event) => {
     if (event.target.hasAttribute("data-close")) closeDeck();
@@ -304,6 +377,7 @@
         );
 
       render();
+      await openSharedDeck();
     } catch (err) {
       showState(
         "error",

@@ -64,6 +64,8 @@ const LQIP_PATH = `${THUMB_PREFIX}_lqip.json`;
 // How long a share link stays valid. Enforced on the server: the expiry is part
 // of the signed payload, so editing the URL cannot extend it.
 const SHARE_TTL_SECONDS = 30 * 60;
+// Presentation (deck) share links are meant to be passed around, so they last 90 days.
+const DECK_SHARE_TTL_SECONDS = 90 * 24 * 60 * 60;
 
 // Module-level cache. Cloudflare reuses isolates, so this is effective in practice.
 let listingCache = { at: 0, files: null, thumbs: null };
@@ -152,7 +154,7 @@ async function readShareToken(secret, token) {
   if (!payload || typeof payload.p !== "string" || typeof payload.e !== "number") {
     return { error: "share_invalid" };
   }
-  if (Date.now() >= payload.e) return { error: "share_expired", expiresAt: payload.e };
+  if (Date.now() >= payload.e) return { error: "share_expired", expiresAt: payload.e, path: payload.p };
 
   return { path: payload.p, expiresAt: payload.e };
 }
@@ -169,7 +171,7 @@ function json(body, status = 200, extraHeaders = {}) {
 }
 
 /** Resolve one bucket object, following the private bucket's signed redirect. */
-async function fetchBucketObject(token, path, extra = {}) {
+export async function fetchBucketObject(token, path, extra = {}) {
   // `encodeURIComponent` encodes "/" as %2F, which the Hub's resolve route accepts.
   const resolveUrl = `${HF}/buckets/${BUCKET_ID}/resolve/${encodeURIComponent(path)}`;
   let upstream = await fetch(resolveUrl, {
@@ -202,7 +204,7 @@ async function getLqip(token, thumbs) {
 }
 
 /** Fetch (and cache) the bucket listing: the visible files plus the thumbnail index. */
-async function getListing(token) {
+export async function getListing(token) {
   const now = Date.now();
   if (listingCache.files && now - listingCache.at < LISTING_TTL_MS) {
     return listingCache;
@@ -255,7 +257,7 @@ async function getListing(token) {
   return listingCache;
 }
 
-function requireToken(env) {
+export function requireToken(env) {
   const token = env.HF_TOKEN;
   if (!token) {
     return json(
@@ -285,6 +287,17 @@ async function handleList(env, request, url, ctx) {
 
   try {
     const { files } = await getListing(env.HF_TOKEN);
+    // Pixel sizes for the viewer's Kind label, kept by the kind service (kind_service/).
+    // Optional: if it is asleep or unset, the page just detects the size itself as before.
+    let kinds = {};
+    if (env.KIND_URL && env.KIND_KEY) {
+      try {
+        const r = await fetch(`${env.KIND_URL}/kinds`, { headers: { "X-Kind-Key": env.KIND_KEY } });
+        if (r.ok) kinds = await r.json();
+      } catch {
+        // cosmetic — never fail the listing over it
+      }
+    }
     const folders = [...new Set(files.map((file) => file.folder))].sort((a, b) => a.localeCompare(b));
 
     const response = json(
@@ -297,7 +310,8 @@ async function handleList(env, request, url, ctx) {
           ...file,
           // Aspect ratio + a ~200-byte blurred preview, so cards reserve their
           // space and show colour before the real preview arrives.
-          ...(lqip ? { w: lqip[0], h: lqip[1], blur: `data:image/webp;base64,${lqip[2]}` } : {}),
+          ...(lqip ? { w: lqip[0], h: lqip[1], blur: `data:image/webp;base64,${lqip[2]}`, ...(lqip[4] ? { ow: lqip[3], oh: lqip[4] } : {}) } : {}),
+          ...(kinds[file.path] ? { ow: kinds[file.path].w, oh: kinds[file.path].h } : {}),
           url: fileUrl(file.path),
         })),
       },
@@ -434,6 +448,64 @@ function previewUrl(file) {
   return file.previewable ? `/api/collection/preview?path=${encodeURIComponent(file.path)}` : null;
 }
 
+/* ---- watermark-service rate-limit (HTTP 429) handling ---- */
+
+/** Used when the service answers 429 without a usable Retry-After header. */
+const WATERMARK_RETRY_FALLBACK_SECONDS = 30;
+/** Upper bound so a bogus Retry-After can never park the previews for long. */
+const WATERMARK_RETRY_MAX_SECONDS = 300;
+const COOLDOWN_CACHE_KEY = "https://robinlab.internal/__watermark_cooldown__";
+
+/**
+ * Seconds to wait, from a Retry-After header (delta-seconds or HTTP-date).
+ * Falls back to a fixed value; always clamped to 1..WATERMARK_RETRY_MAX_SECONDS.
+ */
+function retryAfterSeconds(headers) {
+  const raw = (headers.get("Retry-After") || "").trim();
+  let seconds = NaN;
+  if (/^\d+$/.test(raw)) seconds = Number(raw);
+  else if (raw) seconds = Math.ceil((Date.parse(raw) - Date.now()) / 1000);
+  if (!Number.isFinite(seconds) || seconds < 1) seconds = WATERMARK_RETRY_FALLBACK_SECONDS;
+  return Math.min(seconds, WATERMARK_RETRY_MAX_SECONDS);
+}
+
+// Per-isolate cooldown deadline (ms epoch). Isolates do not share memory, so the
+// same deadline is also published in the colo-wide Cache API (see below).
+let previewCooldownUntil = 0;
+
+/** True while previews must skip the watermark service. */
+async function previewCoolingDown(cache) {
+  if (Date.now() < previewCooldownUntil) return true;
+  if (!cache) return false;
+  try {
+    const marker = await cache.match(new Request(COOLDOWN_CACHE_KEY));
+    const until = Number(marker?.headers.get("X-Cooldown-Until"));
+    if (Number.isFinite(until) && until > Date.now()) {
+      previewCooldownUntil = until;
+      return true;
+    }
+  } catch {
+    // no shared state available — the per-isolate value is all we have
+  }
+  return false;
+}
+
+/**
+ * Start a cooldown. The Cache API entry is shared by every isolate in this data
+ * centre (not globally); a short max-age makes it expire on its own.
+ */
+function startPreviewCooldown(cache, ctx, seconds) {
+  const until = Date.now() + seconds * 1000;
+  previewCooldownUntil = until;
+  if (!cache) return;
+  const marker = new Response(null, {
+    status: 200,
+    headers: { "Cache-Control": `public, max-age=${seconds}`, "X-Cooldown-Until": String(until) },
+  });
+  const put = cache.put(new Request(COOLDOWN_CACHE_KEY), marker).catch(() => {});
+  ctx?.waitUntil?.(put);
+}
+
 async function handlePreview(env, request, url, ctx) {
   if (isHotlink(request, url)) return json({ error: "forbidden", message: "Open images from the collection page." }, 403);
   const path = url.searchParams.get("path") || "";
@@ -446,12 +518,15 @@ async function handlePreview(env, request, url, ctx) {
   // Fallback to the original if the resizer isn't configured or fails.
   const original = () => handleFile(env, request, new URL(`/api/collection/file?path=${encodeURIComponent(path)}`, url), ctx);
   if (!env.WATERMARK_URL || !env.WATERMARK_KEY) return original();
+  // The service recently said 429: don't hit it again until the cooldown ends.
+  if (await previewCoolingDown(cache)) return original();
   try {
     const { files } = await getListing(env.HF_TOKEN);
     if (!files.find((f) => f.path === path && f.previewable)) return json({ error: "not_found" }, 404);
     const up = await fetch(`${env.WATERMARK_URL.replace(/\/+$/, "")}/preview?path=${encodeURIComponent(path)}&w=720`, {
       headers: { "X-Watermark-Key": env.WATERMARK_KEY },
     });
+    if (up.status === 429) startPreviewCooldown(cache, ctx, retryAfterSeconds(up.headers));
     if (!up.ok) return original();
     const res = new Response(up.body, {
       status: 200,
@@ -538,20 +613,23 @@ async function createShare(env, request, url, secret) {
   }
 
   if (!entry) return json({ error: "not_found", message: "No such file in this bucket." }, 404);
-  if (!entry.previewable) {
-    return json({ error: "unsupported_type", message: "Only images can be shared." }, 415);
+  const isDeck = entry.contentType === PPTX_TYPE;
+  if (!entry.previewable && !isDeck) {
+    return json({ error: "unsupported_type", message: "Only images and presentations can be shared." }, 415);
   }
 
-  const ttlMs = SHARE_TTL_SECONDS * 1000;
+  const ttlSeconds = isDeck ? DECK_SHARE_TTL_SECONDS : SHARE_TTL_SECONDS;
+  const ttlMs = ttlSeconds * 1000;
   const token = await createShareToken(secret, entry.path, ttlMs);
   const expiresAt = Date.now() + ttlMs;
+  const page = isDeck ? "presentations" : "collection";
 
   return json({
     token,
     // Built from the request origin so preview deployments and localhost work.
-    url: `${url.origin}/collection?share=${encodeURIComponent(token)}`,
+    url: `${url.origin}/${page}?share=${encodeURIComponent(token)}`,
     expiresAt: new Date(expiresAt).toISOString(),
-    ttlSeconds: SHARE_TTL_SECONDS,
+    ttlSeconds,
   });
 }
 
@@ -564,8 +642,14 @@ async function resolveShare(env, url, secret) {
 
   const read = await readShareToken(secret, token);
   if (read.error === "share_expired") {
+    const deckLink = typeof read.path === "string" && read.path.startsWith("presentations/");
     return json(
-      { error: "share_expired", message: "This shared link has expired. Shared links last 30 minutes." },
+      {
+        error: "share_expired",
+        message: deckLink
+          ? "This shared presentation link has expired. Shared presentation links last 90 days."
+          : "This shared link has expired. Shared links last 30 minutes.",
+      },
       410,
     );
   }
@@ -588,8 +672,8 @@ async function resolveShare(env, url, secret) {
   if (!entry) {
     return json({ error: "not_found", message: "That artwork is no longer in the collection." }, 404);
   }
-  if (!entry.previewable) {
-    return json({ error: "unsupported_type", message: "Only images can be shared." }, 415);
+  if (!entry.previewable && entry.contentType !== PPTX_TYPE) {
+    return json({ error: "unsupported_type", message: "Only images and presentations can be shared." }, 415);
   }
 
   return json({
@@ -668,6 +752,16 @@ async function handleDownload(env, request, url) {
     });
   } catch (err) {
     return json({ error: "upstream_error", message: "The watermark service could not be reached." }, 502);
+  }
+  if (upstream.status === 429) {
+    // Busy, not broken: tell the client when to come back. No automatic retry,
+    // and nothing from the upstream body or headers is passed along.
+    const seconds = retryAfterSeconds(upstream.headers);
+    return json(
+      { error: "service_busy", message: "The download service is busy right now. Please try again in a little while." },
+      503,
+      { "Retry-After": String(seconds) },
+    );
   }
   if (!upstream.ok) {
     const detail = await upstream.json().catch(() => ({}));

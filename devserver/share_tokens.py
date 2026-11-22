@@ -39,5 +39,5 @@ def read_share_token(secret: str, token: str) -> dict:
     if not isinstance(payload, dict) or not isinstance(payload.get("p"), str) or not isinstance(payload.get("e"), int):
         return {"error": "share_invalid"}
     if int(time.time() * 1000) >= payload["e"]:
-        return {"error": "share_expired", "expiresAt": payload["e"]}
+        return {"error": "share_expired", "expiresAt": payload["e"], "path": payload["p"]}
     return {"path": payload["p"], "expiresAt": payload["e"]}
