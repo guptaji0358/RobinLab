@@ -1,13 +1,14 @@
 # AgentMemory — read this first
 
 Map of the RobinLabs repo so you can jump straight to the right file instead of
-scanning the tree. Snapshot: 2026-11-06. Line numbers are approximate; if one is
+scanning the tree. Snapshot: 2026-11-23 (summary) / 2026-11-06 (maps). Line numbers are approximate; if one is
 off, `grep -n` the function name (cheap) rather than reading the whole file.
 
 ## Task → where to look
 
 | I need to…                                   | Open                         |
 | -------------------------------------------- | ---------------------------- |
+| understand the whole project (START HERE)    | `project-summary.md` — compiled overview, usually enough on its own |
 | change a page, JS behaviour or CSS           | `frontend-map.md`            |
 | change an `/api/collection/*` route          | `backend-map.md`             |
 | run, deploy, add a project, set secrets      | `workflows.md`               |
@@ -24,10 +25,11 @@ off, `grep -n` the function name (cheap) rather than reading the whole file.
   `dev_server.py` (local). A change to one almost always needs the other.
 - Watermarked downloads go through `watermark_service/` (FastAPI, separate HF Space).
 - Deploy is manual (`deploy.bat`); `git push` does not deploy.
+- Also: `kind_service/` (image-size cache Space), Canva edit (`/api/canva/*`), `_middleware.js` (canonical host).
 
 ## Known doc drift
 
-`CLAUDE.md` lists 4 routes, but `music.html` and `certificates.html` also exist, and
+`CLAUDE.md` lists 6 routes, but `music.html`, `projects.html` and `404.html` also exist, and
 `js/links.js` (central URLs), `js/fx.js` + `css/fx.css` (visual effects),
 `js/names.js` (Title Case display names) and `css/theme.css` are not mentioned there.
 

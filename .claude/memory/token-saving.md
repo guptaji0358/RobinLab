@@ -6,7 +6,7 @@
    then `Read` with `offset`/`limit` ≈ 60–120 lines around the hit.
 
 ## Never read in full (big files)
-`scripts/root/css/style.css` (2070) · `scripts/root/js/collection.js` (1188) · `dev_server.py` (832) ·
+`scripts/root/css/style.css` (2070) · `scripts/root/js/collection.js` (1188) · `devserver/` (45 modules, ≤60 lines each) ·
 `scripts/root/index.html` (636) · `scripts/root/js/fx.js` (601) · `scripts/functions/api/collection/[[path]].js` (~760).
 Use the section/line maps in `frontend-map.md` / `backend-map.md`.
 
@@ -27,5 +27,5 @@ If the request is ambiguous (which page? production or local only? which route?)
 short question first. A wrong 1000-line edit costs far more than a question.
 
 ## Parity checklist (prevents rework)
-API change → both `scripts/functions/api/collection/[[path]].js` and `dev_server.py`.
+API change → both `scripts/functions/api/collection/[[path]].js` and `devserver/`.
 Footer/identity change → all page `<head>`/footers. New page → nav in `site.js`, route list in `CLAUDE.md`, this folder.

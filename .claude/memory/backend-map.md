@@ -2,30 +2,36 @@
 
 ## Golden rule: the API exists TWICE
 
-| Production (Cloudflare Pages Function)         | Local mirror (`dev_server.py`)            |
+| Production (Cloudflare Pages Function)         | Local mirror (`dev_server.py` → `devserver/` package) |
 | ---------------------------------------------- | ----------------------------------------- |
-| `scripts/functions/api/collection/[[path]].js` (≈760)  | `dev_server.py` (832)                     |
+| `scripts/functions/api/collection/[[path]].js` (≈760)  | `devserver/` — 9 category folders, see below |
+
+`devserver/` folders: `core` (config, paths, settings, caches) · `web` (handler, api_router,
+responses) · `hf` (http, stream, listing, lqip) · `collection` (file/listing/backdrop/decks
+routes) · `share` · `download` · `skills` · `canva` · `app` (server, cli, banner).
 
 Change one → check the other. Both talk to the Hugging Face bucket
 `robinlabdev/robinvault` with `HF_TOKEN` (never exposed to the browser).
 
 ## Route table (`onRequest` dispatches by pathname suffix)
 
-| Route                          | JS handler (functions/…)  | Python (dev_server.py)           |
+| Route                          | JS handler (functions/…)  | Python (`devserver/…`)           |
 | ------------------------------ | ------------------------- | -------------------------------- |
-| `GET /api/collection/files`    | `handleList` 271 → `getListing` 203, `getLqip` 187 | `_serve_listing` 655, `get_listing` 192, `get_lqip` 171 |
-| `GET /api/collection/file?path=` | `handleFile` 408 → `streamBucketFile` 325 | `_serve_file` 704, `open_file_stream` 257 |
-| `POST/GET …/share`             | `handleShare` 537, `createShare` 454, `resolveShare` 488 | `_serve_share` 539, `_create_share` 558, `_resolve_share` 603 |
-| `GET …/download?path=`         | `handleDownload` 570      | `_serve_download` 385            |
-| `GET …/backdrop[?prev=]`       | `handleBackdrop` (above `onRequest`) | `pick_backdrop` (above `open_file_stream`) |
-| `GET …/skills`                 | `handleSkills` 692, `getSkills` 674 | `get_skills` 331, `summarise_skill` 302 |
-| `GET …/skill?id=`              | `handleSkill` 709         | `_serve_skill` 432               |
-| `GET /decks/<name>.pptx`       | `scripts/functions/decks/[[path]].js` (51 lines) | `_serve_file(..., decks_only=True)` |
+| `GET /api/collection/files`    | `handleList` → `getListing`, `getLqip` | `collection/listing_route`, `hf/listing`, `hf/lqip` |
+| `GET /api/collection/file?path=` | `handleFile` → `streamBucketFile` | `collection/file_route`, `hf/stream` |
+| `POST/GET …/share`             | `handleShare`, `createShare`, `resolveShare` | `share/route`, `share/create`, `share/resolve` |
+| `GET …/download?path=`         | `handleDownload`          | `download/route` (+ `local`, `relay`) |
+| `GET …/backdrop[?prev=]`       | `handleBackdrop`          | `collection/backdrop`, `collection/backdrop_route` |
+| `GET …/skills`                 | `handleSkills`, `getSkills` | `skills/routes`, `skills/store`, `skills/summary` |
+| `GET …/skill?id=`              | `handleSkill`             | `skills/routes`                  |
+| `GET /decks/<name>.pptx`       | `scripts/functions/decks/[[path]].js` | `collection/decks_route`   |
+| `/api/canva/*`                 | `scripts/functions/api/canva/` | `canva/` (route, login, callback, edit) |
 
-Share tokens: HMAC-signed, expiry inside payload, **30 min**; `410` after expiry.
-JS: `createShareToken` 111 / `readShareToken` 121. Python: `create_share_token` 127 / `read_share_token` 134.
-Servable types: images + `.pptx` only; everything else → `415` (`is_servable` py 67, `PPTX_TYPE` js 32).
-Skill front-matter parsing: `parse_front_matter` py 281.
+Share tokens: HMAC-signed, expiry inside payload, **30 min** for images, **90 days** for decks (`DECK_SHARE_TTL_SECONDS`); `410` after expiry.
+Also: `scripts/functions/_middleware.js` (www/pages.dev → roveuth.com 301), `kind_service/` (HF Space; Function reads `KIND_URL`+`KIND_KEY`).
+JS: `createShareToken` 111 / `readShareToken` 121. Python: `share/tokens.py`.
+Servable types: images + `.pptx` only; everything else → `415` (`core/content_types.py`, `PPTX_TYPE` js 32).
+Skill front-matter parsing: `skills/frontmatter.py`.
 
 ## Watermark service (`watermark_service/`, FastAPI + Pillow, HF Space)
 

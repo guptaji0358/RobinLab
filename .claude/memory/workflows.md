@@ -15,7 +15,7 @@ Collection needs `HF_TOKEN` in env or `.dev.vars`. Preview configs: `.claude/lau
 ```powershell
 cmd /c "npx wrangler pages deploy root --project-name=robinlab --branch=master"
 ```
-or double-click `deploy.bat`. Prod: https://robinlab.pages.dev. Publishes `scripts/root/` + `scripts/functions/`.
+or double-click `deploy.bat`. Prod: https://roveuth.com (robinlab.pages.dev 301-redirects to it; `<hash>.robinlab.pages.dev` previews still serve). Publishes `scripts/root/` + `scripts/functions/`.
 "Change did nothing?" → `wrangler pages deployment list --project-name=robinlab` and compare the
 newest commit with `git rev-parse HEAD` before debugging code.
 
@@ -33,6 +33,11 @@ Drop a `.md` (with front-matter) into the bucket's `Claude Skills/` folder — a
 ## Regenerate site icons
 
 `python scripts/tools/make_icons.py` (`--source`, `--install-logo` optional).
+
+## Dev server control / tests / other tools
+
+`python scripts/tools/devctl.py start|stop|restart|status` (`dev.bat` has a stale `tools\` path).
+`node --test scripts/tests/` — all Node tests. `make_og.py` (OG images), `make_watch_links.py` (anime Watch map).
 
 ## Commit etiquette
 
