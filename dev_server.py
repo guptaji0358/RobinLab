@@ -14,7 +14,7 @@ The Hugging Face token is read from the HF_TOKEN environment variable, or from a
 git-ignored `.dev.vars` file (lines of the form KEY=VALUE). Nothing is hard-coded.
 """
 
-from devserver.server import main
+from devserver.app.server import main
 
 if __name__ == "__main__":
     raise SystemExit(main(__doc__))

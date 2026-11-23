@@ -471,9 +471,10 @@
 
   const CANVA_PENDING = "rl-canva-pending";
 
-  // Uploads the logo to the visitor's Canva account and opens a design that
-  // already contains it, titled with the logo's name. First use sends the
-  // visitor through Canva sign-in; we resume the same logo when they return.
+  // Opens a blank tab inside the click (the only time browsers allow it), builds
+  // the design in the visitor's Canva, then points that tab at it. First use sends
+  // this tab through Canva sign-in; we then ask the visitor to click again, since
+  // a tab can't be opened without a fresh click.
   async function editInCanva(file, button) {
     if (button.dataset.busy) return;
     const label = button.textContent;
@@ -481,29 +482,24 @@
     button.disabled = true;
     button.textContent = "Opening Canva…";
     try {
-      const res = await fetch("/api/canva/edit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: file.path, title: pretty(file.name), w: file.w, h: file.h }),
+      await window.RLCanva.startEdit(file, {
+        open: () => window.open("about:blank", "_blank"),
+        fetch: (url, init) => window.fetch(url, init),
+        assign: (url) => window.location.assign(url),
+        setPending: (path) => {
+          try { sessionStorage.setItem(CANVA_PENDING, path); } catch (e) { /* private mode */ }
+        },
+        notify: toast,
+        title: pretty,
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401 && data.error === "auth_required") {
-        try { sessionStorage.setItem(CANVA_PENDING, file.path); } catch (e) { /* private mode */ }
-        toast("Sign in to Canva to continue…", "ok");
-        window.location.assign("/api/canva/login?return=/logos");
-        return;
-      }
-      if (!res.ok || !data.editUrl) throw new Error(data.message || `HTTP ${res.status}`);
-      window.location.assign(data.editUrl);
-    } catch (err) {
-      toast(`Couldn’t open ${file.name} in Canva: ${err.message}`, "warn");
+    } finally {
       button.disabled = false;
       button.textContent = label;
       delete button.dataset.busy;
     }
   }
 
-  // Back from Canva sign-in: resume the logo the visitor clicked.
+  // Back from Canva sign-in: tell the visitor to click the same logo again.
   function resumeCanva() {
     const flag = new URLSearchParams(window.location.search).get("canva");
     if (!flag) return;
@@ -515,11 +511,7 @@
       return;
     }
     const file = allLogos.find((f) => f.path === path);
-    if (!file) return;
-    const btn = Array.from(el.grid.querySelectorAll(".lg-edit")).find(
-      (b) => b.getAttribute("aria-label") === `Edit ${file.name}`,
-    );
-    if (btn) editInCanva(file, btn);
+    toast(file ? `Canva connected. Click Edit in Canva on ${pretty(file.name)} to continue.` : "Canva connected. Click Edit in Canva to continue.", "ok");
   }
 
   /* ------------------------------------------------------------------ */
