@@ -164,6 +164,22 @@ def make_lqip(data: bytes) -> list:
     return [width, height, base64.b64encode(buffer.getvalue()).decode("ascii")]
 
 
+def original_size(data: bytes) -> list:
+    """[width, height] of the original as a browser shows it (EXIF rotation applied). Header read only."""
+    from PIL import Image
+
+    with Image.open(io.BytesIO(data)) as img:
+        w, h = img.size
+        if img.getexif().get(0x0112, 1) in (5, 6, 7, 8):
+            w, h = h, w
+    return [w, h]
+
+
+def process_dims(entry: dict, token: str) -> tuple[str, list]:
+    """One-time backfill: the original's pixel size, so the viewer never has to detect it."""
+    return entry["path"], original_size(fetch_bytes(token, entry["path"]))
+
+
 def process_lqip(entry: dict, token: str) -> tuple[str, list]:
     """Placeholder for an image whose preview already exists: read the small preview, not the original."""
     return entry["path"], make_lqip(fetch_bytes(token, thumb_remote_path(entry["path"])))
@@ -175,7 +191,7 @@ def process(entry: dict, token: str, max_edge: int, quality: int) -> dict:
     original = fetch_bytes(token, path)
     thumb, size = make_thumb(original, max_edge, quality)
     return {
-        "lqip": make_lqip(thumb),
+        "lqip": make_lqip(thumb) + original_size(original),
         "path": path,
         "remote": thumb_remote_path(path),
         "data": thumb,
@@ -311,6 +327,19 @@ def main() -> int:
                     lqip[path] = value
                 except Exception as err:  # noqa: BLE001
                     print(f"  placeholder failed: {err}")
+    # Entries are [w, h, blur, origW, origH]. Older ones lack the last two: read each
+    # original ONCE and store the size, so the viewer's Kind/Quality needs no image decode.
+    by_path = {e["path"]: e for e in originals}
+    legacy = [by_path[p] for p, v in lqip.items() if len(v) < 5 and p in by_path]
+    if legacy:
+        print(f"\nRecording the original size of {len(legacy)} image(s) (one-time) ...")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+            for future in concurrent.futures.as_completed([pool.submit(process_dims, e, token) for e in legacy]):
+                try:
+                    path, dims = future.result()
+                    lqip[path] = lqip[path][:3] + dims
+                except Exception as err:  # noqa: BLE001
+                    print(f"  size failed: {err}")
     live_paths = {entry["path"] for entry in originals}
     lqip = {path: value for path, value in lqip.items() if path in live_paths}
     if lqip != before:

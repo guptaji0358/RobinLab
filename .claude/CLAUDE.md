@@ -171,7 +171,7 @@ Cloudflare Pages, project `robinlab` — **Direct Upload, not Git-connected**
 | Project type | Direct Upload (no Git integration, no Cloudflare build step) |
 | Publish directory | `scripts/root` (`pages_build_output_dir` in `scripts/wrangler.toml`) |
 | Build step | none |
-| Production URL | https://robinlab.pages.dev |
+| Production URL | https://roveuth.com (canonical; https://robinlab.pages.dev and www.roveuth.com 301-redirect to it; `<hash>.robinlab.pages.dev` previews still serve) |
 | Secret | `HF_TOKEN` (Pages → Settings → Environment variables) |
 | Optional secret | `SHARE_SECRET` for 30-minute share links (falls back to `HF_TOKEN`) |
 

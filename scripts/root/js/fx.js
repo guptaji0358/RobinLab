@@ -408,20 +408,17 @@
   }
 
   /* ------------------------------------------------------ cursor + main loop */
-  var cur = { x: mouse.x, y: mouse.y, rx: mouse.x, ry: mouse.y };
-  var dot, ring;
+  var cur = { x: mouse.x, y: mouse.y };
+  var dot;
   function cursor() {
     if (!fine || reduce) return;
     dot = d.createElement('div'); dot.className = 'fx-cur-dot';
-    ring = d.createElement('div'); ring.className = 'fx-cur-ring';
-    d.body.appendChild(ring); d.body.appendChild(dot);
+    d.body.appendChild(dot);
     root.classList.add('fx-cursor', 'cur-out');
     var hot = 'a, button, .btn, input, textarea, select, [role="button"], .pf-skills span, .pf-chips li';
     d.addEventListener('pointerover', function (e) {
       root.classList.toggle('cur-link', !!(e.target.closest && e.target.closest(hot)));
     });
-    d.addEventListener('pointerdown', function () { root.classList.add('cur-down'); });
-    d.addEventListener('pointerup', function () { root.classList.remove('cur-down'); });
     d.documentElement.addEventListener('pointerleave', function () { root.classList.add('cur-out'); });
     d.documentElement.addEventListener('pointerenter', function () { root.classList.remove('cur-out'); });
   }
@@ -432,9 +429,7 @@
       // cursor
       if (dot) {
         cur.x = mouse.x; cur.y = mouse.y;
-        cur.rx += (cur.x - cur.rx) * .16; cur.ry += (cur.y - cur.ry) * .16;
         dot.style.transform = 'translate3d(' + cur.x + 'px,' + cur.y + 'px,0)';
-        ring.style.transform = 'translate3d(' + cur.rx + 'px,' + cur.ry + 'px,0)';
       }
       // marquee — speeds up with scroll velocity
       for (var i = 0; i < marquees.length; i++) {

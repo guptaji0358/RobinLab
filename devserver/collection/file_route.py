@@ -85,7 +85,9 @@ def serve_file(h, path: str, decks_only: bool = False) -> None:
                 if not chunk:
                     break
                 h.wfile.write(chunk)
-        except (BrokenPipeError, ConnectionResetError):
-            pass  # browser cancelled (scrolled away / navigated); stop streaming
+        except ConnectionError:
+            # Browser cancelled (scrolled away / navigated). ConnectionError covers
+            # BrokenPipe, ConnectionReset and ConnectionAborted (WinError 10053).
+            pass
     finally:
         conn.close()

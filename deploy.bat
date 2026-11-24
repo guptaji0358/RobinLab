@@ -18,5 +18,5 @@ if not "%DEPLOY_RC%"=="0" (
 )
 
 echo.
-echo Done: https://robinlab.pages.dev
+echo Done: https://roveuth.com  (robinlab.pages.dev 301-redirects here; previews: https://^<hash^>.robinlab.pages.dev)
 pause

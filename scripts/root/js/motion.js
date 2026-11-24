@@ -3,7 +3,7 @@
    does not do:
      1. Velocity ink  — a pointer/touch trail whose size and glow follow speed.
      2. Spring field  — chips and tags are real damped springs: they shy away
-        from a fast pointer and a click / tap sends a shockwave through them.
+        from a fast pointer.
      3. Device tilt   — on phones the code-rain backdrop drifts with the device.
      4. Gravity well  — hold the mouse/finger: chips and particles spiral in.
      5. Constellation — a drifting node web that links to the pointer.
@@ -28,7 +28,6 @@
 
   /* ------------------------------------------------------------ pointer state */
   var P = { x: -999, y: -999, px: -999, py: -999, vx: 0, vy: 0, speed: 0, down: false, t: 0, seen: false };
-  var shocks = [];                               // {x, y, r, life}
   var cv, ctx, W = 0, H = 0, dpr = 1, parts = [];
   var MAX_PARTS = coarse ? 100 : 220;
 
@@ -77,11 +76,6 @@
         var gx = P.x - (s.cx + s.x), gy = P.y - (s.cy + s.y), gq = gx * gx + gy * gy;
         if (gq < 300 * 300 && gq > 400) { var gd = Math.sqrt(gq); ax += gx / gd * (1 - gd / 300) * 2600; ay += gy / gd * (1 - gd / 300) * 2600; }
       }
-      for (var i = 0; i < shocks.length; i++) {
-        var k = shocks[i], ex = s.cx - k.x, ey = s.cy - k.y, ed = Math.sqrt(ex * ex + ey * ey) || 1;
-        var band = Math.abs(ed - k.r);              // only the wavefront pushes
-        if (band < 70) { var g = (1 - band / 70) * k.life * 5200; ax += ex / ed * g; ay += ey / ed * g; }
-      }
       // damped spring back to rest: a = -k x - c v
       ax += -s.x * 170; ay += -s.y * 170;
       s.vx += ax * dt; s.vy += ay * dt;
@@ -126,14 +120,6 @@
     }
     drawWeb(dt);
     drawWell(dt);
-    ctx.lineWidth = 2.6;
-    for (i = shocks.length - 1; i >= 0; i--) {
-      var k = shocks[i];
-      k.r += 620 * dt; k.life -= 1.5 * dt;
-      if (k.life <= 0) { shocks.splice(i, 1); continue; }
-      ctx.strokeStyle = 'hsla(190,95%,70%,' + (k.life * .75).toFixed(3) + ')';
-      ctx.beginPath(); ctx.arc(k.x, k.y, k.r, 0, 6.283); ctx.stroke();
-    }
     ctx.globalCompositeOperation = 'source-over';
   }
 
@@ -255,7 +241,7 @@
     drawInk(dt);
     var b = stepTilt(dt);
     var c = stepLiquid(t, dt);
-    var busy = a || b || c || parts.length || shocks.length || P.speed > .5 || P.seen || web.a > .02 || well.a > .02;
+    var busy = a || b || c || parts.length || P.speed > .5 || P.seen || web.a > .02 || well.a > .02;
     idle = busy ? 0 : idle + 1;
     if (idle > 30 || d.hidden || !enabled) {
       running = false; ctx.clearRect(0, 0, W, H);
@@ -277,10 +263,9 @@
     wake();
   }
   function onDown(e) {
-    P.down = true; P.x = e.clientX; P.y = e.clientY; P.seen = true;
-    shocks.push({ x: e.clientX, y: e.clientY, r: 8, life: 1 });
-    if (shocks.length > 4) shocks.shift();
-    emit(e.clientX, e.clientY, 0, 0, 10);
+    // click/tap effects (shockwave ring, particle burst, hold-to-pull well) are removed:
+    // a press only updates the pointer position, P.down stays false.
+    P.x = e.clientX; P.y = e.clientY; P.seen = true;
     wake();
   }
   function onUp() { P.down = false; }
@@ -318,7 +303,7 @@
       els.forEach(function (s) { rest(s); delete s.el.__rlm; }); visible.clear();
       if (bg) { bg.style.translate = ''; bg.style.scale = ''; }
       off.splice(0).forEach(function (f) { f(); }); if (io) io.disconnect();
-      els.length = 0; cv = null; parts.length = shocks.length = 0;
+      els.length = 0; cv = null; parts.length = 0;
     },
     get active() { return enabled && !!cv; }
   };

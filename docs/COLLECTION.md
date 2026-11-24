@@ -35,7 +35,7 @@ It is **view-only by design**. Every user can browse and enlarge images, but the
 Download button is disabled (tooltip: *"Downloads unlock when payments are added"*)
 until a payment flow exists.
 
-**Live:** <https://robinlab.pages.dev/collection>
+**Live:** <https://roveuth.com/collection>
 
 ---
 
@@ -107,7 +107,7 @@ stops working after **30 minutes**.
 ```
 POST /api/collection/share   {"path":"wallpapers/foo.png"}
   -> { "token":"<payload>.<sig>",
-       "url":"https://robinlab.pages.dev/collection?share=<token>",
+       "url":"https://roveuth.com/collection?share=<token>",
        "expiresAt":"2026-10-21T18:30:00Z", "ttlSeconds":1800 }
 
 GET  /api/collection/share?token=<token>
@@ -223,7 +223,7 @@ available.
 | --- | --- |
 | Host | Cloudflare Pages |
 | Project | `robinlab` |
-| Production URL | <https://robinlab.pages.dev> |
+| Production URL | <https://roveuth.com> |
 | Source | **Direct Upload** — a `git push` does *not* deploy (`Git Provider: No`) |
 | Build step | none |
 | Publish directory | `root` |
@@ -334,3 +334,33 @@ service in `watermark_service/` (FastAPI + Pillow).
   (resized WebP, key-checked). The Pages Function relays it as
   `/api/collection/preview` and caches the result at the edge; if the service is
   unconfigured or fails it falls back to the original file.
+
+## Edit in Canva (logos)
+
+The **Edit in Canva** button on `/logos` (cards and the viewer) uploads the logo to the
+visitor's own Canva account and opens a new design that already contains it, titled with
+the logo's name. Code: `scripts/functions/api/canva/[[path]].js` (mirrored for local use in
+`dev_server.py`) and `editInCanva` in `scripts/root/js/logos.js`.
+
+Flow: `POST /api/canva/edit` -> if the visitor has no Canva session it answers `401
+auth_required` -> the page sends them to `/api/canva/login` (OAuth 2.0 authorization code +
+PKCE) -> Canva redirects to `/api/canva/callback` -> back on `/logos?canva=connected`, the
+page resumes the logo they clicked. The edit route reads the logo from the bucket
+(`LOGO/` only), uploads it (`POST /v1/asset-uploads`), polls the job, then creates the design
+(`POST /v1/designs`, custom size from the image, `asset_id`, `title`) and returns Canva's
+`edit_url`.
+
+Setup (canva.dev -> your integration):
+
+1. Authentication: copy the **Client ID**, generate a **Client secret** (starts `cnvca`).
+2. Redirect URLs: `https://robinlab.pages.dev/api/canva/callback`
+   (and `http://127.0.0.1:5500/api/canva/callback` for local testing).
+3. Scopes: `asset:write`, `design:content:write`.
+4. Pages secrets `CANVA_CLIENT_ID`, `CANVA_CLIENT_SECRET` (locally: `.dev.vars`). The session
+   cookie is AES-GCM encrypted with `SHARE_SECRET` (**required** — no `HF_TOKEN` fallback; without it Canva answers
+   `503 not_configured`). The sealed OAuth state carries an issued-at time and is rejected
+   on callback if older than 10 minutes or future-dated.
+
+Notes: tokens never reach page JavaScript (HttpOnly cookie scoped to `/api/canva`). Locally the
+dev server keeps sessions in memory, so restarting it signs you out of Canva. Until Canva
+approves the integration for public use, only accounts you allow can sign in.
