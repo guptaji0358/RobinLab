@@ -249,6 +249,7 @@
     const download = node("button", "lg-download", {
       type: "button",
       "aria-label": `Download ${name}`,
+      title: "Download",
     });
     const dlLabel = node("span", "lg-dl-label");
     dlLabel.textContent = "Download";
@@ -256,16 +257,22 @@
     download.addEventListener("click", () => downloadFile(file, download, dlLabel));
     const editBtn = node("button", "lg-download lg-edit", {
       type: "button",
-      "aria-label": `Edit ${name}`,
+      "aria-label": `Edit ${name} in Canva`,
+      title: "Edit in Canva",
     });
-    editBtn.textContent = "Edit in Canva";
+    const editLabel = node("span", "lg-edit-label");
+    editLabel.textContent = "Edit in Canva";
+    editBtn.append(node("img", "lg-canva-ic", { src: "assets/canva-icon.png", alt: "", width: "20", height: "20" }), editLabel);
     editBtn.addEventListener("click", () => editInCanva(file, editBtn));
     const copyBtn = node("button", "lg-download lg-copy", {
       type: "button",
       "aria-label": `Copy ${name}`,
+      title: "Copy image",
     });
-    copyBtn.textContent = "Copy";
-    copyBtn.addEventListener("click", () => copyImage(file, copyBtn));
+    const copyLabel = node("span", "lg-dl-label");
+    copyLabel.textContent = "Copy";
+    copyBtn.append(node("span", "ic ic-copy icon icon-sm"), copyLabel);
+    copyBtn.addEventListener("click", () => copyImage(file, copyBtn, copyLabel));
     actions.append(editBtn, copyBtn, download);
 
     card.append(open, info, actions);
@@ -603,10 +610,11 @@
   // a tab can't be opened without a fresh click.
   async function editInCanva(file, button) {
     if (button.dataset.busy) return;
-    const label = button.textContent;
+    const target = button.querySelector(".lg-edit-label") || button; // keep the icon
+    const label = target.textContent;
     button.dataset.busy = "1";
     button.disabled = true;
-    button.textContent = "Opening Canva…";
+    target.textContent = "Opening Canva…";
     try {
       await window.RLCanva.startEdit(file, {
         open: () => window.open("about:blank", "_blank"),
@@ -620,7 +628,7 @@
       });
     } finally {
       button.disabled = false;
-      button.textContent = label;
+      target.textContent = label;
       delete button.dataset.busy;
     }
   }

@@ -2352,6 +2352,7 @@ a.deck-open:hover { border-color: #3a4048; color: var(--text); }
 .ic-close{-webkit-mask-image:url(../assets/icons/actions/close.svg);mask-image:url(../assets/icons/actions/close.svg)}
 .ic-code-thin{-webkit-mask-image:url(../assets/icons/dev/code-thin.svg);mask-image:url(../assets/icons/dev/code-thin.svg)}
 .ic-database-thin{-webkit-mask-image:url(../assets/icons/dev/database-thin.svg);mask-image:url(../assets/icons/dev/database-thin.svg)}
+.ic-copy{-webkit-mask-image:url(../assets/icons/actions/copy.svg);mask-image:url(../assets/icons/actions/copy.svg)}
 .ic-download{-webkit-mask-image:url(../assets/icons/actions/download.svg);mask-image:url(../assets/icons/actions/download.svg)}
 .ic-download-tray{-webkit-mask-image:url(../assets/icons/actions/download-tray.svg);mask-image:url(../assets/icons/actions/download-tray.svg)}
 .ic-git-branch-thin{-webkit-mask-image:url(../assets/icons/dev/git-branch-thin.svg);mask-image:url(../assets/icons/dev/git-branch-thin.svg)}
