@@ -101,9 +101,13 @@ everything else is rejected with `415`.
 
 `/logos` reuses the same manifest but keeps only files in the `LOGO/` folder
 (any depth below it). The Collection and Certificates pages hide that folder, so
-brand marks never appear twice. Logos show two previews (dark and light), open in
-a dedicated viewer, and download as the untouched original through a Blob URL —
-no watermark service involved. New images in `LOGO/` appear automatically.
+brand marks never appear twice. The folders drive the layout: each folder under
+`LOGO/` is a category section with a filter chip, deeper folders are subcategory
+headings, and files directly in `LOGO/` are listed last under "General"
+(`FOLDER_LABELS` in `js/logos.js` fixes display casing only). Logos preview on a
+transparent or white background, open in a dedicated viewer, and download as the
+untouched original through a Blob URL — no watermark service involved. New images
+and folders in `LOGO/` appear automatically.
 
 The lightbox's **Share** button calls `POST /api/collection/share`, which mints an
 HMAC-signed link (`/collection?share=<token>`) for that one image. The expiry is

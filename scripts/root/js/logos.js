@@ -3,7 +3,9 @@
  *
  * The manifest (`GET /api/collection/files`) is the same one the Collection
  * page uses; this page keeps only images whose folder is `LOGO` (or a
- * subfolder below it) and renders each one as a single preview.
+ * subfolder below it). The bucket folders drive the layout: each folder directly
+ * under `LOGO/` is a category section, deeper folders are subcategories inside
+ * it, and files sitting in `LOGO/` itself are listed last under "General".
  *
  * Downloads fetch the proxied original and save it through a Blob URL, so the
  * file keeps its real format and name (SVG stays vector, transparency stays
@@ -15,9 +17,13 @@
   const LIST_ENDPOINT = "/api/collection/files";
   const LOGO_ROOT = "logo"; // bucket folder, matched case-insensitively
   const IMAGE_RE = /\.(svg|png|jpe?g|webp|gif|avif|bmp|ico|tiff?)$/i;
+  const LOOSE_LABEL = "General"; // files directly inside LOGO/
+  // Folder names whose Title Case form would be wrong. Display only.
+  const FOLDER_LABELS = { ai: "AI", pytorch: "PyTorch" };
 
   const el = {
     grid: document.getElementById("lg-grid"),
+    cats: document.getElementById("lg-cats"),
     stats: document.getElementById("lg-stats"),
     state: document.getElementById("lg-state"),
     search: document.getElementById("lg-search"),
@@ -62,6 +68,7 @@
   let allLogos = [];
   let shown = [];
   let query = "";
+  let category = null; // selected top-level folder; null = all, "" = loose files
   let openAt = -1;
   let lastFocus = null;
   let toastTimer = 0;
@@ -108,17 +115,57 @@
   }
 
   function subfolderOf(file) {
-    const folder = String(file.folder || "");
-    return folder.slice(LOGO_ROOT.length).replace(/^\/+/, "");
+    const folder = String(file.folder || "").replace(/\\/g, "/");
+    return folder.slice(LOGO_ROOT.length).replace(/^\/+|\/+$/g, "");
   }
 
-  function metaText(file) {
+  function folderLabel(segment) {
+    return FOLDER_LABELS[segment.toLowerCase()] || pretty(segment);
+  }
+
+  function categoryOf(file) {
+    return subfolderOf(file).split("/")[0];
+  }
+
+  function categoryLabel(key) {
+    return key ? folderLabel(key) : LOOSE_LABEL;
+  }
+
+  // "" when the file sits directly in its category folder.
+  function subcategoryLabel(file) {
+    return subfolderOf(file).split("/").slice(1).map(folderLabel).join(" / ");
+  }
+
+  function folderTrail(file) {
+    const top = categoryLabel(categoryOf(file));
+    const sub = subcategoryLabel(file);
+    return sub ? `${top} / ${sub}` : top;
+  }
+
+  function compareText(a, b) {
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+  }
+
+  // Category (loose files last), then subcategory (direct files first), then
+  // name. The viewer steps through this same order.
+  function compareLogos(a, b) {
+    const ca = categoryOf(a);
+    const cb = categoryOf(b);
+    if (!ca !== !cb) return ca ? -1 : 1;
+    return (
+      compareText(categoryLabel(ca), categoryLabel(cb)) ||
+      ca.localeCompare(cb) ||
+      compareText(subcategoryLabel(a), subcategoryLabel(b)) ||
+      compareText(a.name, b.name)
+    );
+  }
+
+  function metaText(file, withFolder) {
     const parts = [extensionOf(file), formatBytes(file.size)];
     const w = file.w || 0;
     const h = file.h || 0;
     if (w && h) parts.push(`${w} × ${h}`);
-    const sub = subfolderOf(file);
-    if (sub) parts.push(sub);
+    if (withFolder) parts.push(folderTrail(file));
     return parts.join(" · ");
   }
 
@@ -225,35 +272,114 @@
     return card;
   }
 
+  function plural(count) {
+    return `${count} ${count === 1 ? "logo" : "logos"}`;
+  }
+
+  // Category buttons, one per folder. Counts follow the search box.
+  function renderChips(matches) {
+    if (!el.cats) return;
+    const keys = [...new Set(allLogos.map(categoryOf))]; // allLogos is already ordered
+    el.cats.textContent = "";
+    el.cats.hidden = keys.length < 2;
+
+    [null, ...keys].forEach((key) => {
+      const count = key === null ? matches.length : matches.filter((f) => categoryOf(f) === key).length;
+      const chip = node("button", "col-chip", { type: "button", "aria-pressed": String(key === category) });
+      chip.textContent = key === null ? "All" : categoryLabel(key);
+      const badge = node("span", "col-chip-count");
+      badge.textContent = count;
+      chip.appendChild(badge);
+      chip.addEventListener("click", () => {
+        category = key;
+        render();
+        const pressed = el.cats.querySelector('[aria-pressed="true"]');
+        if (pressed) pressed.focus({ preventScroll: true });
+      });
+      el.cats.appendChild(chip);
+    });
+  }
+
+  // `shown` is sorted by category then subcategory, so a new heading starts
+  // exactly where either value changes.
+  function buildSections() {
+    const frag = document.createDocumentFragment();
+    let section = null;
+    let grid = null;
+    let currentCat = null;
+    let currentSub = null;
+
+    shown.forEach((file, index) => {
+      const cat = categoryOf(file);
+      const sub = subcategoryLabel(file);
+
+      if (cat !== currentCat) {
+        currentCat = cat;
+        currentSub = null;
+        const id = `lg-cat-${frag.childElementCount}`;
+        section = node("section", "lg-pack", { "aria-labelledby": id });
+        const head = node("div", "col-pack-head");
+        const title = node("h3", "col-pack-title", { id });
+        title.textContent = categoryLabel(cat);
+        const meta = node("span", "col-pack-meta");
+        meta.textContent = plural(shown.filter((f) => categoryOf(f) === cat).length);
+        head.append(title, meta);
+        section.appendChild(head);
+        frag.appendChild(section);
+      }
+
+      if (sub !== currentSub) {
+        currentSub = sub;
+        if (sub) {
+          const subTitle = node("h4", "lg-sub-title");
+          subTitle.textContent = sub;
+          section.appendChild(subTitle);
+        }
+        grid = node("div", "lg-grid");
+        section.appendChild(grid);
+      }
+
+      grid.appendChild(buildCard(file, index));
+    });
+
+    return frag;
+  }
+
   function render() {
     el.grid.textContent = "";
 
     if (!allLogos.length) {
       el.stats.textContent = "";
+      if (el.cats) el.cats.hidden = true;
       showState("empty", "No logos yet.", 'Add image files to the "LOGO" folder in the bucket.');
       return;
     }
 
-    shown = query
+    const matches = query
       ? allLogos.filter((file) => {
-          const haystack = `${file.name} ${file.path} ${pretty(file.name)}`.toLowerCase();
+          const haystack = `${file.name} ${file.path} ${pretty(file.name)} ${folderTrail(file)}`.toLowerCase();
           return haystack.includes(query);
         })
-      : allLogos.slice();
+      : allLogos;
+    shown = category === null ? matches.slice() : matches.filter((file) => categoryOf(file) === category);
 
-    el.stats.textContent = query
-      ? `${shown.length} of ${allLogos.length} logos`
-      : `${allLogos.length} ${allLogos.length === 1 ? "logo" : "logos"}`;
+    renderChips(matches);
+
+    el.stats.textContent =
+      shown.length === allLogos.length ? plural(allLogos.length) : `${shown.length} of ${plural(allLogos.length)}`;
 
     if (!shown.length) {
-      showState("empty", `No logos match “${query}”.`, "Try a shorter search.");
+      const where = category === null ? "" : ` in ${categoryLabel(category)}`;
+      showState(
+        "empty",
+        `No logos match “${query}”${where}.`,
+        category !== null && matches.length ? "Choose All to see matches in other categories." : "Try a shorter search.",
+      );
       return;
     }
 
     el.state.hidden = true;
-    const frag = document.createDocumentFragment();
-    shown.forEach((file, index) => frag.appendChild(buildCard(file, index)));
-    el.grid.appendChild(frag);
+    el.grid.appendChild(buildSections());
   }
 
   /* ------------------------------------------------------------------ */
@@ -294,7 +420,7 @@
       artImg = img;
       file.w = img.naturalWidth;
       file.h = img.naturalHeight;
-      el.meta.textContent = metaText(file);
+      el.meta.textContent = metaText(file, true);
       draw();
     };
     img.onerror = () => {
@@ -303,7 +429,7 @@
     img.src = file.url;
 
     el.name.textContent = pretty(file.name);
-    el.meta.textContent = metaText(file);
+    el.meta.textContent = metaText(file, true);
     el.counter.textContent = `${openAt + 1} / ${shown.length}`;
     el.prev.disabled = shown.length < 2;
     el.next.disabled = shown.length < 2;
@@ -531,7 +657,7 @@
         .filter(inLogoFolder)
         .filter(isRenderable)
         .filter((file) => !!file.url)
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+        .sort(compareLogos);
 
       render();
       resumeCanva();

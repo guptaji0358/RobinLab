@@ -11,14 +11,27 @@
 .lg-toolbar { margin-bottom: 16px; }
 .lg-stats { margin: 0 0 0 auto; align-self: center; }
 
+/* ---- Category sections (one per bucket folder) -------------------------- */
+
+.lg-cats, .lg-packs { max-width: 1680px; margin-inline: auto; }
+.lg-cats { margin-bottom: 28px; }
+.lg-cats[hidden] { display: none; }
+.lg-packs { display: flex; flex-direction: column; gap: 44px; }
+.lg-pack { min-width: 0; }
+.lg-sub-title {
+  margin: 22px 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.col-pack-head + .lg-sub-title { margin-top: 0; }
+
 /* ---- Grid of marks ------------------------------------------------------ */
 
 .lg-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 18px;
-  max-width: 1680px;
-  margin: 0 auto;
 }
 
 .lg-card {
@@ -74,7 +87,7 @@
 .lg-card:hover .lg-stage img { transform: scale(1.06); }
 
 /* Preview background switch (Transparent / White) */
-.lg-grid[data-bg="white"] .lg-stage { background: #fff; }
+.lg-packs[data-bg="white"] .lg-stage { background: #fff; }
 
 .lg-bgsw { display: inline-flex; align-items: center; gap: 4px; margin-left: 12px; }
 .lg-bgsw-label { margin-right: 6px; font-size: 12px; color: var(--text-muted); }

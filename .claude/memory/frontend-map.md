@@ -28,7 +28,7 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 - `music.js` (163) — audio player: `load` 59, `step` 78, `stopAll` 53.
 - `skills.js` (158) — `buildCard` 48, `copySkill` 111, `load` 130 (calls `/api/collection/skills`, `/skill`).
 - `presentations.js` (319) — `buildCard` 120, `render` 156, `openDeck` 182 (Office Web Viewer embed), `closeDeck` 243, `load` 284.
-- `logos.js` (330) — `/logos`: filters `/api/collection/files` to `LOGO/`, builds dark+light preview cards, full-size viewer (arrow keys, dark/light/checker), and Blob-URL downloads of the original.
+- `logos.js` (330) — `/logos`: filters `/api/collection/files` to `LOGO/`, groups by bucket folder (`renderChips`, `buildSections`: folder = category, deeper = subcategory, loose files = "General"), preview cards, full-size viewer (arrow keys, dark/light/checker), and Blob-URL downloads of the original.
 - `collection.js` (1188) — the big one:
   - **image scheduler** (top, before `prefersReduced`): `MAX_ACTIVE=3` queue, nearest-to-viewport first, `setThumbSrc`/`cancelImage`/`resetImageQueue`/`pumpImages`; paused while `body.lb-open`. All grid/cover images go through it; originals untouched. **Observe the media box (`.col-card-media`, `_img` → `<img>`), never the `<img>`:** the img starts at `clip-path: inset(0 0 100% 0)` and IntersectionObserver reports it as 0% visible, so it would never load.
   - names/labels 142–172 · toast/copy 202–214 · search & chips 251–320
