@@ -18,6 +18,7 @@
 .lg-cats[hidden] { display: none; }
 .lg-packs { display: flex; flex-direction: column; gap: 44px; }
 .lg-pack { min-width: 0; }
+.lg-page .col-pack-title::before { content: none; } /* no "/ " prefix here (fx.css) */
 .lg-sub-title {
   margin: 22px 0 12px;
   font-size: 14px;
