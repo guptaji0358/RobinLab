@@ -68,7 +68,7 @@ def save(img, path):
 
 def shared():
     img = background()
-    logo = Image.open(ROOT / "assets/robinlab-logo.png").convert("RGB")
+    logo = Image.open(ROOT / "assets/brand/robinlab-logo.png").convert("RGB")
     emblem = logo.crop((60, 30, 964, 640)).resize((452, 305), Image.LANCZOS)  # emblem only
     emblem = emblem.crop((40, 0, 412, 305))
     mask = Image.new("L", emblem.size, 0)
@@ -116,4 +116,4 @@ if __name__ == "__main__":
     product("PyWix", "Turn Python scripts into Windows apps.",
             P / "Pywix/assets/APP_BUILDER_ICON.ico", P / "Pywix/assets/og-image.jpg")
     product("Contact Book", "A private desktop address book.",
-            ROOT / "assets/contactbook-icon.png", P / "Contact Book/assets/og-image.jpg")
+            ROOT / "assets/app-icon/contactbook-icon.png", P / "Contact Book/assets/og-image.jpg")

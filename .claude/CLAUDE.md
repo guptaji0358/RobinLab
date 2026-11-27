@@ -61,7 +61,7 @@ sync/mirror step.
      `projects/Contact%20Book/index.html`). Always name `index.html` explicitly —
      a bare `projects/<Name>/` breaks when the page is opened from disk
      (`file://`), because browsers list the directory instead of loading it.
-3. Optionally drop a hub icon in `scripts/root/assets/` (the existing ones are
+3. Optionally drop a hub icon in `scripts/root/assets/app-icon/` (the existing ones are
    `pywix-icon.ico`, `codelens-icon.ico`, `contactbook-icon.png`; Motiva pulls
    its favicon straight from `projects/Motiva/Assets/logo/`).
 4. Commit.
@@ -94,13 +94,13 @@ points at a file outside the repo. All three pages link the same set (plus
 
 | File | Used for |
 | --- | --- |
-| `assets/favicon.ico` | browser tab — 16/32/48/64, emblem zoomed in so it reads small |
-| `assets/robinlab-icon-192.png` | Android / PWA (192×192) |
-| `assets/apple-touch-icon.png` | iOS home screen (180×180, opaque) |
-| `assets/robinlab-mark.png` | PWA 512×512 (`site.webmanifest`) |
-| `assets/robinlab-logo.png` | the full logo with wordmark — `logo` in the JSON-LD |
+| `assets/brand/favicon.ico` | browser tab — 16/32/48/64, emblem zoomed in so it reads small |
+| `assets/brand/robinlab-icon-192.png` | Android / PWA (192×192) |
+| `assets/brand/apple-touch-icon.png` | iOS home screen (180×180, opaque) |
+| `assets/brand/robinlab-mark.png` | PWA 512×512 (`site.webmanifest`) |
+| `assets/brand/robinlab-logo.png` | the full logo with wordmark — `logo` in the JSON-LD |
 
-`python scripts/tools/make_icons.py` regenerates them from `scripts/root/assets/robinlab-logo.png`:
+`python scripts/tools/make_icons.py` regenerates them from `scripts/root/assets/brand/robinlab-logo.png`:
 it keeps only the emblem block (a wordmark is unreadable at 16–48 px), centres
 it on the artwork's own background and feathers the join. Pass `--source` to read
 a different logo, or `--install-logo` to also refresh `robinlab-logo.png`.

@@ -47,5 +47,5 @@ Prod: Cloudflare Pages → Settings → Environment variables. Never print or co
 
 ## Tools
 
-`scripts/tools/make_icons.py` — favicon/manifest set from `scripts/root/assets/robinlab-logo.png`.
+`scripts/tools/make_icons.py` — favicon/manifest set from `scripts/root/assets/brand/robinlab-logo.png`.
 `scripts/tools/make_thumbs.py` — bucket thumbnails (LQIP source). Both are Python, run on demand.

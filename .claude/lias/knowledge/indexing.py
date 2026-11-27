@@ -40,7 +40,7 @@ FOUNDATIONAL_FACTS: List[Tuple[str, str, str]] = [
     ),
     (
         "tooling",
-        "scripts/tools/make_icons.py regenerates site favicons and icons from scripts/root/assets/robinlab-logo.png. scripts/tools/make_thumbs.py generates collection thumbnails.",
+        "scripts/tools/make_icons.py regenerates site favicons and icons from scripts/root/assets/brand/robinlab-logo.png. scripts/tools/make_thumbs.py generates collection thumbnails.",
         "CLAUDE.md:Site icons"
     ),
 ]

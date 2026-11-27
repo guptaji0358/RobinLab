@@ -6,17 +6,17 @@ ROBINLAB wordmark and the tagline. A wordmark is unreadable at 16-48 px, so the
 script keeps only the emblem, centres it on the artwork's own background colour
 and writes the standard icon sizes.
 
-    python scripts/tools/make_icons.py                          # uses scripts/root/assets/robinlab-logo.png
+    python scripts/tools/make_icons.py                          # uses scripts/root/assets/brand/robinlab-logo.png
     python scripts/tools/make_icons.py --source path/to/logo.png
 
-Outputs (all under scripts/root/assets/):
+Outputs (all under scripts/root/assets/brand/):
 
     robinlab-mark.png        512x512 emblem, used for large/manifest icons
     robinlab-icon-192.png    192x192 manifest icon
     apple-touch-icon.png     180x180, opaque background (iOS applies its own mask)
     favicon.ico              16/32/48/64 multi-size favicon
 
-The source image itself is copied to scripts/root/assets/robinlab-logo.png (1024x1024)
+The source image itself is copied to scripts/root/assets/brand/robinlab-logo.png (1024x1024)
 by `--install-logo`, which is how the repo stopped depending on a file outside
 it. Re-running is safe: every output is deterministic.
 
@@ -34,6 +34,7 @@ from PIL import Image, ImageDraw
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 ASSETS = PROJECT_ROOT / "scripts" / "root" / "assets"
+BRAND = ASSETS / "brand"
 
 # Content detection: pixels brighter than this count as artwork. The background
 # is a near-black navy (~2, 4, 19), so 45 separates glyph/glow from empty space.
@@ -112,21 +113,21 @@ def main() -> int:
     parser.add_argument(
         "--source",
         type=Path,
-        default=ASSETS / "robinlab-logo.png",
-        help="studio logo PNG (default: scripts/root/assets/robinlab-logo.png)",
+        default=BRAND / "robinlab-logo.png",
+        help="studio logo PNG (default: scripts/root/assets/brand/robinlab-logo.png)",
     )
     parser.add_argument(
         "--install-logo",
         action="store_true",
-        help="copy --source to scripts/root/assets/robinlab-logo.png (1024px) before generating icons",
+        help="copy --source to scripts/root/assets/brand/robinlab-logo.png (1024px) before generating icons",
     )
     args = parser.parse_args()
 
     if not args.source.is_file():
         raise SystemExit(f"Source image not found: {args.source}")
 
-    ASSETS.mkdir(parents=True, exist_ok=True)
-    logo_target = ASSETS / "robinlab-logo.png"
+    BRAND.mkdir(parents=True, exist_ok=True)
+    logo_target = BRAND / "robinlab-logo.png"
 
     if args.install_logo:
         logo = Image.open(args.source).convert("RGB")
@@ -142,21 +143,21 @@ def main() -> int:
     tile = emblem_tile(source)
 
     mark = tile.resize((512, 512), Image.LANCZOS)
-    mark.save(ASSETS / "robinlab-mark.png", "PNG", optimize=True)
+    mark.save(BRAND / "robinlab-mark.png", "PNG", optimize=True)
 
-    tile.resize((192, 192), Image.LANCZOS).save(ASSETS / "robinlab-icon-192.png", "PNG", optimize=True)
+    tile.resize((192, 192), Image.LANCZOS).save(BRAND / "robinlab-icon-192.png", "PNG", optimize=True)
 
     # iOS masks the corners itself; an opaque square is what it expects.
-    tile.resize((180, 180), Image.LANCZOS).save(ASSETS / "apple-touch-icon.png", "PNG", optimize=True)
+    tile.resize((180, 180), Image.LANCZOS).save(BRAND / "apple-touch-icon.png", "PNG", optimize=True)
 
     favicon = zoom_tile(tile, FAVICON_ZOOM).resize((64, 64), Image.LANCZOS)
     favicon.save(
-        ASSETS / "favicon.ico",
+        BRAND / "favicon.ico",
         sizes=[(16, 16), (32, 32), (48, 48), (64, 64)],
     )
 
     for name in ("robinlab-mark.png", "robinlab-icon-192.png", "apple-touch-icon.png", "favicon.ico"):
-        path = ASSETS / name
+        path = BRAND / name
         print(f"wrote    {path.relative_to(PROJECT_ROOT)}  {path.stat().st_size // 1024} KB")
     return 0
 
