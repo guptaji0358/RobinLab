@@ -1,0 +1,36 @@
+/* Performance layer. Loaded last on every page so it wins over the effect stylesheets.
+   Desktop keeps the full look; phones, tablets and small windows drop the effects
+   that repaint or re-rasterise while scrolling. */
+
+/* js/fx.js adds .rl-offscreen to animated blocks that are out of view. */
+.rl-offscreen, .rl-offscreen *, .rl-offscreen::before, .rl-offscreen::after,
+.rl-offscreen *::before, .rl-offscreen *::after { animation-play-state: paused !important; }
+
+/* Off-screen logo cards skip style, layout and paint. */
+.lg-card { content-visibility: auto; contain-intrinsic-size: auto 320px; }
+
+@media (pointer: coarse), (max-width: 900px) {
+  /* Always-on decorations. Each one kept the whole frame pipeline busy at 60 fps for as
+     long as it was on screen, so on small devices they are held still. */
+  .pf-hero::after, .col-hero::after, .pr-hero::after { display: none; }
+  .fx-orbit,
+  .pf-name, h1, h2, .project-title, .col-pack-title, .brand-name,
+  .pf-hero::before, .col-hero::before, .pr-hero::before,
+  .pf-avatar, .pf-status::before,
+  .project-card:not(.project-card-placeholder) .project-watermark { animation: none; }
+  .project-card:not(.project-card-placeholder) .project-watermark { filter: none; }
+  .fx-orbit { filter: none; }
+
+  /* Blur transitions re-rasterise every frame. Fade and move only. */
+  html.fx-js [data-fx]:not([data-fx="words"]),
+  .fx-words .w { filter: none; }
+  .col-card-media img { filter: none; transform: none; clip-path: none; transition: opacity 0.3s ease-out; }
+  .col-card.is-loaded .col-card-media img { clip-path: none; transition: opacity 0.3s ease-out; }
+  .lb-stage img.is-preview { filter: none; }
+
+  /* Five stacked 90px shadows on every card is expensive to raster; keep one. */
+  .col-card, .col-card:hover, .col-packcard, .lg-card, .pr-card {
+    box-shadow: 0 0 14px 1px rgba(110, 168, 255, 0.14);
+  }
+  p, li, .about-intro { text-shadow: none; }
+}

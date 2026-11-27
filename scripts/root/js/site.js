@@ -76,4 +76,22 @@
     var m = L.mailRequests && L.mailRequests[n.getAttribute('data-mail')];
     if (m) n.setAttribute('href', 'mailto:' + m.to + '?subject=' + encodeURIComponent(m.subject));
   });
+
+  /* Faster page changes: fetch the next page as soon as a finger or pointer lands on its
+     link, a few hundred milliseconds before the click completes. */
+  (function () {
+    var c = navigator.connection;
+    if (c && (c.saveData || /2g/.test(c.effectiveType || ''))) return;
+    var seen = {};
+    function warm(e) {
+      var a = e.target.closest && e.target.closest('a[href]');
+      if (!a || a.origin !== location.origin || location.protocol === 'file:' || a.hasAttribute('download')) return;
+      var url = a.href.split('#')[0];
+      if (seen[url] || url === location.href.split('#')[0] || url.indexOf('/api/') !== -1) return;
+      seen[url] = true;
+      var l = document.createElement('link'); l.rel = 'prefetch'; l.href = url; document.head.appendChild(l);
+    }
+    document.addEventListener('pointerover', warm, { passive: true });
+    document.addEventListener('touchstart', warm, { passive: true });
+  })();
 })();

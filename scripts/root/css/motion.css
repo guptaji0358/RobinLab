@@ -4,5 +4,4 @@
   z-index: 5; pointer-events: none;
   mix-blend-mode: screen;
 }
-.pf-chips li, .pf-skills span, .project-tag { will-change: translate; }
 @media (prefers-reduced-motion: reduce) { .rlm-ink { display: none; } }

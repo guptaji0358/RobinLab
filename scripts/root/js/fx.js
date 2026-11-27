@@ -13,6 +13,25 @@
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function safe(fn) { try { fn(); } catch (e) { if (window.console) console.warn('[fx]', e); } }
 
+  var lite = matchMedia('(pointer: coarse), (max-width: 900px)').matches; // phones, tablets, small windows
+  var low = (navigator.deviceMemory || 8) <= 4 || (navigator.hardwareConcurrency || 8) <= 4;
+  var BG_FPS = low ? 20 : lite ? 24 : 30; // a dim backdrop does not need 60 frames a second
+
+  var scrolledAt = -1e9;
+  addEventListener('scroll', function () { scrolledAt = performance.now(); }, { passive: true });
+  /* On small devices the backdrop holds its last frame while the page scrolls. */
+  function scrolling() { return lite && performance.now() - scrolledAt < 160; }
+
+  /* Android shows/hides its URL bar while scrolling, firing resize each time. Rebuilding
+     full-screen canvases for that causes jank, so only react to real size changes. */
+  function onResize(fn) {
+    var w = innerWidth, h = innerHeight;
+    addEventListener('resize', function () {
+      if (!fine && innerWidth === w && Math.abs(innerHeight - h) < 160) return;
+      w = innerWidth; h = innerHeight; fn();
+    });
+  }
+
   var mouse = { x: innerWidth / 2, y: innerHeight / 2, seen: false };
   var scroll = { y: scrollY, vel: 0 };
 
@@ -157,6 +176,12 @@
     btn.type = 'button'; btn.className = 'fx-scene-btn';
     function label() { btn.textContent = '✨ ' + NAMES[cur] + ' →'; btn.title = 'Change background scene'; }
     function apply(v) {
+      // The wallpaper scene downloads a multi-megabyte original and keeps it decoded; on phones
+      // and low-memory devices it competes with the grid, so use an animated scene there.
+      if (v.wallpaper && (lite || low || (navigator.connection && navigator.connection.saveData))) {
+        var pool = LOCAL.filter(function (s) { return s !== cur; });
+        v.scene = pool[Math.random() * pool.length | 0]; v.wallpaper = '';
+      }
       cfg = v; cur = scenes[v.scene] ? v.scene : 'sakura';
       wall = null;
       if (v.wallpaper) { // pre-render once, cover-fit and softened, so each frame is a cheap drawImage
@@ -168,6 +193,7 @@
           // crop to viewport aspect so zoom/pan math in the scene stays simple
           var f = d.createElement('canvas'); f.width = W; f.height = H;
           f.getContext('2d').drawImage(o, (o.width - W) / 2, (o.height - H) / 2, W, H, 0, 0, W, H);
+          o.width = o.height = 0; // release the intermediate bitmap now, not at the next GC
           if (cfg === v) wall = f;
         };
         im.src = '/api/collection/file?path=' + encodeURIComponent(v.wallpaper);
@@ -175,16 +201,18 @@
       label(); size();
     }
     function next() {
-      if (sw) return; sw = 1; c.style.opacity = '0';
+      if (sw || d.hidden) return; sw = 1; c.style.opacity = '0';
       Promise.all([fetchCfg(), new Promise(function (r) { setTimeout(r, 900); })]).then(function (res) {
         apply(res[0]); c.style.opacity = '.85'; sw = 0;
       });
     }
     btn.addEventListener('click', function () { next(); clearInterval(timer); timer = setInterval(next, 20000); });
     label(); d.body.appendChild(btn);
-    size(); addEventListener('resize', size);
+    size(); onResize(size);
     var timer = reduce ? 0 : setInterval(next, 20000);
-    var gl = guardedLoop(function (dt, t) { scenes[cur](dt * cfg.speed, t); });
+    var gl = guardedLoop(function (dt, t) {
+      if (!scrolling() && !d.body.classList.contains('lb-open')) scenes[cur](dt * cfg.speed, t); // skip when scrolling or covered
+    }, null, BG_FPS);
     if (reduce) { scenes.sakura(1, 0); return; }
     gl.start();
     fetchCfg().then(apply); // random scene from the very first paint
@@ -192,17 +220,23 @@
 
   /* One rAF chain per animation. start() is a no-op while a chain is alive, so
      visibilitychange can never stack duplicate loops (each one used to advance the scene again). */
-  function guardedLoop(step, canRun) {
-    var id = 0, last = 0;
+  function guardedLoop(step, canRun, fps) {
+    // A capped loop sleeps on a timer between frames: asking for every display frame just to
+    // skip most of them still makes the browser produce them all.
+    var id = 0, timer = 0, last = 0, wait = fps ? Math.max(0, 1000 / fps - 12) : 0;
+    function next() {
+      if (!wait) { id = requestAnimationFrame(frame); return; }
+      timer = setTimeout(function () { timer = 0; id = requestAnimationFrame(frame); }, wait);
+    }
     function frame(t) {
       id = 0;
       if (d.hidden || (canRun && !canRun())) return;
-      var dt = Math.min(40, t - last) / 16.67; last = t;
+      var dt = Math.min(fps ? 50 : 40, t - last) / 16.67; last = t;
       step(dt, t);
-      id = requestAnimationFrame(frame);
+      next();
     }
-    function start() { if (id || d.hidden) return; id = requestAnimationFrame(function (t) { last = t; frame(t); }); }
-    function stop() { if (id) cancelAnimationFrame(id); id = 0; }
+    function start() { if (id || timer || d.hidden) return; id = requestAnimationFrame(function (t) { last = t; frame(t); }); }
+    function stop() { if (id) cancelAnimationFrame(id); clearTimeout(timer); id = timer = 0; }
     d.addEventListener('visibilitychange', function () { if (d.hidden) stop(); else start(); });
     return { start: start, stop: stop };
   }
@@ -241,9 +275,10 @@
       }
     }
     size();
-    addEventListener('resize', size);
+    onResize(size);
     if (reduce) { for (var k = 0; k < 90; k++) draw(1); return; }
-    guardedLoop(draw).start();
+    // dt is capped so a column never skips rows (which would leave gaps in its trail)
+    guardedLoop(function (dt) { if (!scrolling()) draw(Math.min(dt, 1.3)); }, null, BG_FPS).start();
   }
 
   /* --------------------------------------------------------- split words */
@@ -323,7 +358,7 @@
         });
         // occasional glitch twitch
         setInterval(function () {
-          if (d.hidden) return;
+          if (d.hidden || h.classList.contains('rl-offscreen')) return;
           name.classList.add('glitch');
           setTimeout(function () { name.classList.remove('glitch'); }, 450);
         }, 6500);
@@ -342,6 +377,7 @@
       else {
         var pi = 0, ci = 0, del = false;
         (function tick() {
+          if (d.hidden || h.classList.contains('rl-offscreen')) return setTimeout(tick, 600); // typing re-lays out the hero
           var cur = phrases[pi];
           if (!del) { ci++; typed.textContent = cur.slice(0, ci); if (ci === cur.length) { del = true; return setTimeout(tick, 2000); } return setTimeout(tick, 45 + Math.random() * 40); }
           ci -= 2; if (ci <= 0) { ci = 0; del = false; pi = (pi + 1) % phrases.length; typed.textContent = ''; return setTimeout(tick, 320); }
@@ -378,7 +414,8 @@
     var hud = d.createElement('div');
     hud.className = 'fx-hud';
     h.appendChild(hud);
-    var go = function () {
+    var go = function () { (window.requestIdleCallback || setTimeout)(load, { timeout: 2000 }); };
+    var load = function () {
       var srcs = ['globe-data.js', 'globe.js', 'globe-scene.js'], i = 0, base = (d.querySelector('script[src*="fx.js"]') || {}).src || '';
       base = base.replace(/fx\.js.*$/, '');
       (function next() {
@@ -404,11 +441,10 @@
     function measure() {
       marquees.forEach(function (m) { m.w = m.el.scrollWidth / 2; if (m.dir > 0 && m.x === 0) m.x = -m.w; });
     }
-    measure(); addEventListener('resize', measure); addEventListener('load', measure);
+    measure(); onResize(measure); addEventListener('load', measure);
   }
 
   /* ------------------------------------------------------ cursor + main loop */
-  var cur = { x: mouse.x, y: mouse.y };
   var dot;
   function cursor() {
     if (!fine || reduce) return;
@@ -424,13 +460,10 @@
   }
 
   function mainLoop() {
-    if (reduce || (!fine && !marquees.length)) return; // nothing to animate: no loop at all
-    guardedLoop(function () {
-      // cursor
-      if (dot) {
-        cur.x = mouse.x; cur.y = mouse.y;
-        dot.style.transform = 'translate3d(' + cur.x + 'px,' + cur.y + 'px,0)';
-      }
+    var host = $('.fx-marquee');
+    if (reduce || !host || !marquees.length) return; // nothing to animate: no loop at all
+    var seen = true;
+    var loop = guardedLoop(function () {
       // marquee — speeds up with scroll velocity
       for (var i = 0; i < marquees.length; i++) {
         var m = marquees[i];
@@ -441,7 +474,36 @@
         m.el.style.transform = 'translate3d(' + m.x + 'px,0,0)';
       }
       scroll.vel *= .9;
-    }).start();
+    }, function () { return seen; });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (e) { seen = e[0].isIntersecting; if (seen) loop.start(); }).observe(host);
+    }
+    loop.start();
+  }
+
+  /* ------------------------------------------- rest animations out of view */
+  /* CSS animations keep recalculating styles when scrolled away; css/perf.css pauses
+     anything inside .rl-offscreen. */
+  function restOffscreen() {
+    if (!('IntersectionObserver' in window)) return;
+    // Headings and cards only animate on large screens, so small ones just watch the hero.
+    var SEL = lite ? '.pf-hero, .col-hero, .pr-hero' : '.pf-hero, .col-hero, .pr-hero, .project-card, h1, h2';
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { en.target.classList.toggle('rl-offscreen', !en.isIntersecting); });
+    }, { rootMargin: '100px' });
+    function watch(node) {
+      if (node.nodeType !== 1) return;
+      if (node.matches(SEL)) io.observe(node);
+      $$(SEL, node).forEach(function (el) { io.observe(el); });
+    }
+    watch(d.body);
+    var host = d.getElementById('col-packs');
+    if (host) new MutationObserver(function (ms) {
+      ms.forEach(function (m) {
+        Array.prototype.forEach.call(m.removedNodes, function (n) { if (n.nodeType === 1) $$(SEL, n).forEach(function (el) { io.unobserve(el); }); });
+        Array.prototype.forEach.call(m.addedNodes, watch);
+      });
+    }).observe(host, { childList: true });
   }
 
   /* ----------------------------------------------- tilt + magnetic + spotlight */
@@ -539,7 +601,8 @@
 
     // Cards rendered later by collection.js / presentations.js. Only the big
     // blocks are animated - hundreds of blurred thumbnails would stutter.
-    var dyn = '.col-pack, .col-packcard, .col-packgroup, .pr-card';
+    // Not .col-packgroup: a group taller than ~8 screens can never be 12% visible, so it stayed blank.
+    var dyn = '.col-pack, .col-packcard, .pr-card';
     function adopt(node) {
       if (node.nodeType !== 1) return;
       var list = node.matches(dyn) ? [node] : $$(dyn, node);
@@ -683,6 +746,7 @@
 
   addEventListener('pointermove', function (e) {
     mouse.x = e.clientX; mouse.y = e.clientY; mouse.seen = true;
+    if (dot) dot.style.transform = 'translate3d(' + mouse.x + 'px,' + mouse.y + 'px,0)';
     if (e.pointerType === 'mouse') root.classList.remove('cur-out');
   }, { passive: true });
 
@@ -695,6 +759,7 @@
   safe(hscroll);
   safe(scrollFx);
   safe(interactions);
+  safe(restOffscreen);
   // Hero + reveals wait for the boot curtain.
   boot(function () { safe(hero); safe(globe); safe(reveal); });
 })();

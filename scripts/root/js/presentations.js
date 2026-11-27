@@ -462,7 +462,7 @@
       showState(
         "error",
         "Presentations could not be loaded.",
-        "Could not reach the API. If you are previewing locally, serve the site with `python dev_server.py`.",
+        "Could not reach the API. If you are previewing locally, serve the site with `python scripts/dev_server.py`.",
       );
       console.error(err);
     }

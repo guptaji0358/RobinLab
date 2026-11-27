@@ -454,6 +454,7 @@
     document.body.classList.remove("lg-lock");
     artToken += 1;
     artImg = null;
+    el.art.width = el.art.height = 0; // give the full-size bitmap back
     openAt = -1;
     if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
   }
@@ -676,9 +677,13 @@
   }
 
   if (el.search) {
+    let searchTimer = 0;
     el.search.addEventListener("input", () => {
-      query = el.search.value.trim().toLowerCase();
-      render();
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        query = el.search.value.trim().toLowerCase();
+        render();
+      }, 160);
     });
   }
 

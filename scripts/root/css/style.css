@@ -1283,9 +1283,9 @@ a { color: inherit; text-decoration: none; }
   text-align: left;
   cursor: pointer;
   position: relative;
-  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
   transition: border-color 0.2s ease, transform 0.25s ease-out, box-shadow 0.3s ease;
-  will-change: transform;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
 }
 
 .col-card:hover {
@@ -1376,17 +1376,16 @@ a { color: inherit; text-decoration: none; }
   border-radius: inherit;
   background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.09) 50%, transparent 70%);
   transform: translateX(-100%);
-  animation: col-sweep 1.5s ease-in-out infinite;
-  will-change: transform;
   transition: opacity 0.35s ease-out, visibility 0s;
 }
+
+.col-card.is-loading .col-card-media::before { animation: col-sweep 1.5s ease-in-out infinite; }
 
 .col-card.is-loaded .col-card-media::before,
 .col-card.is-broken .col-card-media::before {
   opacity: 0;
   visibility: hidden;
-  animation-play-state: paused;
-  will-change: auto;
+  animation: none;
   transition: opacity 0.35s ease-out, visibility 0s 0.35s;
 }
 

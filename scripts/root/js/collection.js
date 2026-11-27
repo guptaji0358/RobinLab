@@ -91,13 +91,15 @@
    * Benchmarked at 3: the first on-screen images arrive about twice as fast as
    * with 6 in parallel, and the whole batch finishes in the same total time
    * (the link, not the request count, is the limit). Image bytes are untouched. */
-  const MAX_ACTIVE = 3;
+  const lowMemory = (navigator.deviceMemory || 8) <= 4;
+  const MAX_ACTIVE = lowMemory ? 2 : 3; // each download ends in a decode of tens of megabytes
   const pendingImages = new Set();
   const activeImages = new Set();
 
   // Distance in px from the viewport; 0 when on screen. Hidden cards are never preferred.
   function viewportDistance(img) {
-    const r = img.getBoundingClientRect();
+    // Measure the card: asking for a box inside a skipped (content-visibility) card forces its layout.
+    const r = (img._watch || img).getBoundingClientRect();
     if (!r.width && !r.height) return Infinity;
     if (r.bottom < 0) return -r.bottom;
     if (r.top > innerHeight) return r.top - innerHeight;
@@ -124,9 +126,11 @@
     const url = img.dataset.src;
     if (!url || img.getAttribute("src")) return;
     activeImages.add(img);
+    if (img._watch) img._watch.classList.add("is-loading");
     const release = () => {
       img.removeEventListener("load", release);
       img.removeEventListener("error", release);
+      if (img._watch) img._watch.classList.remove("is-loading");
       if (activeImages.delete(img)) pumpImages();
     };
     img.addEventListener("load", release);
@@ -150,6 +154,7 @@
     pendingImages.delete(img);
     if (activeImages.delete(img)) {
       if (!img.complete) img.removeAttribute("src");
+      if (img._watch) img._watch.classList.remove("is-loading");
       pumpImages();
     }
   }
@@ -166,7 +171,7 @@
       ? new IntersectionObserver(
           (entries) => {
             for (const entry of entries) {
-              // Card images are watched through their media box (`_img`): the <img>
+              // Cards are watched through the card element (`_img` points to its image): the <img>
               // itself starts fully clipped (clip-path wipe), which IntersectionObserver
               // reports as zero visible area, so it would never start loading.
               const img = entry.target._img || entry.target;
@@ -187,10 +192,39 @@
         )
       : null;
 
+  // Memory: a decoded original costs width x height x 4 bytes (a 4K wallpaper is 33 MB), so
+  // keeping every card the visitor has scrolled past exhausts a phone. Cards far from the
+  // viewport drop their image and keep their shape; scrolling back reloads it from the
+  // browser's HTTP cache.
+  const KEEP_MARGIN = lowMemory || matchMedia("(pointer: coarse)").matches ? "1500px" : "2500px";
+  const farObserver = imageObserver
+    ? new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) if (!entry.isIntersecting) releaseImage(entry.target);
+        },
+        { rootMargin: `${KEEP_MARGIN} 0px` },
+      )
+    : null;
+
+  function releaseImage(card) {
+    const img = card._img;
+    // Cards in a folded group or a hidden tab report "not intersecting" too: same treatment.
+    if (!img || !card.classList.contains("is-loaded") || !img.naturalWidth) return;
+    const media = img.parentNode;
+    media.style.setProperty("--ar", `${img.naturalWidth} / ${img.naturalHeight}`);
+    media.classList.add("has-ratio");
+    farObserver.unobserve(card);
+    card.classList.remove("is-loaded");
+    img.removeAttribute("src");
+    imageObserver.observe(card);
+  }
+
   const prefersReduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const canTilt = !prefersReduced && window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches;
+  // The rise-in entrance is desktop only: on phones it animates cards in the middle of a scroll.
+  const smallDevice = !!(window.matchMedia && matchMedia("(pointer: coarse), (max-width: 900px)").matches);
   const revealObserver =
-    !prefersReduced && "IntersectionObserver" in window
+    !prefersReduced && !smallDevice && "IntersectionObserver" in window
       ? new IntersectionObserver(
           (entries) => {
             for (const entry of entries) {
@@ -423,7 +457,7 @@
   function pickSlides(files) {
     const sorted = files.slice().sort(sorters.name);
     if (sorted.length <= SLIDE_COUNT) return sorted;
-    return Array.from({ length: SLIDE_COUNT }, (_, i) => sorted[Math.round((i * (sorted.length - 1)) / (SLIDE_COUNT - 1))]);
+    return Array.from({ length: SLIDE_COUNT }, (_, i) => sorted[Math.round((i * (sorted.length - 1)) / Math.max(1, SLIDE_COUNT - 1))]);
   }
 
   const screenObserver =
@@ -680,6 +714,7 @@
     card.className = "col-card";
     card.title = `${file.name} — click to preview`;
     card.addEventListener("click", () => openLightbox(index));
+    let img = null;
 
     // Entrance: cards rise into place as they scroll in, staggered across a row.
     if (revealObserver) {
@@ -715,7 +750,7 @@
       media.style.backgroundImage = `url("${file.blur}")`;
     }
 
-    const img = document.createElement("img");
+    img = document.createElement("img");
     img.decoding = "async";
     img.draggable = false;
     img.alt = humanName(file);
@@ -725,22 +760,29 @@
     // The skeleton goes away only once the picture can actually be painted:
     // `load` means the bytes arrived, `decode()` means they are ready to show.
     img.addEventListener("load", () => {
-      const ready = () => card.classList.add("is-loaded");
+      const ready = () => {
+        if (!img.getAttribute("src")) return;
+        card.classList.add("is-loaded");
+        if (farObserver) farObserver.observe(card);
+      };
       if (!img.decode) return ready();
       img.decode().then(ready, () => {
         // A rejected decode is a real failure, unless the src was withdrawn (scrolled away).
         if (img.getAttribute("src")) card.classList.add("is-broken");
       });
     });
-    img.addEventListener("error", () => card.classList.add("is-broken"));
+    img.addEventListener("error", () => {
+      if (img.getAttribute("src")) card.classList.add("is-broken");
+    });
     media.appendChild(img);
 
     // The first screenful starts downloading immediately at high priority; the
     // rest begin well before they scroll into view (see `watchImages`).
     if (imageObserver) {
-      media._img = img;
-      img._watch = media;
-      imageObserver.observe(media);
+      // The card is observed: it is the content-visibility box, so it always has a position.
+      card._img = img;
+      img._watch = card;
+      imageObserver.observe(card);
     } else {
       setThumbSrc(img, img.dataset.src);
     }
@@ -807,7 +849,8 @@
         for (const [k, v] of Object.entries(obj || {})) {
           if (typeof v === "string" && /^https:\/\//i.test(v)) watchMap.set(normTitle(k), v);
         }
-        if (typeof render === "function" && el.lightbox.hidden) render();
+        // Update the links in place: rebuilding the grid here aborted images already downloading.
+        for (const a of el.packs.querySelectorAll("a.col-watch")) a.href = watchUrl(a.dataset.title);
       })
       .catch(() => {});
   }
@@ -825,6 +868,7 @@
     if (!url) return null;
     const a = document.createElement("a");
     a.className = className;
+    a.dataset.title = title;
     a.href = url;
     a.target = "_blank";
     a.rel = "noopener noreferrer";
@@ -952,6 +996,8 @@
 
   function render() {
     if (imageObserver) imageObserver.disconnect();
+    if (farObserver) farObserver.disconnect();
+    if (revealObserver) revealObserver.disconnect(); // it would otherwise keep the old cards alive
     resetImageQueue();
     el.packs.textContent = "";
     visible = [];
@@ -1142,7 +1188,7 @@
 
   /** After the current image is on screen, warm ONE neighbour (the way the viewer is heading). */
   function preloadNext(dir) {
-    if (visible.length < 2) return;
+    if (visible.length < 2 || (navigator.connection && navigator.connection.saveData)) return;
     const near = visible[(lbPos + dir + visible.length) % visible.length];
     if (!near) return;
     lbWarm = new Image();
@@ -1265,9 +1311,13 @@
   /* Events                                                              */
   /* ------------------------------------------------------------------ */
 
+  let searchTimer = 0;
   el.search.addEventListener("input", () => {
-    query = el.search.value.trim().toLowerCase();
-    render();
+    clearTimeout(searchTimer); // one rebuild after typing pauses, not one per keystroke
+    searchTimer = setTimeout(() => {
+      query = el.search.value.trim().toLowerCase();
+      render();
+    }, 160);
   });
 
   el.sort.addEventListener("change", () => {
@@ -1476,7 +1526,7 @@
         const detail =
           payload.message ||
           (response.status === 404
-            ? "The API endpoint was not found. Deploy the Cloudflare Pages Function, or run `python dev_server.py` instead of a plain static server."
+            ? "The API endpoint was not found. Deploy the Cloudflare Pages Function, or run `python scripts/dev_server.py` instead of a plain static server."
             : `The server responded with HTTP ${response.status}.`);
         if (cached) return true;
         showState("error", "The collection could not be loaded.", detail);
@@ -1494,7 +1544,7 @@
       showState(
         "error",
         "The collection could not be loaded.",
-        "Could not reach the API. If you are previewing locally, serve the site with `python dev_server.py` so the bucket proxy is available.",
+        "Could not reach the API. If you are previewing locally, serve the site with `python scripts/dev_server.py` so the bucket proxy is available.",
       );
       console.error(err);
       return false;
@@ -1538,7 +1588,7 @@
       showState(
         "error",
         "The shared link could not be opened.",
-        "The share API is unreachable. Locally, run `python dev_server.py`.",
+        "The share API is unreachable. Locally, run `python scripts/dev_server.py`.",
       );
       console.error(err);
       return;

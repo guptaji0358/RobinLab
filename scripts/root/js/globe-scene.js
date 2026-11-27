@@ -9,7 +9,7 @@
     var stats = { frames: 0, maxDt: 0, loops: 0 }; // read by tests: frames drawn, worst frame gap, live rAF chains
     host.__rlGlobe = { stats: stats };
     var ui = G.mount(host), info = new G.Info();
-    var state = { hover: false, paused: false, expanded: false, visible: true, speed: G.reduce ? 0 : 1, glow: 0.6, mark: 0, drag: null, moved: false, raf: 0, goal: null, clock: 0, dead: false };
+    var state = { hover: false, paused: false, expanded: false, visible: true, speed: G.reduce ? 0 : 1, glow: 0.6, mark: 0, drag: null, moved: false, raf: 0, timer: 0, goal: null, clock: 0, dead: false };
     var rad = Math.PI / 180;
 
     import(G.base + 'three.module.min.js').then(function (T) {
@@ -22,14 +22,15 @@
       // "ready" (fade-in) only once every texture is in; a failed texture hides the globe instead of showing a half-lit sphere
       var lm = new T.LoadingManager(function () { prewarm(); host.classList.add('rl-globe-ready'); }, function () {}, function () { host.classList.add('rl-globe-off'); });
       var tl = new T.TextureLoader(lm), max = renderer.capabilities.getMaxAnisotropy();
+      var lite = w.matchMedia('(pointer: coarse), (max-width: 900px)').matches;
       var tex = function (n, srgb) {
         var t = tl.load(G.base + n);
         if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = Math.min(8, max); texes.push(t); return t;
       };
       var texes = [];
       var sun = new T.Vector3(-1, 0.35, 0.9).normalize();
-      var earth = new T.Mesh(new T.SphereGeometry(1, 96, 64), new T.ShaderMaterial({
-        uniforms: { day: { value: tex('earth_atmos_2048.jpg') }, night: { value: tex('earth_lights_2048.png') }, spec: { value: tex('earth_specular_2048.jpg') }, sun: { value: sun } },
+      var earth = new T.Mesh(new T.SphereGeometry(1, lite ? 48 : 64, lite ? 32 : 48), new T.ShaderMaterial({
+        uniforms: { day: { value: tex('earth_atmos_1024.jpg') }, night: { value: tex('earth_lights_1024.jpg') }, spec: { value: tex('earth_specular_1024.jpg') }, sun: { value: sun } },
         vertexShader: 'varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }',
         fragmentShader: 'uniform sampler2D day,night,spec; uniform vec3 sun; varying vec2 vUv; varying vec3 vN; varying vec3 vV;' +
           'void main(){ vec3 n=normalize(vN); float l=dot(n,normalize(sun)); float k=smoothstep(-.12,.22,l);' +
@@ -115,9 +116,18 @@
         // keep rendering only while something is moving; otherwise the GPU idles
         var busy = state.drag || state.goal !== null || (live && !state.paused) || state.speed !== target ||
           state.glow !== gt || state.mark !== mt;
-        if (busy && state.visible && !d.hidden) { state.raf = requestAnimationFrame(frame); stats.loops = 1; } else stats.loops = 0;
+        if (busy && state.visible && !d.hidden) {
+          // 30 fps is plenty for a slow spin this small (sleep on a timer between frames);
+          // dragging still follows every display frame. `raf` holds either handle.
+          if (state.drag) state.raf = requestAnimationFrame(frame);
+          else state.raf = state.timer = setTimeout(function () { state.timer = 0; state.raf = requestAnimationFrame(frame); }, 22);
+          stats.loops = 1;
+        } else stats.loops = 0;
       }
-      function run() { if (!state.raf && !state.dead && state.visible && !d.hidden) { last = performance.now(); state.raf = requestAnimationFrame(frame); } }
+      function run() {
+        if (state.timer && state.drag) { clearTimeout(state.timer); state.timer = state.raf = 0; } // respond to a drag at once
+        if (!state.raf && !state.dead && state.visible && !d.hidden) { last = performance.now(); state.raf = requestAnimationFrame(frame); }
+      }
 
       // ---- panel: rebuild markup only when its structure changes, so buttons survive the clock tick
       var lastKey = '', TIME = /<div class="rl-g-time">(.*?)<\/div>/;
@@ -194,7 +204,7 @@
       d.addEventListener('visibilitychange', onVis);
       // full teardown: no rAF, timers, observers or document/media listeners survive
       host.__rlGlobe.destroy = function () {
-        state.dead = true; if (state.raf) cancelAnimationFrame(state.raf); state.raf = 0; clock(false);
+        state.dead = true; clearTimeout(state.timer); if (state.raf) cancelAnimationFrame(state.raf); state.raf = state.timer = 0; clock(false);
         io.disconnect(); if (ro) ro.disconnect(); else w.removeEventListener('resize', size);
         d.removeEventListener('pointerdown', outside); d.removeEventListener('visibilitychange', onVis);
         if (rm.removeEventListener) rm.removeEventListener('change', onRm);

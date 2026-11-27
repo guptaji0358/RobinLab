@@ -5,6 +5,8 @@
      2. Spring field  — chips and tags are real damped springs: they shy away
         from a fast pointer.
      3. Device tilt   — on phones the code-rain backdrop drifts with the device.
+        Touch devices get ONLY this one: the full-screen canvas and per-frame work
+        behind 1, 2 and 4-6 made scrolling stutter on phones.
      4. Gravity well  — hold the mouse/finger: chips and particles spiral in.
      5. Constellation — a drifting node web that links to the pointer.
      6. Liquid text   — section headings ripple under the pointer (SVG filter).
@@ -91,7 +93,7 @@
 
   /* -------------------------------------------------------------- ink trail */
   function size() {
-    dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+    dpr = 1; W = innerWidth; H = innerHeight;         // soft glows: extra pixels cost far more than they show
     cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     seedNodes();
   }
@@ -130,7 +132,7 @@
     for (var i = 0; i < n; i++) nodes.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * 14, vy: (Math.random() - .5) * 14 });
   }
   function drawWeb(dt) {
-    web.a += ((P.seen ? 1 : 0) - web.a) * Math.min(1, dt * 3);
+    web.a += ((P.seen && performance.now() - P.t < REST_MS ? 1 : 0) - web.a) * Math.min(1, dt * 3);
     if (web.a < .01) return;
     var i, j, a, b, dx, dy, dd, L = 140, C = 190, damp = Math.pow(.97, dt * 60);
     for (i = 0; i < nodes.length; i++) {
@@ -207,30 +209,29 @@
   }
 
   /* ------------------------------------------------------------ device tilt */
-  var tilt = { tx: 0, ty: 0, x: 0, y: 0, on: false }, bg = null;
+  var bg = null;
   function setupTilt() {
     if (!coarse || !('DeviceOrientationEvent' in window)) return;
+    if ((navigator.deviceMemory || 8) <= 4) return;   // low-memory phones: no extra work at all
     // iOS needs a permission prompt from a gesture; we don't nag — touch effects remain.
     if (typeof DeviceOrientationEvent.requestPermission === 'function') return;
+    // The sensor reports ~60 times a second: apply at most 8 times a second and let a
+    // compositor transition smooth the steps. No animation frame loop is needed.
+    var at = 0, lx = 0, ly = 0;
     on(window, 'deviceorientation', function (e) {
-      if (e.gamma == null || e.beta == null) return;
-      tilt.tx = clamp(e.gamma / 35, -1, 1) * 14;
-      tilt.ty = clamp((e.beta - 45) / 35, -1, 1) * 14;
-      if (!tilt.on) { tilt.on = true; bg = d.getElementById('fx-bg'); }
-      wake();
+      if (e.gamma == null || e.beta == null || d.hidden) return;
+      var now = performance.now(); if (now - at < 125) return;
+      var x = clamp(e.gamma / 35, -1, 1) * 14, y = clamp((e.beta - 45) / 35, -1, 1) * 14;
+      if (bg && Math.abs(x - lx) < .5 && Math.abs(y - ly) < .5) return;
+      at = now; lx = x; ly = y;
+      if (!bg) { bg = d.getElementById('fx-bg'); if (!bg) return; bg.style.scale = '1.05'; bg.style.transition = 'translate .2s linear'; }
+      bg.style.translate = x.toFixed(1) + 'px ' + y.toFixed(1) + 'px';
     }, { passive: true });
-  }
-  function stepTilt(dt) {
-    if (!tilt.on || !bg) return false;
-    tilt.x += (tilt.tx - tilt.x) * Math.min(1, dt * 6); tilt.y += (tilt.ty - tilt.y) * Math.min(1, dt * 6);
-    bg.style.translate = tilt.x.toFixed(2) + 'px ' + tilt.y.toFixed(2) + 'px';
-    bg.style.scale = '1.05';
-    return Math.abs(tilt.tx - tilt.x) > .05 || Math.abs(tilt.ty - tilt.y) > .05;
   }
 
   /* -------------------------------------------------------------- main loop */
-  var last = 0, idle = 0;
-  function wake() { if (!running && enabled && !d.hidden) { running = true; idle = 0; last = performance.now(); raf = requestAnimationFrame(frame); } }
+  var last = 0, idle = 0, REST_MS = 2000;             // a still pointer lets the loop sleep
+  function wake() { if (cv && !running && enabled && !d.hidden) { running = true; idle = 0; cv.style.display = ''; last = performance.now(); raf = requestAnimationFrame(frame); } }
   function frame(t) {
     var dt = Math.min(.05, (t - last) / 1000); last = t;
     if (rectsDirty) measure();
@@ -239,12 +240,11 @@
     if (P.speed > 2 && P.seen) emit(P.x, P.y, P.vx, P.vy, Math.min(6, 2 + (P.speed / 14) | 0));
     var a = stepSprings(dt);
     drawInk(dt);
-    var b = stepTilt(dt);
-    var c = stepLiquid(t, dt);
-    var busy = a || b || c || parts.length || P.speed > .5 || P.seen || web.a > .02 || well.a > .02;
+    var c = stepLiquid(t, dt) && t - P.t < REST_MS;
+    var busy = a || c || parts.length || P.speed > .5 || t - P.t < REST_MS || web.a > .02 || well.a > .02;
     idle = busy ? 0 : idle + 1;
     if (idle > 30 || d.hidden || !enabled) {
-      running = false; ctx.clearRect(0, 0, W, H);
+      running = false; ctx.clearRect(0, 0, W, H); cv.style.display = 'none';   // no blend layer while asleep
       visible.forEach(function (s) { if (s.x || s.y) rest(s); });   // never leave a chip off-grid
       return;
     }
@@ -274,9 +274,10 @@
 
   /* ---------------------------------------------------------------- lifecycle */
   function init() {
+    if (coarse) { setupTilt(); on(rmq, 'change', function () { if (rmq.matches) api.disable(); }); return; }
     cv = d.createElement('canvas'); cv.className = 'rlm-ink'; cv.setAttribute('aria-hidden', 'true');
     ctx = cv.getContext('2d'); if (!ctx) return;
-    d.body.appendChild(cv); size();
+    d.body.appendChild(cv); size(); cv.style.display = 'none';
     off.push(function () { cv.remove(); });
     collect(); setupLiquid();
     on(window, 'pointermove', onMove, { passive: true });
@@ -292,20 +293,19 @@
     var mo = new MutationObserver(function () { if (!mt) mt = setTimeout(function () { mt = 0; if (enabled) collect(); }, 250); });
     mo.observe(d.body, { childList: true, subtree: true });
     off.push(function () { mo.disconnect(); });
-    setupTilt();
     on(rmq, 'change', function () { if (rmq.matches) api.disable(); });
   }
 
   var api = window.RLMotion = {
-    enable: function () { if (enabled) return; enabled = true; if (!cv) safe(init); wake(); },
+    enable: function () { if (enabled) return; enabled = true; if (!cv) safe(init); },
     disable: function () {
       enabled = false; cancelAnimationFrame(raf); running = false;
       els.forEach(function (s) { rest(s); delete s.el.__rlm; }); visible.clear();
-      if (bg) { bg.style.translate = ''; bg.style.scale = ''; }
+      if (bg) { bg.style.translate = bg.style.scale = bg.style.transition = ''; bg = null; }
       off.splice(0).forEach(function (f) { f(); }); if (io) io.disconnect();
       els.length = 0; cv = null; parts.length = 0;
     },
-    get active() { return enabled && !!cv; }
+    get active() { return enabled && (!!cv || coarse); }
   };
 
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { safe(init); });
