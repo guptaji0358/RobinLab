@@ -262,7 +262,7 @@
     });
     const editLabel = node("span", "lg-edit-label");
     editLabel.textContent = "Edit in Canva";
-    editBtn.append(node("img", "lg-canva-ic", { src: "assets/canva-icon.png", alt: "", width: "20", height: "20" }), editLabel);
+    editBtn.append(node("img", "lg-canva-ic", { src: "assets/canva/canva-icon.png", alt: "", width: "20", height: "20" }), editLabel);
     editBtn.addEventListener("click", () => editInCanva(file, editBtn));
     const copyBtn = node("button", "lg-download lg-copy", {
       type: "button",
