@@ -60,7 +60,7 @@ python .claude/lias/cli.py knowledge index
 ```
 
 Foundational facts come from `.claude/lias/knowledge/indexing.py`. Full indexing
-chunks `.claude/CLAUDE.md` and `docs/COLLECTION.md` by heading. Chunks are
+chunks `.claude/CLAUDE.md` and `scripts/docs/COLLECTION.md` by heading. Chunks are
 truncated to 1200 characters to keep retrieval compact.
 
 ## Audit trail

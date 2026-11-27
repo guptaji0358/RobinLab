@@ -5,8 +5,8 @@
     python scripts/tools/devctl.py restart
     python scripts/tools/devctl.py status
 
-It runs `dev_server.py` detached (no console window), remembers its PID in
-`.dev_server.pid`, and stops it by PID or, failing that, by whatever process is
+It runs `scripts/dev_server.py` detached (no console window), remembers its PID in
+`out/dev_server.pid`, and stops it by PID or, failing that, by whatever process is
 listening on the port. Nothing else on the machine is touched.
 """
 
@@ -22,9 +22,10 @@ import time
 import webbrowser
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-PID_FILE = ROOT / ".dev_server.pid"
-LOG_FILE = ROOT / ".dev_server.log"
+SCRIPTS = Path(__file__).resolve().parent.parent
+OUT = SCRIPTS.parent / "out"
+PID_FILE = OUT / "dev_server.pid"
+LOG_FILE = OUT / "logs" / "dev_server.log"
 HOST = "127.0.0.1"
 
 
@@ -65,24 +66,25 @@ def start(port: int, open_browser: bool) -> int:
     if is_up(port):
         print(f"Already running: http://{HOST}:{port}")
     else:
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
         log = open(LOG_FILE, "ab")
         flags = 0
         if os.name == "nt":
             flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
         proc = subprocess.Popen(
-            [sys.executable, str(ROOT / "dev_server.py"), "--port", str(port)],
-            cwd=ROOT, stdout=log, stderr=log, stdin=subprocess.DEVNULL, creationflags=flags,
+            [sys.executable, str(SCRIPTS / "dev_server.py"), "--port", str(port)],
+            cwd=SCRIPTS, stdout=log, stderr=log, stdin=subprocess.DEVNULL, creationflags=flags,
         )
         PID_FILE.write_text(str(proc.pid))
         for _ in range(40):  # up to ~8 s
             if is_up(port):
                 break
             if proc.poll() is not None:
-                print(f"Server exited early — see {LOG_FILE.name}")
+                print(f"Server exited early — see {LOG_FILE}")
                 return 1
             time.sleep(0.2)
         else:
-            print(f"Server did not come up — see {LOG_FILE.name}")
+            print(f"Server did not come up — see {LOG_FILE}")
             return 1
         print(f"Started: http://{HOST}:{port}  (pid {proc.pid})")
     if open_browser:

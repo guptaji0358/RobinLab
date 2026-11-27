@@ -205,7 +205,7 @@ def process(entry: dict, token: str, max_edge: int, quality: int) -> dict:
 # Entry point
 # --------------------------------------------------------------------------- #
 def main() -> int:
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # scripts/
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--width", type=int, default=DEFAULT_WIDTH, help=f"max edge in px (default {DEFAULT_WIDTH})")
@@ -226,7 +226,7 @@ def main() -> int:
     token = load_token(project_root)
     if not token:
         print("error: no Hugging Face token found.", file=sys.stderr)
-        print("       Run `hf auth login`, or set HF_TOKEN, or add it to .dev.vars", file=sys.stderr)
+        print("       Run `hf auth login`, or set HF_TOKEN, or add it to scripts/.dev.vars", file=sys.stderr)
         return 1
 
     print(f"Bucket: {BUCKET_ID}")

@@ -8,20 +8,20 @@ from http.server import ThreadingHTTPServer
 from devserver.app.banner import print_serving, print_token_status
 from devserver.app.cli import parse_args
 from devserver.web.entrypoints import Handler
-from devserver.core.paths import PROJECT_ROOT
+from devserver.core.paths import SCRIPTS_DIR
 from devserver.core.settings import load_token, load_var
 
 
 def configure_handler(directory: str) -> None:
     Handler.directory = os.path.abspath(directory)
-    Handler.token = load_token(PROJECT_ROOT)
+    Handler.token = load_token(SCRIPTS_DIR)
     # Prefer a dedicated secret so links survive a token rotation; the HF token
     # is a safe local fallback (both stay server-side).
-    Handler.share_secret = load_var(PROJECT_ROOT, "SHARE_SECRET") or Handler.token
-    Handler.watermark_url = load_var(PROJECT_ROOT, "WATERMARK_URL")
-    Handler.watermark_key = load_var(PROJECT_ROOT, "WATERMARK_KEY")
-    Handler.canva_id = load_var(PROJECT_ROOT, "CANVA_CLIENT_ID")
-    Handler.canva_secret = load_var(PROJECT_ROOT, "CANVA_CLIENT_SECRET")
+    Handler.share_secret = load_var(SCRIPTS_DIR, "SHARE_SECRET") or Handler.token
+    Handler.watermark_url = load_var(SCRIPTS_DIR, "WATERMARK_URL")
+    Handler.watermark_key = load_var(SCRIPTS_DIR, "WATERMARK_KEY")
+    Handler.canva_id = load_var(SCRIPTS_DIR, "CANVA_CLIENT_ID")
+    Handler.canva_secret = load_var(SCRIPTS_DIR, "CANVA_CLIENT_SECRET")
 
 
 def main(doc: str | None = None) -> int:

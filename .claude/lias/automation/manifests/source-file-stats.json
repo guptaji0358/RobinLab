@@ -41,7 +41,8 @@
       "scripts/root",
       "scripts/functions",
       "scripts/tools",
-      "dev_server.py"
+      "scripts/dev_server.py",
+      "scripts/devserver"
     ]
   },
   "failure_policy": {

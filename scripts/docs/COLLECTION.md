@@ -187,25 +187,25 @@ Originals are **never** modified or deleted. `--prune` only ever removes paths i
 
 ## Running locally
 
-A plain `python -m http.server 5500 --directory root` serves the static pages but has no
+A plain `python -m http.server 5500 --directory scripts/root` serves the static pages but has no
 `/api/collection/*` proxy.
 
 Use the bundled dev server instead. It serves `scripts/root/` **and** runs the bucket proxy:
 
 ```powershell
 # 1. Create a token at https://huggingface.co/settings/tokens (a Read token is enough)
-# 2. Put it in a .dev.vars file (git-ignored):
+# 2. Put it in scripts/.dev.vars (git-ignored):
 #      HF_TOKEN=hf_xxxxxxxxxxxxxxxxx
 #      SHARE_SECRET=<any long random string>   # optional; falls back to HF_TOKEN
 #    ...or set it for the session:
 $env:HF_TOKEN = "hf_xxxxxxxxxxxxxxxxx"
 
-python dev_server.py
+python scripts/dev_server.py
 ```
 
 Then open <http://127.0.0.1:5500/collection>.
 
-Options: `python dev_server.py --port 8080 --host 127.0.0.1 --dir root`.
+Options: `python scripts/dev_server.py --port 8080 --host 127.0.0.1 --dir scripts/root`.
 
 `.claude/launch.json` has two configurations: **`robinlab-root`** (port `5500`) and
 **`robinlab-collection`** (port `5501`) — both run this server, so the API is always
@@ -326,7 +326,7 @@ service in `watermark_service/` (FastAPI + Pillow).
 - **Config:** Space secrets `HF_TOKEN` (read-only) and `WATERMARK_KEY`; Pages
   secrets `WATERMARK_URL` (the Space URL, e.g. `https://<user>-<space>.hf.space`)
   and `WATERMARK_KEY` (same value). Locally, put `WATERMARK_URL` and
-  `WATERMARK_KEY` in `.dev.vars` for `dev_server.py`. Without them the route
+  `WATERMARK_KEY` in `scripts/.dev.vars` for `dev_server.py`. Without them the route
   answers `503 not_configured`.
 - **Limits:** the watermark only covers downloads. The lightbox still previews
   the original through `/api/collection/file`.
@@ -356,7 +356,7 @@ Setup (canva.dev -> your integration):
 2. Redirect URLs: `https://robinlab.pages.dev/api/canva/callback`
    (and `http://127.0.0.1:5500/api/canva/callback` for local testing).
 3. Scopes: `asset:write`, `design:content:write`.
-4. Pages secrets `CANVA_CLIENT_ID`, `CANVA_CLIENT_SECRET` (locally: `.dev.vars`). The session
+4. Pages secrets `CANVA_CLIENT_ID`, `CANVA_CLIENT_SECRET` (locally: `scripts/.dev.vars`). The session
    cookie is AES-GCM encrypted with `SHARE_SECRET` (**required** — no `HF_TOKEN` fallback; without it Canva answers
    `503 not_configured`). The sealed OAuth state carries an issued-at time and is rejected
    on callback if older than 10 minutes or future-dated.

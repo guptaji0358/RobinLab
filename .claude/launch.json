@@ -4,13 +4,13 @@
     {
       "name": "robinlab-root",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["dev_server.py", "--port", "5500"],
+      "runtimeArgs": ["scripts/dev_server.py", "--port", "5500"],
       "port": 5500
     },
     {
       "name": "robinlab-collection",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["dev_server.py", "--port", "5501"],
+      "runtimeArgs": ["scripts/dev_server.py", "--port", "5501"],
       "port": 5501
     }
   ]

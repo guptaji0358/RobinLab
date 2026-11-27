@@ -194,7 +194,7 @@ test("Python dev mirror agrees with the Function on sizes and names", async () =
   const { fitDesign, assetName } = await freshModule();
   const cases = [[640, 480], [8000, 8000], [0, 5], ["abc", 3], [1, 99999], ["800", "600.4"], [null, null], [3000, 9000], [true, 5], ["", 7]];
   const code = `import json,sys\nfrom devserver.canva.edit import fit_design, asset_name\ncs=json.loads(sys.argv[1])\nprint(json.dumps({"d":[list(fit_design(a,b)) for a,b in cs],"n":asset_name("😀"*80)}))`;
-  const r = spawnSync("python", ["-I", "-c", `import sys; sys.path.insert(0, ${JSON.stringify(path.resolve(here, "../.."))}); exec(${JSON.stringify(code)})`, JSON.stringify(cases)], { encoding: "utf8" });
+  const r = spawnSync("python", ["-I", "-B", "-c", `import sys; sys.path.insert(0, ${JSON.stringify(path.resolve(here, ".."))}); exec(${JSON.stringify(code)})`, JSON.stringify(cases)], { encoding: "utf8" });
   if (r.error || r.status !== 0) return void console.log("python unavailable, skipped:", r.stderr || r.error);
   const py = JSON.parse(r.stdout);
   assert.deepEqual(py.d, cases.map(([a, b]) => { const d = fitDesign(a, b); return [d.width, d.height]; }));

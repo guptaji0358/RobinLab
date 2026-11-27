@@ -238,7 +238,7 @@ def main():
             seed_count = indexer.index_foundational()
             doc_count = 0
             if not args.seed_only:
-                for md in [cfg.claude_dir / "CLAUDE.md", cfg.project_root / "docs" / "COLLECTION.md"]:
+                for md in [cfg.claude_dir / "CLAUDE.md", cfg.project_root / "scripts" / "docs" / "COLLECTION.md"]:
                     if md.exists():
                         doc_count += indexer.index_markdown_file(md)
             print(json.dumps({

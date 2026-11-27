@@ -35,7 +35,7 @@ FOUNDATIONAL_FACTS: List[Tuple[str, str, str]] = [
     ),
     (
         "backend",
-        "Cloudflare Pages Function at scripts/functions/api/collection/* acts as proxy to HuggingFace dataset bucket. dev_server.py provides local emulation.",
+        "Cloudflare Pages Function at scripts/functions/api/collection/* acts as proxy to HuggingFace dataset bucket. scripts/dev_server.py provides local emulation.",
         "CLAUDE.md:dev_server.py"
     ),
     (

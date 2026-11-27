@@ -30,7 +30,7 @@ def analyze():
         "directories": {},
     }
 
-    ignore_dirs = {".git", ".wrangler", "node_modules", "__pycache__", "cache", "logs", "backups", "Skills"}
+    ignore_dirs = {".git", ".wrangler", "node_modules", "__pycache__", "cache", "logs", "backups", "Skills", "out"}
 
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in ignore_dirs and not d.startswith(".")]

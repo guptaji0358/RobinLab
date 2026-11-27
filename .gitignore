@@ -32,5 +32,8 @@ node_modules/
 # Private evaluation data (ratings, reviews) - never commit
 .claude/.private/
 
-# Local caches (wrangler, bytecode)
+# Everything generated at runtime (logs, caches, bytecode, wrangler state)
+out/
+
+# Stray caches, if a tool is run without the redirects above
 .cache/

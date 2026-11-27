@@ -2,8 +2,8 @@
 rem Deploy RobinLab to Cloudflare Pages (Direct Upload).
 rem Uploads scripts/root/ + scripts/functions/ (wrangler must run from scripts/)
 cd /d "%~dp0"
-rem Keep wrangler's cache under .cache/ instead of cluttering the repo root.
-set "WRANGLER_CACHE_DIR=%~dp0.cache\.wrangler\cache"
+rem Keep wrangler's cache under out/ instead of cluttering the repo root.
+set "WRANGLER_CACHE_DIR=%~dp0out\wrangler\cache"
 
 echo.
 echo === Deploying to Cloudflare Pages ===
