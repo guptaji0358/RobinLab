@@ -104,8 +104,6 @@ Deploy is **manual Direct Upload**; `git push` does NOT deploy. If a change "did
 
 - `CLAUDE.md` Pages table lists 6 routes; `music`, `projects`, `404` also exist.
 - `out/` (and `scripts/.wrangler/`, which wrangler recreates on deploy) hold generated junk — ignore when searching.
-- Uncommitted at snapshot: SEO/middleware, `scripts/kind_service/`, `make_og.py`, new tests,
-  `scripts/canva-logo.png`, memory edits.
 
 ## Where to go next
 
