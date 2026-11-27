@@ -2,11 +2,11 @@
 
 ## Golden rule: the API exists TWICE
 
-| Production (Cloudflare Pages Function)         | Local mirror (`dev_server.py` → `devserver/` package) |
+| Production (Cloudflare Pages Function)         | Local mirror (`scripts/dev_server.py` → `scripts/devserver/` package) |
 | ---------------------------------------------- | ----------------------------------------- |
-| `scripts/functions/api/collection/[[path]].js` (≈760)  | `devserver/` — 9 category folders, see below |
+| `scripts/functions/api/collection/[[path]].js` (≈760)  | `scripts/devserver/` — 9 category folders, see below |
 
-`devserver/` folders: `core` (config, paths, settings, caches) · `web` (handler, api_router,
+`scripts/devserver/` folders: `core` (config, paths, settings, caches) · `web` (handler, api_router,
 responses) · `hf` (http, stream, listing, lqip) · `collection` (file/listing/backdrop/decks
 routes) · `share` · `download` · `skills` · `canva` · `app` (server, cli, banner).
 
@@ -15,7 +15,7 @@ Change one → check the other. Both talk to the Hugging Face bucket
 
 ## Route table (`onRequest` dispatches by pathname suffix)
 
-| Route                          | JS handler (functions/…)  | Python (`devserver/…`)           |
+| Route                          | JS handler (functions/…)  | Python (`scripts/devserver/…`)           |
 | ------------------------------ | ------------------------- | -------------------------------- |
 | `GET /api/collection/files`    | `handleList` → `getListing`, `getLqip` | `collection/listing_route`, `hf/listing`, `hf/lqip` |
 | `GET /api/collection/file?path=` | `handleFile` → `streamBucketFile` | `collection/file_route`, `hf/stream` |
@@ -28,12 +28,12 @@ Change one → check the other. Both talk to the Hugging Face bucket
 | `/api/canva/*`                 | `scripts/functions/api/canva/` | `canva/` (route, login, callback, edit) |
 
 Share tokens: HMAC-signed, expiry inside payload, **30 min** for images, **90 days** for decks (`DECK_SHARE_TTL_SECONDS`); `410` after expiry.
-Also: `scripts/functions/_middleware.js` (www/pages.dev → roveuth.com 301), `kind_service/` (HF Space; Function reads `KIND_URL`+`KIND_KEY`).
+Also: `scripts/functions/_middleware.js` (www/pages.dev → roveuth.com 301), `scripts/kind_service/` (HF Space; Function reads `KIND_URL`+`KIND_KEY`).
 JS: `createShareToken` 111 / `readShareToken` 121. Python: `share/tokens.py`.
 Servable types: images + `.pptx` only; everything else → `415` (`core/content_types.py`, `PPTX_TYPE` js 32).
 Skill front-matter parsing: `skills/frontmatter.py`.
 
-## Watermark service (`watermark_service/`, FastAPI + Pillow, HF Space)
+## Watermark service (`scripts/watermark_service/`, FastAPI + Pillow, HF Space)
 
 - `app.py` — `/health`, `/download` (key-checked via `_check_key`, fetches original read-only via `_fetch_original`).
 - `watermark.py` — `apply_watermark` 120 (tiled text 43 + corner badge 80).
@@ -42,7 +42,7 @@ Skill front-matter parsing: `skills/frontmatter.py`.
 ## Secrets / env
 
 `HF_TOKEN` (required) · `SHARE_SECRET` (optional, falls back to `HF_TOKEN`) ·
-`WATERMARK_URL`, `WATERMARK_KEY`. Local: git-ignored `.dev.vars` (template `.dev.vars.example`).
+`WATERMARK_URL`, `WATERMARK_KEY`. Local: git-ignored `scripts/.dev.vars` (template `scripts/.dev.vars.example`).
 Prod: Cloudflare Pages → Settings → Environment variables. Never print or commit values.
 
 ## Tools

@@ -17,7 +17,7 @@ Code-Lens is the user's own MCP server. I am its **user/tester, not its develope
 1. Load the tools: ToolSearch `select:mcp__code-lens__get_capabilities,...` (all 8 code-lens tools). If the server is missing/disconnected, say so and stop; do not claim results.
 2. `get_capabilities` (check version change).
 3. `list_files` (extensions + exclude + detail + pagination cursor).
-4. `get_file_outline`: Python (`dev_server.py`), JS (`scripts/root/js/motion.js`, `scripts/functions/api/collection/[[path]].js`), HTML (`scripts/root/index.html`, expect "unsupported").
+4. `get_file_outline`: Python (`scripts/dev_server.py`), JS (`scripts/root/js/motion.js`, `scripts/functions/api/collection/[[path]].js`), HTML (`scripts/root/index.html`, expect "unsupported").
 5. `search_symbols` (e.g. `pick_backdrop`, `handleBackdrop`) WITHOUT `exclude` first, to check whether `.wrangler/` is still scanned.
 6. `find_references` (`handleBackdrop`, context=1).
 7. `search_code`: word + files_only; flexible; literal; count_only; pagination; check warning noise (binary-skip spam).

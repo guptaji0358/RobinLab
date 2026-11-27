@@ -6,12 +6,12 @@
    then `Read` with `offset`/`limit` ≈ 60–120 lines around the hit.
 
 ## Never read in full (big files)
-`scripts/root/css/style.css` (2070) · `scripts/root/js/collection.js` (1188) · `devserver/` (45 modules, ≤60 lines each) ·
+`scripts/root/css/style.css` (2070) · `scripts/root/js/collection.js` (1188) · `scripts/devserver/` (45 modules, ≤60 lines each) ·
 `scripts/root/index.html` (636) · `scripts/root/js/fx.js` (601) · `scripts/functions/api/collection/[[path]].js` (~760).
 Use the section/line maps in `frontend-map.md` / `backend-map.md`.
 
 ## Never read at all
-Images, `.ico`, `.pptx`, fonts, `.git/`, `docs/COLLECTION.md` (long; only for API-contract questions).
+Images, `.ico`, `.pptx`, fonts, `.git/`, `scripts/docs/COLLECTION.md` (long; only for API-contract questions).
 
 ## Cheap habits
 - Edit with targeted `Edit`, don't rewrite whole files. Don't re-read a file after editing.
@@ -27,5 +27,5 @@ If the request is ambiguous (which page? production or local only? which route?)
 short question first. A wrong 1000-line edit costs far more than a question.
 
 ## Parity checklist (prevents rework)
-API change → both `scripts/functions/api/collection/[[path]].js` and `devserver/`.
+API change → both `scripts/functions/api/collection/[[path]].js` and `scripts/devserver/`.
 Footer/identity change → all page `<head>`/footers. New page → nav in `site.js`, route list in `CLAUDE.md`, this folder.

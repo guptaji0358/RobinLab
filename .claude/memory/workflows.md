@@ -3,11 +3,11 @@
 ## Run locally
 
 ```powershell
-python dev_server.py            # http://127.0.0.1:5500 — site + collection API
-python dev_server.py --port 8080
+python scripts/dev_server.py            # http://127.0.0.1:5500 — site + collection API
+python scripts/dev_server.py --port 8080
 ```
-Static only (no API): `python -m http.server 5500 --directory root`.
-Collection needs `HF_TOKEN` in env or `.dev.vars`. Preview configs: `.claude/launch.json`
+Static only (no API): `python -m http.server 5500 --directory scripts/root`.
+Collection needs `HF_TOKEN` in env or `scripts/.dev.vars`. Preview configs: `.claude/launch.json`
 (`robinlab-root`, `robinlab-collection`).
 
 ## Deploy (manual — push does NOT deploy)
@@ -36,7 +36,7 @@ Drop a `.md` (with front-matter) into the bucket's `Claude Skills/` folder — a
 
 ## Dev server control / tests / other tools
 
-`python scripts/tools/devctl.py start|stop|restart|status` (`dev.bat` has a stale `tools\` path).
+`python scripts/tools/devctl.py start|stop|restart|status` (or `dev.bat start|stop|restart|status`).
 `node --test scripts/tests/` — all Node tests. `make_og.py` (OG images), `make_watch_links.py` (anime Watch map).
 
 ## Commit etiquette

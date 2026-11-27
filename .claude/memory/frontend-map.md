@@ -30,7 +30,7 @@ Plain HTML + vanilla JS (IIFEs, no modules). Line numbers ≈ 2026-11-06.
 - `presentations.js` (319) — `buildCard` 120, `render` 156, `openDeck` 182 (Office Web Viewer embed), `closeDeck` 243, `load` 284.
 - `logos.js` (330) — `/logos`: filters `/api/collection/files` to `LOGO/`, groups by bucket folder (`renderChips`, `buildSections`: folder = category, deeper = subcategory, loose files = "General"), preview cards, full-size viewer (arrow keys, dark/light/checker), and Blob-URL downloads of the original.
 - `collection.js` (1188) — the big one:
-  - **image scheduler** (top, before `prefersReduced`): `MAX_ACTIVE=3` queue, nearest-to-viewport first, `setThumbSrc`/`cancelImage`/`resetImageQueue`/`pumpImages`; paused while `body.lb-open`. All grid/cover images go through it; originals untouched. **Observe the media box (`.col-card-media`, `_img` → `<img>`), never the `<img>`:** the img starts at `clip-path: inset(0 0 100% 0)` and IntersectionObserver reports it as 0% visible, so it would never load.
+  - **image scheduler** (top, before `prefersReduced`): `MAX_ACTIVE=3` queue, nearest-to-viewport first, `setThumbSrc`/`cancelImage`/`resetImageQueue`/`pumpImages`; paused while `body.lb-open`. All grid/cover images go through it; originals untouched. **Observe the card (`.col-card`, `_img` → `<img>`), never the `<img>`:** the img starts at `clip-path: inset(0 0 100% 0)` and IntersectionObserver reports it as 0% visible, so it would never load.
   - names/labels 142–172 · toast/copy 202–214 · search & chips 251–320
   - pack covers/slideshows 323–425 · pack tree & list 477–557 · tabs/stats 558–581
   - `buildCard` 582 · title→character grouping (`titleAndCharacter`, `buildGroups`: h1 anime / h2 character, collapsible, jump bar) ~652 · `render` ~770 · "All images" is the default tab
@@ -67,5 +67,13 @@ plus `<meta name="author|publisher|copyright">` in every `<head>`; `index.html` 
 - `globe-data.js`: offline tz→city table + NOAA sunrise/sunset. `globe.js`: DOM + info panel. `globe-scene.js`: three.js scene + hover/drag/click.
 - Self-hosted in `assets/globe/`: three.module.min.js (r160) + NASA-derived textures from the three.js examples.
 - Location = browser timezone → approximate city; precise GPS only after clicking "Use precise location". No weather (would need sending location to a third party). Nothing is transmitted.
-- Styles: end of `css/fx.css`. Behaviour, geography checks, limitations: `docs/GLOBE.md`; tests: `scripts/tests/globe.test.mjs`.
+- Styles: end of `css/fx.css`. Behaviour, geography checks, limitations: `scripts/docs/GLOBE.md`; tests: `scripts/tests/globe.test.mjs`.
 - Render loop stops when settled/off-screen/reduced-motion; panel rebuilds markup only when its structure changes (clock updates just the time node).
+
+## Performance rules (2026-11-26)
+- `css/perf.css` is linked last on every page: phone/small-window overrides (`pointer: coarse` or `max-width: 900px`) and the `.rl-offscreen` animation pause. A new always-on animation or blur needs a rule there.
+- Don't animate layout/paint properties forever (`top`, `inset`, `box-shadow`, `background-position` every frame) or add `will-change` to repeated cards.
+- `fx.js`: `guardedLoop(step, canRun, fps)` caps backdrop frames (20/24/30); `onResize` ignores mobile URL-bar resizes; `restOffscreen` pauses off-screen animations; no wallpaper scene on phones / low memory / Data Saver.
+- `motion.js`: touch devices get only device tilt; desktop loop sleeps 2 s after the pointer stops.
+- `collection.js`: grid still loads originals (owner's choice, 2026-11-26). Cards use `content-visibility`; `farObserver`/`releaseImage` drop images far from the viewport; `IntersectionObserver` watches the `.col-card` (`_img`); shimmer only on `.is-loading`.
+- Globe textures in use are `assets/globe/earth_*_1024.*`; `site.js` prefetches same-origin pages on hover/touch.

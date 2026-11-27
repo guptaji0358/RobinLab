@@ -20,12 +20,13 @@ step**. Repo: github.com/guptaji0358/RobinLab (branch `master`). Owner: Robin Gu
 | `scripts/tools/` | Python helpers: `make_icons`, `make_thumbs`, `make_og`, `make_watch_links`, `devctl` |
 | `scripts/tests/` | Node tests (`*.test.mjs`): canva (3), globe, middleware, seo, watermark_resilience |
 | `scripts/wrangler.toml` | Pages config, `pages_build_output_dir = "root"` |
-| `dev_server.py` + `devserver/` | Local mirror of the production API (45 modules, 9 folders) |
-| `watermark_service/` | FastAPI+Pillow HF Space that stamps the RGS watermark on downloads |
-| `kind_service/` | FastAPI HF Space: image pixel-size ("Kind/Quality") cache in MongoDB |
+| `scripts/dev_server.py` + `scripts/devserver/` | Local mirror of the production API (45 modules, 9 folders) |
+| `scripts/watermark_service/` | FastAPI+Pillow HF Space that stamps the RGS watermark on downloads |
+| `scripts/kind_service/` | FastAPI HF Space: image pixel-size ("Kind/Quality") cache in MongoDB |
 | `docs/` | `COLLECTION.md` (bucket/API), `GLOBE.md`, `SEO.md` |
+| `out/` | Generated files only (logs, caches, bytecode, wrangler state); git-ignored |
 | `.claude/` | `CLAUDE.md`, `memory/` (this), `lias/` (local automation), `launch.json` |
-| root `.bat` | `deploy.bat` (works), `dev.bat` (see Gotchas) |
+| root `.bat` | `deploy.bat` (works), `dev.bat` (both work) |
 
 ## Pages (all in `scripts/root/`)
 
@@ -41,10 +42,10 @@ from bucket) · `music` · `404`. Plus `robots.txt`, `sitemap.xml`, `_headers`,
 Media (images, `.pptx` decks, skill `.md`) lives in a private Hugging Face bucket
 `robinlabdev/robinvault`. The browser never sees `HF_TOKEN`; a Cloudflare Pages Function
 (`scripts/functions/api/collection/[[path]].js`) proxies listing/file/share/download/
-backdrop/skills. **The same API is re-implemented in Python** (`devserver/`) for local use —
+backdrop/skills. **The same API is re-implemented in Python** (`scripts/devserver/`) for local use —
 a change to one nearly always needs the other (and `js/fx.js` for the backdrop).
 Downloads relay through `watermark_service`. Logos can be sent to the visitor's Canva via
-OAuth+PKCE (`/api/canva/*`, also mirrored in `devserver/canva/`).
+OAuth+PKCE (`/api/canva/*`, also mirrored in `scripts/devserver/canva/`).
 
 ## Feature facts worth remembering
 
@@ -54,17 +55,17 @@ OAuth+PKCE (`/api/canva/*`, also mirrored in `devserver/canva/`).
 - **Decks**: `/decks/<name>.pptx` public route (`functions/decks/[[path]].js`) because
   Microsoft's viewer needs a public URL. Embed only works on the deployed site.
 - **Collection backdrop** random per load (`/api/collection/backdrop`), read-only on bucket.
-  Logic exists in the Function, `devserver/collection/backdrop*.py` and `js/fx.js`.
-- **Image loading**: `collection.js` scheduler (MAX_ACTIVE=3); observe `.col-card-media`,
+  Logic exists in the Function, `scripts/devserver/collection/backdrop*.py` and `js/fx.js`.
+- **Image loading**: `collection.js` scheduler (MAX_ACTIVE=3); observe `.col-card`,
   never the `<img>` (clip-path makes IntersectionObserver see 0%).
-- **Anime Watch buttons**: `AnimeWatchURL.json` (root, source of truth, read-only) →
+- **Anime Watch buttons**: `scripts/AnimeWatchURL.json` ( source of truth, read-only) →
   `make_watch_links.py` → `scripts/root/data/anime-watch.json`; fallback is Crunchyroll search.
 - **Kind/Quality in lightbox**: Function calls `KIND_URL/kinds` with `X-Kind-Key` if both
   env vars are set; otherwise feature is simply off.
 - **Canonical host**: `functions/_middleware.js` 301s `www.roveuth.com` and
   `robinlab.pages.dev` to `roveuth.com`; `<hash>.robinlab.pages.dev` previews pass through.
 - **SEO**: canonical/OG/Twitter per page; `/collection`, `/logos`, `/certificates` are
-  `noindex,follow`; JSON-LD on home + project pages. See `docs/SEO.md`.
+  `noindex,follow`; JSON-LD on home + project pages. See `scripts/docs/SEO.md`.
 - **Visual layers** (all pages): `fx.js/css` (loader, code-rain, hero, cursor, reveal),
   `motion.js/css` (ink trail, spring chips), globe (`globe*.js`, three.js self-hosted),
   `soft-edges.css` (loaded last), `veins.css` (SVG card edges; remove `<link>` to revert).
@@ -73,13 +74,13 @@ OAuth+PKCE (`/api/canva/*`, also mirrored in `devserver/canva/`).
 
 `HF_TOKEN` (required) · `SHARE_SECRET` · `WATERMARK_URL` + `WATERMARK_KEY` ·
 `KIND_URL` + `KIND_KEY` (kind_service also: `MONGODB_URI`, `MONGODB_DB`, `BUCKET_ID`) ·
-Canva client id/secret (see `docs/COLLECTION.md` → Edit in Canva). Local: git-ignored
-`.dev.vars` (template `.dev.vars.example`). Prod: Pages → Settings → Environment variables.
+Canva client id/secret (see `scripts/docs/COLLECTION.md` → Edit in Canva). Local: git-ignored
+`scripts/.dev.vars` (template `scripts/.dev.vars.example`). Prod: Pages → Settings → Environment variables.
 
 ## Run / test / deploy
 
 ```
-python dev_server.py [--port 8080]      # http://127.0.0.1:5500 site + API
+python scripts/dev_server.py [--port 8080]      # http://127.0.0.1:5500 site + API
 python scripts/tools/devctl.py start|stop|restart|status [--open]
 node --test scripts/tests/              # all Node tests
 deploy.bat                              # cd scripts; wrangler pages deploy root ...
@@ -101,12 +102,10 @@ Deploy is **manual Direct Upload**; `git push` does NOT deploy. If a change "did
 
 ## Gotchas / known drift
 
-- `dev.bat` calls `python tools\devctl.py` but `tools/` is at `scripts/tools/` — the path
-  is stale (verified: no root `tools/`). Use `python scripts/tools/devctl.py` instead.
 - `CLAUDE.md` Pages table lists 6 routes; `music`, `projects`, `404` also exist.
-- `scripts/.wrangler/tmp/` and `.cache/` hold generated junk — ignore when searching.
-- Uncommitted at snapshot: SEO/middleware, `kind_service/`, `make_og.py`, new tests,
-  `canva-logo.png`, memory edits.
+- `out/` (and `scripts/.wrangler/`, which wrangler recreates on deploy) hold generated junk — ignore when searching.
+- Uncommitted at snapshot: SEO/middleware, `scripts/kind_service/`, `make_og.py`, new tests,
+  `scripts/canva-logo.png`, memory edits.
 
 ## Where to go next
 
